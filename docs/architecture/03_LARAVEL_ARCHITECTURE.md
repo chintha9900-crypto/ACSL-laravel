@@ -1,6 +1,6 @@
 # 03 — Laravel Component Architecture
 
-How the modular monolith (`01_ARCHITECTURE_OVERVIEW.md` §3) is organized inside a standard Laravel 13 application. Directory names below are proposed layout for the DATABASE DESIGN / IMPLEMENTATION phases — nothing has been created yet.
+How the modular monolith (`01_ARCHITECTURE_OVERVIEW.md` §3) is organized inside a standard Laravel 12 application. Directory names below are proposed layout for the DATABASE DESIGN / IMPLEMENTATION phases — nothing has been created yet.
 
 ## 1. Directory / namespace layout
 

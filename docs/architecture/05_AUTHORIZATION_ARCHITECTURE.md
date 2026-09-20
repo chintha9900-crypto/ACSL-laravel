@@ -61,7 +61,7 @@ Cross-referenced in full in `07_FILE_STORAGE_ARCHITECTURE.md` §§1–3 — cont
 
 ## 9. Password handling
 
-Laravel's default `Hash::make()` (bcrypt/argon2, whichever Laravel 13 defaults to) for every stored password — no custom hashing, no legacy carry-over (the legacy's Supabase-managed password hashing is entirely superseded since Supabase Auth itself is not part of this architecture).
+Laravel's default `Hash::make()` (bcrypt/argon2, whichever Laravel 12 defaults to) for every stored password — no custom hashing, no legacy carry-over (the legacy's Supabase-managed password hashing is entirely superseded since Supabase Auth itself is not part of this architecture).
 
 ## 10. Summary — legacy weaknesses closed
 

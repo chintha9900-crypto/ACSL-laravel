@@ -28,9 +28,12 @@ Do not copy its React, TypeScript, TanStack, Supabase, PostgreSQL, or Supabase R
 
 The target application is:
 
-* Laravel
-* PHP
+* Laravel 12 (12.x; current local version 12.69.2)
+* PHP 8.2+ (current local version 8.2.12)
 * MySQL
+* Blade
+* Livewire where appropriate
+* Laravel Boost
 * Laravel-native authentication and authorization
 * Laravel policies, gates and middleware
 * Laravel validation/Form Requests
@@ -38,9 +41,13 @@ The target application is:
 * Tailwind CSS
 * SiteGround-compatible deployment
 
-XAMPP MySQL is used for local development.
+XAMPP is the local development environment (XAMPP MySQL for the local database).
 
-SiteGround MySQL is the intended production database.
+SiteGround is the production host; SiteGround MySQL is the intended production database.
+
+No Supabase and no Vercel in the target architecture.
+
+The PHP/Laravel versions above are a locked development baseline. Do not upgrade PHP or Laravel, edit `composer.json`, or run `composer update` without explicit approval.
 
 ## Reverse-Engineering Rule
 
@@ -136,7 +143,7 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 
 ## Foundational Context
 
-This application is a Laravel application running on PHP 8.2. You are an expert with the Laravel ecosystem. Always use the APIs that match the installed major version of each package — do not assume a version.
+This application is a Laravel 12 application running on PHP 8.2+ (current local environment: PHP 8.2.12, Laravel 12.69.2). You are an expert with the Laravel ecosystem. Always use the APIs that match the installed major version of each package — do not assume a version.
 
 Before relying on a package's API, confirm its installed version:
 - PHP packages: run `composer show --direct` to list direct dependencies with versions, or `composer show <vendor/package>` for a single package.

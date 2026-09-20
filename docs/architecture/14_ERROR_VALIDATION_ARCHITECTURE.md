@@ -2,7 +2,7 @@
 
 ## 1. Exception handling
 
-**ARCHITECTURAL DECISION**: Laravel 13's `bootstrap/app.php` `->withExceptions()` centralized exception configuration, with custom Blade error views (`resources/views/errors/{404,403,419,429,500}.blade.php`).
+**ARCHITECTURAL DECISION**: Laravel 12's `bootstrap/app.php` `->withExceptions()` centralized exception configuration, with custom Blade error views (`resources/views/errors/{404,403,419,429,500}.blade.php`).
 
 - **Preserves the one good legacy principle**: never leak internals to the browser (`LEGACY_RISKS.md`/reverse-engineering `error handling` notes: "every unexpected server error is deliberately hidden behind one generic message... no stack traces, error messages, or exception details are exposed to the browser in any surface"). `APP_DEBUG=false` in production + generic error views achieves the same outcome natively, with none of the legacy's bespoke workarounds needed:
   - The legacy's `error-capture.ts` global-listener workaround existed specifically because the underlying Nitro/h3 server framework sometimes swallowed the real error into a generic response before the app's own try/catch could see it — this is a quirk of that specific serverless framework and **has no equivalent problem in Laravel's request lifecycle**, so no equivalent workaround is needed.

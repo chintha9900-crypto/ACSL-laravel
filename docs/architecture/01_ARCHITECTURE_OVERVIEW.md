@@ -15,9 +15,9 @@ Where the legacy Lovable/Supabase reference application's actual behaviour confl
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Language/runtime | PHP 8.3+ | Updated per the latest Phase 2 instruction (supersedes `CLAUDE.md`'s earlier "PHP 8.2" foundational note — PHP 8.3+ is backward-compatible with 8.2-targeted guidance elsewhere in this document set, so no other document needs a corresponding change) |
-| Framework | Laravel 13 | Confirmed by Phase 2 instructions |
-| Database | MySQL 8 | XAMPP locally, SiteGround MySQL in production |
+| Language/runtime | PHP 8.2+ | Locked project baseline (final project decision). Current local environment: PHP 8.2.12. This supersedes the earlier Phase 2 "PHP 8.3+" statement; nothing in this document set depends on PHP 8.3 features. |
+| Framework | Laravel 12 (12.x) | Locked project baseline (final project decision). Current local environment: Laravel 12.69.2. This supersedes the earlier Phase 2 "Laravel 13" statement; no architectural decision in this document set depends on Laravel 13. |
+| Database | MySQL | XAMPP locally, SiteGround MySQL in production. Note: the local XAMPP install currently bundles MariaDB 10.4.32 — see `docs/database/17_DATABASE_OPEN_DECISIONS.md` OD-08. |
 | Frontend rendering | Blade + Livewire + Alpine.js + Tailwind CSS | Per `CLAUDE.md` / the reverse-engineering prompt's target stack |
 | Auth | Laravel-native session auth (no Supabase, no third-party auth-as-a-service) | CONFIRMED REQUIREMENT |
 | Hosting | SiteGround (shared/cloud hosting or Laravel Cloud if adopted later) | CONFIRMED REQUIREMENT — see §7 for deployment topology implications |
