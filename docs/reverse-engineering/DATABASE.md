@@ -4,6 +4,8 @@ Reconstructed from all 19 files in `supabase/migrations/` (read chronologically,
 
 > **CONFIRMED ACI BUSINESS REQUIREMENT (final, 2026-09-15) overrides the `memberships`/`membership_applications` design below.** See "CONFIRMED Membership Data Model" immediately after the Schema Summary for the target conceptual shape, and WORKFLOWS.md §0 for the full, authoritative business workflow (including the exact membership-number format, payment-evidence handling, and promotion rules). The `memberships` and `membership_applications` table descriptions further down are kept as historical reverse-engineering record only (what the Lovable app actually built) — they are **not** the target design.
 
+> **UPDATE (later confirmations OD-10 / OD-04):** where this section describes `membership_promotions`, activation-time promotion eligibility, a payment record "created only when payment is actually required" for a new member, or a membership number belonging to a single membership row, it is **superseded**: the first 6 months are free for every approved new member (a standard introductory term, not a promotion), payment applies to renewals only, and the membership number belongs to the **member** for life (`memberships` = stable member record, `membership_terms` = terms). See `docs/database/04_MEMBERSHIP_SCHEMA.md` and `05_PROMOTION_SCHEMA.md`.
+
 ## CONFIRMED Membership Data Model (supersedes legacy `memberships` + `membership_applications`)
 
 **Status: CONFIRMED by ACI — authoritative and final. Conceptual only — no migrations have been created, per the Implementation Rule.** Full business workflow this supports is in WORKFLOWS.md §0.

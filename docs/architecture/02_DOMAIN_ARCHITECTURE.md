@@ -16,44 +16,40 @@ These are architectural boundaries within one Laravel monolith (per `01_ARCHITEC
 
 ## 2. Membership
 
-**Purpose**: the full applicant → application → approval → activation → renewal lifecycle, per `WORKFLOWS.md` §0 (CONFIRMED, authoritative).
+**Purpose**: the full applicant → application → admin approval → payment/free decision → activation → free introductory term → paid renewals lifecycle, per `WORKFLOWS.md` §0 **as amended by the confirmed decisions OD-10 and OD-04** (see `docs/database/17_DATABASE_OPEN_DECISIONS.md`). For every approved new member the payment/free decision confirms payment is not required, after which the membership is activated with the first 6 months free (approval is not immediate activation); the membership number identifies the member for life.
 
-**Key entities**: `MembershipCategory` (Student/Professional/Veteran, codes S/P/V), `MembershipApplication` (one row per application; statuses `submitted`/`more_details_required`/`approved`/`rejected`), `AviationProofDocument` (mandatory per application, all 3 categories), `Membership` (created only on activation; FK to its originating application), `MembershipNumberSequence` (per-category counter, see `04_MEMBERSHIP_ARCHITECTURE.md`), `MembershipStatusHistory` (audit trail of every application/membership status transition).
+**Key entities**: `MembershipCategory` (Student/Professional/Veteran, codes S/P/V), `MembershipPlan` (renewal pricing per category), `MembershipSettings` (introductory free months, cooldown, setup-link lifetime), `MembershipApplication` (one row per application; statuses `submitted`/`more_details_required`/`approved`/`rejected`), `AviationProofDocument` (mandatory per application, all 3 categories), `Membership` (**the stable member record, created once at first activation, owns the membership number**), `MembershipTerm` (one row per validity term: the free **introductory** term, then paid **renewals**), `MembershipNumberSequence` (per-category, per-year counter, see `04_MEMBERSHIP_ARCHITECTURE.md`), `MembershipStatusHistory` (audit trail of every application/member/term/payment transition).
 
-**Relationships**: one `MembershipApplication` → at most one `Membership` (never the reverse legacy two-table split); a `Membership` references at most one applied `MembershipPromotion` (Promotions domain, nullable); a `Membership`/`MembershipApplication` may have a related `Payment` (Payments domain, nullable — absent entirely for `payment_not_required`); a `Membership` belongs to a `User` (Identity domain) once activated.
+**Relationships**: one `MembershipApplication` → at most one `Membership` (never the reverse legacy two-table split); a `Membership` has many `MembershipTerm`s (term 1 = introductory/free, no payment; later terms = renewals, each with an optional `Payment`); renewal never creates a new `Membership` or changes its number; a `Membership` belongs to a `User` (Identity domain) provisioned at activation.
 
 **Replaces (legacy)**: the disconnected `memberships` (System A) + `membership_applications` (System B) pair (`LEGACY_RISKS.md` §1 — RESOLVED), `next_membership_number`/`verify_membership` Postgres RPCs, the plaintext-temp-password provisioning flow.
 
-**Depends on**: Identity & Access (user creation on activation), Promotions (eligibility), Payments (paid path), Files/Documents (proof storage), Notifications (every M1–M11 email).
+**Depends on**: Identity & Access (user creation on activation), Payments (renewal payments), Files/Documents (proof storage), Notifications (every M1–M11 email). It does **not** depend on Promotions.
 
-## 3. Promotions
+## 3. Promotions (DEFERRED — decoupled from the introductory period)
 
-**Purpose**: admin-configurable membership promotions (the introductory 6-month-free offer being the first, not a special case in code) and deterministic eligibility resolution when multiple promotions are simultaneously active, per `WORKFLOWS.md` §0.6 (CONFIRMED).
+**Status (OD-10):** the mandatory first-6-month free membership is **not** a promotion; it is a standard rule of the Membership domain (`MembershipSettings` + the introductory `MembershipTerm`). The Promotions domain is retained **only as a deferred design reservation** for possible future marketing promotions; no entity, table or behaviour is scheduled, and it must never gate, shorten or replace the introductory period.
 
-**Key entities**: `MembershipPromotion` (name, active flag, start/end date, free-membership flag, free-duration-months, applicable categories, priority/order).
+**Reserved entities (not built)**: `MembershipPromotion` (name, active flag, dates, priority) and its category applicability. What a promotion would *do* is undefined.
 
-**Relationships**: many `MembershipPromotion` rows may be active at once; at most one is ever selected per `Membership` (never stacked); the selection is recorded on the `Membership` record for audit.
-
-**Replaces (legacy)**: nothing — this concept did not exist in the reference app at all; it is new, ACI-confirmed scope.
-
-**Depends on**: nothing on its own; consumed by Membership at activation time.
+**Replaces (legacy)**: nothing — no equivalent existed in the reference app. The legacy "first 100 students free" idea is not carried over.
 
 ## 4. Payments
 
 **Purpose**: a single, provider-independent payment ledger shared by Membership (manual bank-transfer path today) and Commerce (future), per the Phase 2 payment architecture instructions.
 
 **Key entities** (fields as directly specified by ACI — CONFIRMED REQUIREMENT):
-- `Payment`: `user_id` (nullable), `order_id` (nullable), `membership_id` (nullable), `gateway`, `transaction_reference`, `idempotency_key`, `amount` (DECIMAL), `currency`, `status`, `payment_url`, `paid_at`, `failed_at`, `metadata`, timestamps.
+- `Payment`: `user_id` (nullable), `order_id` (nullable), `membership_term_id` (nullable — a membership **renewal** term), `gateway`, `transaction_reference`, `idempotency_key`, `amount` (DECIMAL), `currency`, `status`, `payment_url`, `paid_at`, `failed_at`, `metadata`, timestamps.
 - `PaymentWebhookEvent`: uniquely identifies an inbound gateway event (gateway + event id), records processing state, ensures idempotent handling.
 - `PaymentRefund`: a refund against a `Payment`.
 
-**Business rule (CONFIRMED)**: a `Payment` relates to exactly one business purpose — `membership_id` XOR `order_id` — never both, never neither for a real (non-`payment_not_required`) transaction.
+**Business rule (CONFIRMED)**: a `Payment` relates to exactly one business purpose — `membership_term_id` XOR `order_id` — never both, never neither. The free introductory term has **no** `Payment` at all.
 
-**Relationships**: a `Payment` optionally belongs to a `Membership` or an `Order` (never both); a `Payment` has many `PaymentRefund`s; a `Payment`'s gateway events are recorded via `PaymentWebhookEvent`.
+**Relationships**: a `Payment` belongs to a renewal `MembershipTerm` or an `Order` (never both); a `Payment` has many `PaymentRefund`s; a `Payment`'s gateway events are recorded via `PaymentWebhookEvent`.
 
 **Replaces (legacy)**: the manually-typed `memberships.payment_link`/`payment_amount`/`payment_status` columns and the complete absence of any payment concept on the legacy `shop_orders` table.
 
-**Depends on**: nothing structurally (a shared service consumed by Membership and Commerce); see `08_PAYMENT_ARCHITECTURE.md` for the important distinction between this domain's gateway-facing `Payment.status` and Membership's own business-facing `payment_status` on the application/membership record.
+**Depends on**: nothing structurally (a shared service consumed by Membership and Commerce); see `08_PAYMENT_ARCHITECTURE.md` for the important distinction between this domain's gateway-facing `Payment.status` and the membership term's own business-facing `payment_status`.
 
 ## 5. Commerce / E-commerce
 
@@ -149,7 +145,7 @@ These are architectural boundaries within one Laravel monolith (per `01_ARCHITEC
 Identity & Access ──┬──────────────────────────────────────────┐
                      │                                          │
                      ▼                                          ▼
-              Membership ◀──── Promotions                 Commerce ◀── (future)
+              Membership (member + terms)                 Commerce ◀── (future)
                      │                                          │
                      ▼                                          ▼
                  Payments ◀───────────────────────────────────┘

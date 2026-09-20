@@ -1,6 +1,6 @@
 # 06 — Payment Schema
 
-Design only. Tables: `payment_bank_accounts`, `payments`, `payment_refunds`, `payment_webhooks`. One provider-independent payment ledger shared by Membership (manual bank transfer today) and E-commerce (future).
+Design only. Tables: `payment_bank_accounts`, `payments`, `payment_refunds`, `payment_webhooks`. One provider-independent payment ledger shared by Membership **renewals** (manual bank transfer today) and E-commerce (future). **The initial 6-month membership is free and never has a payment row** (OD-10, `05` §1); membership payments exist only for renewal terms.
 
 Legend: **N** = `NOT NULL`, **Y** = nullable. All FKs `ON UPDATE RESTRICT`.
 
@@ -8,26 +8,26 @@ Legend: **N** = `NOT NULL`, **Y** = nullable. All FKs `ON UPDATE RESTRICT`.
 
 | Vocabulary | Lives on | Values |
 |---|---|---|
-| Business workflow status | `memberships.payment_status` | `payment_not_required`, `payment_pending`, `payment_confirmation_submitted`, `payment_confirmed`, `payment_rejected` |
+| Business workflow status | `membership_terms.payment_status` | `payment_not_required`, `payment_pending`, `payment_confirmation_submitted`, `payment_confirmed`, `payment_rejected` |
 | Gateway/transaction status | `payments.status` | `pending`, `processing`, `paid`, `failed`, `cancelled`, `refunded`, `partially_refunded` |
 
-They are synchronised by the application layer in the **same transaction**. A free membership has no `payments` row, so it can only be expressed in the first vocabulary. `payment_rejected` is a **transient** state: WORKFLOWS §0.9 says a rejection immediately returns the membership to `payment_pending`; the rejection is recorded as a `payment.rejected` history event and the M7 notification, not as a long-lived resting state.
+They are synchronised by the application layer in the **same transaction**. The introductory (free) term has no `payments` row, so it can only be expressed in the first vocabulary (`payment_not_required`). `payment_rejected` is a **transient** state: WORKFLOWS §0.9 says a rejection immediately returns the renewal term to `payment_pending`; the rejection is recorded as a `payment.rejected` history event and the M7 notification, not as a long-lived resting state.
 
 Mapping for the manual bank-transfer gateway:
 
-| Event | `payments.status` | `memberships.payment_status` |
+| Event (renewal term) | `payments.status` | `membership_terms.payment_status` |
 |---|---|---|
-| Approved, no promotion | `pending` | `payment_pending` |
-| Applicant submits reference + evidence | `processing` | `payment_confirmation_submitted` |
-| Admin confirms | `paid` (`paid_at` set) | `payment_confirmed` → activation |
+| Member starts a renewal (term created `pending_payment`) | `pending` | `payment_pending` |
+| Member submits reference + evidence | `processing` | `payment_confirmation_submitted` |
+| Admin confirms | `paid` (`paid_at` set) | `payment_confirmed` → the renewal term becomes valid (`active`) |
 | Admin rejects | `failed` (`failed_at` set) | `payment_rejected` → immediately `payment_pending` |
-| Applicant resubmits (same `payments` row) | `failed → processing` | `payment_confirmation_submitted` |
+| Member resubmits (same `payments` row) | `failed → processing` | `payment_confirmation_submitted` |
 
 `failed → processing` is a **manual-gateway-only** transition (C8 in `01`): for a real gateway `failed` is terminal and a retry is a new payment.
 
 ## 2. `payment_bank_accounts` — CONFIRMED (source of truth for bank/payment details)
 
-Purpose: the approved ACI bank details shown in M5 and on the payment screen. Not folded into `site_settings`; not embedded in email copy.
+Purpose: the approved ACI bank details shown in the renewal emails (M5/M10) and on the renewal payment screen. Not folded into `site_settings`; not embedded in email copy.
 
 | Column | Type | Null | Default | Notes |
 |---|---|---|---|---|
@@ -55,48 +55,48 @@ Design notes: effective dates are **not** modelled (over-engineering); "effectiv
 |---|---|---|---|---|
 | `id` | BIGINT UNSIGNED AI | N | — | PK |
 | `public_id` | CHAR(26) `ascii_bin` | N | — | **UNIQUE** ULID for routes (evidence upload, admin review) |
-| `user_id` | BIGINT UNSIGNED | Y | NULL | FK → `users`. The paying party where known. Nullable for an unauthenticated applicant (pre-account) and for a possible guest checkout (OD-18). |
-| `membership_id` | BIGINT UNSIGNED | Y | NULL | FK → `memberships` — set for a membership payment |
+| `user_id` | BIGINT UNSIGNED | Y | NULL | FK → `users`. The paying party where known. Membership payments are made by an existing member (account already provisioned at activation), so `user_id` is normally set; nullable only for a possible guest checkout (OD-18). |
+| `membership_term_id` | BIGINT UNSIGNED | Y | NULL | FK → `membership_terms` — set for a membership **renewal** payment (never the introductory term) |
 | `order_id` | BIGINT UNSIGNED | Y | NULL | FK → `orders` — set for an e-commerce payment |
 | `bank_account_id` | BIGINT UNSIGNED | Y | NULL | FK → `payment_bank_accounts` — the account the payer was instructed to use (manual gateway) |
 | `gateway` | VARCHAR(30) | N | — | `manual_bank_transfer` today; `stripe`, … later. Open vocabulary (no CHECK) — gateways are added by config. |
-| `transaction_reference` | VARCHAR(191) | Y | NULL | Applicant's bank reference (manual) or the provider's payment/charge id |
+| `transaction_reference` | VARCHAR(191) | Y | NULL | Payer's bank reference (manual) or the provider's payment/charge id |
 | `idempotency_key` | VARCHAR(100) | N | — | Unique per attempted payment operation |
 | `amount` | DECIMAL(12,2) | N | — | `CHECK (amount > 0)` |
 | `currency` | CHAR(3) | N | — | No default (OD-01) |
 | `status` | VARCHAR(30) | N | `'pending'` | `CHECK IN ('pending','processing','paid','failed','cancelled','refunded','partially_refunded')` |
 | `payment_url` | VARCHAR(2048) | Y | NULL | Gateway checkout URL where applicable; unused by manual transfer |
-| `submitted_at` | TIMESTAMP | Y | NULL | When the applicant last submitted reference/evidence (manual) |
+| `submitted_at` | TIMESTAMP | Y | NULL | When the member last submitted reference/evidence (manual) |
 | `reviewed_by_user_id` | BIGINT UNSIGNED | Y | NULL | FK → `users` — admin who confirmed/rejected (latest decision; full trail in history/audit) |
 | `reviewed_at` | TIMESTAMP | Y | NULL | |
-| `rejection_reason` | VARCHAR(500) | Y | NULL | Latest rejection reason (shown to the applicant in M7) |
+| `rejection_reason` | VARCHAR(500) | Y | NULL | Latest rejection reason (shown to the member in M7) |
 | `paid_at` | TIMESTAMP | Y | NULL | Set only when confirmed |
 | `failed_at` | TIMESTAMP | Y | NULL | Set only when failed/rejected |
 | `metadata` | JSON | Y | NULL | Provider-specific extras only (the one JSON column in this domain). Anything normalisable is a real column. Evidence files are `documents` rows, **not** metadata. |
 | `created_at`, `updated_at` | TIMESTAMP | Y | NULL | |
 
-### 3.1 Payment-purpose integrity: `membership_id` XOR `order_id`
+### 3.1 Payment-purpose integrity: `membership_term_id` XOR `order_id`
 
 MySQL cannot express a partial/conditional unique or a "one of two FKs" relationship natively, so the strategy is layered:
 
 | Layer | Mechanism | Protects against |
 |---|---|---|
-| **Database (primary)** | `CHECK ((membership_id IS NULL) <> (order_id IS NULL))` named `payments_exactly_one_purpose` — exactly one purpose FK is set. Both FKs are `RESTRICT` (a CHECK column may not carry `CASCADE`/`SET NULL`). | a payment for both, or for neither, via any writer (app, tinker, SQL console, import) |
-| **Database (typed FKs)** | each purpose is a real FK to its own parent table | a payment pointing at a non-existent membership/order |
-| **Database (no £0)** | `CHECK (amount > 0)` | a fake £0 "free membership payment" |
-| **Application** | payments are constructed **only** by `CreateMembershipPayment` and `CreateOrderPayment` actions, each setting exactly one FK; a `saving` guard in the model rejects violations with a clear error | clear error messages; defence in depth if CHECK is not enforced (MySQL < 8.0.16, OD-08) |
-| **Reconciliation** | scheduled/test query: `SELECT id FROM payments WHERE (membership_id IS NULL) = (order_id IS NULL)` must return 0 rows | silent loss of CHECK enforcement after an engine change |
+| **Database (primary)** | `CHECK ((membership_term_id IS NULL) <> (order_id IS NULL))` named `payments_exactly_one_purpose` — exactly one purpose FK is set. Both FKs use the default `NO ACTION` (= `RESTRICT` policy; a CHECK column must not carry `CASCADE`/`SET NULL` — see `18` §3.1). | a payment for both, or for neither, via any writer (app, tinker, SQL console, import) |
+| **Database (typed FKs)** | each purpose is a real FK to its own parent table | a payment pointing at a non-existent membership term/order |
+| **Database (no £0)** | `CHECK (amount > 0)` | a fake £0 payment (there is no payment for the free introductory term) |
+| **Application** | payments are constructed **only** by `CreateMembershipPayment` and `CreateOrderPayment` actions, each setting exactly one FK; a `saving` guard in the model rejects violations with a clear error | clear error messages; defence in depth if a CHECK were ever not enforced |
+| **Reconciliation** | scheduled/test query: `SELECT id FROM payments WHERE (membership_term_id IS NULL) = (order_id IS NULL)` must return 0 rows | silent loss of CHECK enforcement after an engine change |
 
 There is deliberately **no polymorphic `payable_type/payable_id`**: a polymorphic pair cannot have FKs, and the domain has exactly two purposes.
 
-Additional cross-table rules (application layer, `15`): a membership payment's `amount`/`currency` equal the membership's `fee_amount`/`fee_currency`; an order payment's equal `orders.total_amount`/`currency`; the sum of processed refunds never exceeds `amount`.
+Additional cross-table rules (application layer, `15`): a membership payment's `amount`/`currency` equal its **renewal term's** `fee_amount`/`fee_currency`, and that term is `term_kind = 'renewal'` (an introductory term can never be paid for); an order payment's equal `orders.total_amount`/`currency`; the sum of processed refunds never exceeds `amount`.
 
 **Foreign keys**
 
 | FK column | Parent | Cardinality | ON DELETE |
 |---|---|---|---|
 | `user_id` | `users` | many payments : 0..1 user | RESTRICT |
-| `membership_id` | `memberships` | many : 0..1 (normally 1 payment, possibly more after cancel/refund) | RESTRICT |
+| `membership_term_id` | `membership_terms` | many : 0..1 (normally 1 payment per renewal term, possibly more after cancel/refund) | RESTRICT |
 | `order_id` | `orders` | many : 0..1 (normally 1) | RESTRICT |
 | `bank_account_id` | `payment_bank_accounts` | many : 0..1 | RESTRICT |
 | `reviewed_by_user_id` | `users` | many : 0..1 | RESTRICT |
@@ -107,15 +107,15 @@ Additional cross-table rules (application layer, `15`): a membership payment's `
 |---|---|---|
 | `payments_public_id_unique` | `public_id` | routes |
 | `payments_gateway_idempotency_key_unique` | `gateway, idempotency_key` | **idempotency**: a retried "create payment" or double-submit cannot create a second row |
-| `payments_gateway_transaction_reference_index` | `gateway, transaction_reference` | webhook → payment lookup; **not unique** because a manual reference is applicant-typed free text (uniqueness would reject legitimate collisions and create a probing oracle). Provider-issued ids are protected by webhook idempotency instead. |
-| `payments_membership_id_status_index` | `membership_id, status` | membership payment lookup |
+| `payments_gateway_transaction_reference_index` | `gateway, transaction_reference` | webhook → payment lookup; **not unique** because a manual reference is member-typed free text (uniqueness would reject legitimate collisions and create a probing oracle). Provider-issued ids are protected by webhook idempotency instead. |
+| `payments_membership_term_id_status_index` | `membership_term_id, status` | renewal payment lookup |
 | `payments_order_id_status_index` | `order_id, status` | order payment lookup |
 | `payments_status_submitted_at_index` | `status, submitted_at` | admin "evidence awaiting review" queue |
 | FK indexes | `user_id`, `bank_account_id`, `reviewed_by_user_id` | |
 
 Soft delete: **NO** — financial records are never deleted or hidden. Audit: `payment.created`, `payment.evidence_submitted`, `payment.confirmed`, `payment.rejected`, `payment.refunded` in `audit_logs`; membership-facing events in `membership_status_history`.
 
-"At most one open payment per membership/order" is an application rule with a reconciliation query, not a unique key — a manual payment cycles `failed → processing` on the same row, and a gateway retry legitimately creates a new row, so a status-conditioned unique key cannot express both cleanly.
+"At most one open payment per membership term/order" is an application rule with a reconciliation query, not a unique key — a manual payment cycles `failed → processing` on the same row, and a gateway retry legitimately creates a new row, so a status-conditioned unique key cannot express both cleanly.
 
 ## 4. `payment_refunds` — CONFIRMED (concept)
 
@@ -164,7 +164,7 @@ Indexes: `UNIQUE payment_webhooks_gateway_event_id_unique (gateway, event_id)` �
 1. **Insert-once:** the endpoint verifies the signature, then `INSERT`s `(gateway, event_id, …)`. A redelivery violates `UNIQUE(gateway, event_id)` → treated as "already seen" → respond `200` so the provider stops retrying → **no job dispatched, no state change**.
 2. **Claim-once:** the processing job claims the row with a compare-and-set: `UPDATE payment_webhooks SET processing_status='processing', attempts=attempts+1 WHERE id=? AND processing_status IN ('received','failed')`. `0 rows affected` ⇒ another worker owns it or it is done → exit.
 3. **Transition-once:** the business change is itself a guarded update: `UPDATE payments SET status='paid', paid_at=UTC_TIMESTAMP() WHERE id=? AND status IN ('pending','processing')`. `0 rows affected` ⇒ already paid → exit without firing `PaymentConfirmed`. The domain event fires **only** when exactly one row changed.
-4. **Same transaction:** the payment update, the membership/order update, and `processing_status='processed'` commit together. A crash leaves the row `processing`/`received` and the sweeper re-dispatches it; steps 2–3 make the retry harmless.
+4. **Same transaction:** the payment update, the membership-term/order update, and `processing_status='processed'` commit together. A crash leaves the row `processing`/`received` and the sweeper re-dispatches it; steps 2–3 make the retry harmless.
 5. **Out-of-order events** (e.g. `refund` before `paid`) are stored, marked `ignored` or retried by application logic — the ledger never blocks on ordering.
 
 ### 5.2 Why a failed-signature request is not stored here
@@ -173,4 +173,4 @@ If unverified requests were inserted, an attacker could pre-register a **fake `e
 
 ## 6. Bank details and historical accuracy
 
-Emails (M5) read the active bank account **at send time** and `payments.bank_account_id` records which one the payer was given, so a later change of bank details never rewrites history. Snapshotting the *amount* is done twice on purpose: `memberships.fee_amount` (what the term cost) and `payments.amount` (what was requested) — a payment is a legal record of an amount at a point in time.
+Emails carrying payment instructions (renewal reminder M10 and renewal instructions M5) read the active bank account **at send time** and `payments.bank_account_id` records which one the payer was given, so a later change of bank details never rewrites history. Snapshotting the *amount* is done twice on purpose: `membership_terms.fee_amount` (what the renewal term cost) and `payments.amount` (what was requested) — a payment is a legal record of an amount at a point in time.

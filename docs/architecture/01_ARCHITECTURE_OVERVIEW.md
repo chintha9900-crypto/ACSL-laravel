@@ -15,9 +15,9 @@ Where the legacy Lovable/Supabase reference application's actual behaviour confl
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Language/runtime | PHP 8.2+ | Locked project baseline (final project decision). Current local environment: PHP 8.2.12. This supersedes the earlier Phase 2 "PHP 8.3+" statement; nothing in this document set depends on PHP 8.3 features. |
+| Language/runtime | PHP 8.2+ | Locked project baseline (final project decision). Current local environment: PHP 8.2.12; production: PHP 8.2.33. This supersedes the earlier Phase 2 "PHP 8.3+" statement; nothing in this document set depends on PHP 8.3 features. |
 | Framework | Laravel 12 (12.x) | Locked project baseline (final project decision). Current local environment: Laravel 12.69.2. This supersedes the earlier Phase 2 "Laravel 13" statement; no architectural decision in this document set depends on Laravel 13. |
-| Database | MySQL | XAMPP locally, SiteGround MySQL in production. Note: the local XAMPP install currently bundles MariaDB 10.4.32 — see `docs/database/17_DATABASE_OPEN_DECISIONS.md` OD-08. |
+| Database | **MySQL 8.4** (production: MySQL 8.4.6, utf8mb4; documented minimum 8.0.19) | SiteGround MySQL in production. **Development should ultimately use MySQL 8.x matching production**; the local XAMPP install bundles MariaDB 10.4.32, which is *not* production-equivalent and must not be used to validate the schema. Integration/database tests run on MySQL 8.x, not SQLite. See `docs/database/18_MYSQL_84_COMPATIBILITY_REVIEW.md`. |
 | Frontend rendering | Blade + Livewire + Alpine.js + Tailwind CSS | Per `CLAUDE.md` / the reverse-engineering prompt's target stack |
 | Auth | Laravel-native session auth (no Supabase, no third-party auth-as-a-service) | CONFIRMED REQUIREMENT |
 | Hosting | SiteGround (shared/cloud hosting or Laravel Cloud if adopted later) | CONFIRMED REQUIREMENT — see §7 for deployment topology implications |
@@ -76,7 +76,7 @@ Full detail in `02_DOMAIN_ARCHITECTURE.md`. The 13 domains, at a glance:
 |---|---|---|
 | 1 | Identity & Access | Users, authentication, roles, sessions, account setup |
 | 2 | Membership | Applications, categories, activated memberships, status history |
-| 3 | Promotions | Admin-configurable membership promotions and eligibility resolution |
+| 3 | Promotions | **Deferred** — future marketing promotions only; **not** the mandatory free introductory period (a standard Membership rule) |
 | 4 | Payments | Provider-independent payment records, webhooks, refunds — shared by Membership and Commerce |
 | 5 | Commerce / E-commerce | Products, cart, orders, inventory, shipping, coupons |
 | 6 | Content / CMS | Blog, news, FAQs, testimonials, team, hero banners, site settings, SEO |
@@ -142,7 +142,7 @@ This is a conventional shared/cloud-hosting Laravel deployment — no serverless
 |---|---|
 | `02_DOMAIN_ARCHITECTURE.md` | The 13 domains in detail: entities, relationships, responsibilities |
 | `03_LARAVEL_ARCHITECTURE.md` | Directory/namespace layout, layer responsibilities, Blade vs. Livewire decision, frontend/visual-design-preservation approach |
-| `04_MEMBERSHIP_ARCHITECTURE.md` | Full membership application/promotion/activation/renewal design |
+| `04_MEMBERSHIP_ARCHITECTURE.md` | Full membership application / activation / introductory free term / renewal design |
 | `05_AUTHORIZATION_ARCHITECTURE.md` | Identity & Access + authorization: users, roles, permissions, Policies, Gates, IDOR protection, rate limiting |
 | `06_NOTIFICATION_ARCHITECTURE.md` | Mail/notification design, mapped to `NOTIFICATIONS.md`'s confirmed list |
 | `07_FILE_STORAGE_ARCHITECTURE.md` | Disks, visibility, signed URLs, validation, retention |

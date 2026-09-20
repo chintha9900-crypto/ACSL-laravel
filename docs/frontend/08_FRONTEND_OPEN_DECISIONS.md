@@ -30,11 +30,11 @@ These five items were previously listed as CRITICAL. They are now approved and a
 * **Exactly three membership categories: Student, Professional, Veteran.**
 * **No hard-coded prices** (or currency) in views. Prices and currency come from the database (`membership_plans`). The choice of currency value itself is a database decision (DB OD-01); the frontend only renders what the data says.
 * The legacy **three Professional tiers (Core / Premier / Inner-Circle) are not hard-coded.** **Professional remains one active plan** unless ACI later approves multiple plans.
-* **Promotions are database-driven** (`membership_promotions`); promotion banners appear only when an active promotion exists.
+* **Promotions are database-driven** (any *future* marketing promotion would be data, never hard-coded). **Clarification after OD-10:** the first-6-month free period is **not a promotion** — it is a standard introductory term for every approved new member, its length read from `membership_settings.introductory_period_months`; the Promotions capability itself is deferred (`docs/database/05_PROMOTION_SCHEMA.md`), so no promotion banner exists in the first build.
 * The legacy **"first 100 students free"** offer is **not carried over** unless ACI later configures it explicitly as a promotion.
 
 ### C-05 — Pre-account applicant access — **APPROVED in principle**
-* Applicant pages (status, respond to a details request, submit payment evidence) use **secure signed, expiring links tied to the application**.
+* Applicant pages (status, respond to a details request) use **secure signed, expiring links tied to the application**. *(Update after OD-10: there is no pre-activation payment, so "submit payment evidence" is no longer an applicant page; renewal payment is made by the signed-in member.)*
 * Final Laravel implementation and security details (expiry length, signing, throttling, link re-issue) will be documented during implementation.
 * **No public application access by guessing IDs** — the identifier alone never grants access.
 * **No applicant account is created merely to provide pre-activation access.**

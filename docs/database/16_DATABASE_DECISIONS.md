@@ -1,6 +1,6 @@
 # 16 — Database Decisions
 
-Design only. Each decision states what was decided, **why**, and what was rejected. Decisions marked ▲ change or refine an earlier architecture document (see `01` §7). Open questions live in `17`.
+Design only. Reconciled with the confirmed decisions OD-04, OD-08 and OD-10 (see `17`). Each decision states what was decided, **why**, and what was rejected. Decisions marked ▲ change or refine an earlier architecture document (see `01` §7). Open questions live in `17`.
 
 ---
 
@@ -22,13 +22,13 @@ Design only. Each decision states what was decided, **why**, and what was reject
 
 **Decision.** No native `ENUM`. Status columns are `VARCHAR(20–40)`; the PHP backed enum is authoritative. ACI-confirmed, closed vocabularies (application status, membership status, five payment states, seven payment statuses, eight order statuses, eight ledger types, three category codes, the two roles) also get `CHECK (col IN (...))` (`14` §3.1). Provisional/open vocabularies (job application statuses, enquiry status, comment status, gateway names, audit event names, history event names) do not.
 
-**Why.** Native `ENUM` needs an `ALTER TABLE` per value, sorts by ordinal, and behaves inconsistently across MySQL/MariaDB. A VARCHAR keeps evolution cheap; the CHECK gives the *locked* sets a database-level backstop so a typo or a raw write cannot invent a state, while sets that will change are not frozen into DDL. Application-level enum casting alone would leave raw writes (tinker, imports, another tool) unprotected exactly where mistakes are most expensive (money, memberships).
+**Why.** Native `ENUM` needs an `ALTER TABLE` per value, sorts by ordinal, and is awkward to evolve. A VARCHAR keeps evolution cheap; the CHECK gives the *locked* sets a database-level backstop so a typo or a raw write cannot invent a state, while sets that will change are not frozen into DDL. Application-level enum casting alone would leave raw writes (tinker, imports, another tool) unprotected exactly where mistakes are most expensive (money, memberships).
 
 **Rejected.** ENUM everywhere; CHECK on every status; no CHECKs at all.
 
 ## DD-04 Money: `DECIMAL(12,2)`, `CHAR(3)` currency with no default, snapshots
 
-**Decision.** All money is `DECIMAL(12,2)`. Currency is `CHAR(3)` on the money-bearing row (`membership_plans`, `memberships.fee_currency`, `payments`, `payment_refunds`, `payment_bank_accounts`, `orders`); catalogue prices (`product_variants.price`, `coupons`, `shipping_methods`) carry no per-row currency and inherit the single shop currency at order time. **No database default currency.** Amounts are stored, never recomputed from current prices, after they are charged.
+**Decision.** All money is `DECIMAL(12,2)`. Currency is `CHAR(3)` on the money-bearing row (`membership_plans`, `membership_terms.fee_currency`, `payments`, `payment_refunds`, `payment_bank_accounts`, `orders`); catalogue prices (`product_variants.price`, `coupons`, `shipping_methods`) carry no per-row currency and inherit the single shop currency at order time. **No database default currency.** Amounts are stored, never recomputed from current prices, after they are charged.
 
 **Why.** `FLOAT` cannot represent 0.10 exactly; `DECIMAL(12,2)` holds up to 9,999,999,999.99, enough for LKR-scale amounts, and every currency in play (GBP, LKR, USD) has two decimals (a zero-decimal currency would need a rethink, recorded). The currency is genuinely unresolved (OD-01: the reference priced in LKR, the instructions used £); a default would silently encode a guess into data, so the application must state it at creation. A per-row currency on catalogue prices would invite mixed-currency carts that nothing in scope supports.
 
@@ -47,7 +47,7 @@ Design only. Each decision states what was decided, **why**, and what was reject
 | Table group | Approach | Reason |
 |---|---|---|
 | `products`, `product_variants` | soft delete | referenced by ledger, carts, historical order lines; must vanish from the catalogue without breaking history |
-| Applications, memberships, payments, refunds, webhooks, orders, ledger, history, audit, email logs | never deleted | legal/financial/operational record |
+| Applications, memberships, membership terms, payments, refunds, webhooks, orders, ledger, history, audit, email logs | never deleted | legal/financial/operational record |
 | Documents | tombstone | privacy erasure must remove the *file* but keep proof that it existed; `SoftDeletes` would leave the file |
 | Promotions, plans, bank accounts, coupons, templates, categories | `is_active` | referenced by history; "deleted" and "inactive" mean the same to the business |
 | Users | `status = suspended` / anonymise | FK integrity of every history table |
@@ -61,27 +61,27 @@ Design only. Each decision states what was decided, **why**, and what was reject
 
 **Why.** Polymorphic pairs cannot carry FKs, so the database cannot detect orphans or protect history with `RESTRICT`. Where the set of targets is small and known (2 payment purposes, 3 document owners, 2 email-related entities, 1 anchor for membership history) typed FKs give real integrity for the price of one nullable column each. Audit genuinely targets "any row" and must survive deletes, so a morph is right there.
 
-**Rejected.** `payable_type/payable_id`; `documentable_*`; a polymorphic `membership_status_history` (every event has an application anchor, so a typed FK plus optional `membership_id` suffices).
+**Rejected.** `payable_type/payable_id`; `documentable_*`; a polymorphic `membership_status_history` (every event anchors to an application or the member, so typed FKs — plus an optional term — suffice).
 
-## DD-08 Membership-number sequence: locked counter row per (category, year)
+## DD-08 Membership-number sequence: locked counter row per (category, year), issued once per member
 
-**Decision.** `membership_number_sequences(category, year, last_number)` locked with `SELECT … FOR UPDATE` inside the activation transaction; number stored with its components; `UNIQUE` on the number and on `(category, year, sequence)`.
+**Decision.** `membership_number_sequences(category, year, last_number)` locked with `SELECT … FOR UPDATE` inside the **first-activation** transaction; the number is stored on the stable `memberships` row with its components; `UNIQUE` on the number and on `(category, year, sequence)`. The number is **never regenerated**: renewals create `membership_terms` rows and never touch the generator (OD-04 resolved).
 
-**Why.** The counter makes concurrency safe by serialising same-bucket activations on one row lock; being inside the activation transaction means a failed activation returns its number (no gaps caused by failures, no numbers consumed by rejected or unpaid applications, which never reach the table). Storing `number_year`/`number_sequence` lets the database independently guarantee the *sequence* is unique (the random `RR` digits would otherwise mask a duplicated sequence behind a "unique" full number) and lets CHECKs tie the string to its parts. Full mechanics: `04` §8.1.
+**Why.** The counter makes concurrency safe by serialising same-bucket activations on one row lock; being inside the activation transaction means a failed activation returns its number (no gaps caused by failures, no numbers consumed by rejected or pending applications, which never reach the table). Storing `number_year`/`number_sequence` lets the database independently guarantee the *sequence* is unique (the random `RR` digits would otherwise mask a duplicated sequence behind a "unique" full number) and lets CHECKs tie the string to its parts. Because the number identifies the **member** (`YY` = original activation year), it lives on the member row, not on a term. Sequence scope (category + year) is confirmed by the business brief. Full mechanics: `04` §10.1.
 
-**Rejected.** `MAX()+1` (forbidden; races). Global `AUTO_INCREMENT` + display prefix (one counter for all categories). Insert-and-retry on the unique constraint (works, but burns attempts under contention and interleaves poorly with the other writes in the activation transaction). Application-level mutex/cache lock (not safe across processes on shared hosting). `sequence per category only` vs per (category, year): (category, year) follows architecture `04` §4; annual reset semantics need confirmation (OD-03).
+**Rejected.** `MAX()+1` (forbidden; races). Global `AUTO_INCREMENT` + display prefix (one counter for all categories). Insert-and-retry on the unique constraint (burns attempts under contention). Application-level mutex/cache lock (not safe across processes on shared hosting). A new number per renewal term (contradicts the confirmed lifetime-number rule). Sequence per category only (the brief specifies category/year).
 
 ## DD-09 Historical snapshot strategy
 
-**Decision.** History is protected two ways: (1) **snapshot** the facts a later edit could change onto the transaction row; (2) make decision/event tables **append-only**. Snapshots: plan fee/currency/duration and promotion name/free months on `memberships`; product/variant name, SKU, unit price, line total on `order_items`; shipping/coupon labels and customer contact on `orders`; addresses in `order_addresses`; the bank account link on `payments`; the applicant's reviewed identity on `membership_applications`. Master data that snapshots point at (`membership_plans`, `payment_bank_accounts`, promotions) is treated as immutable-once-used (`R-25`) and changed by replacement.
+**Decision.** History is protected two ways: (1) **snapshot** the facts a later edit could change onto the transaction row; (2) make decision/event tables **append-only**. Snapshots: renewal plan fee/currency/duration and the introductory length on `membership_terms`; product/variant name, SKU, unit price, line total on `order_items`; shipping/coupon labels and customer contact on `orders`; addresses in `order_addresses`; the bank account link on `payments`; the applicant's reviewed identity on `membership_applications`. Master data that snapshots point at (`membership_plans`, `payment_bank_accounts`) is treated as immutable-once-used (`R-25`) and changed by replacement.
 
-**Why.** Reconstructing "what did this member pay and why was it free" from *current* master data is impossible once a price or promotion changes. Snapshots cost a few columns; the alternative is versioned master tables everywhere (more complex, still needs the FK).
+**Why.** Reconstructing "what did this member pay for this term and how long was it" from *current* master data is impossible once a price or the introductory setting changes. Snapshots cost a few columns; the alternative is versioned master tables everywhere (more complex, still needs the FK).
 
 ## DD-10 Payment-purpose integrity: two typed FKs + XOR CHECK
 
-**Decision.** `payments.membership_id` and `payments.order_id`, both nullable `RESTRICT` FKs, plus `CHECK ((membership_id IS NULL) <> (order_id IS NULL))`, plus creation only through two narrow Actions, plus a reconciliation query.
+**Decision.** `payments.membership_term_id` and `payments.order_id`, both nullable FKs (default `NO ACTION` = the RESTRICT policy), plus `CHECK ((membership_term_id IS NULL) <> (order_id IS NULL))`, plus creation only through two narrow Actions, plus a reconciliation query.
 
-**Why.** MySQL cannot make "exactly one of two FKs" structural, but a CHECK does it at the row level for every writer, the FKs give referential integrity, and the two-Action rule gives clear error messages and covers an engine that ignores CHECKs (< 8.0.16). `CHECK (amount > 0)` closes the fake-£0-payment hole for free.
+**Why.** MySQL cannot make "exactly one of two FKs" structural, but a CHECK does it at the row level for every writer, the FKs give referential integrity, and the two-Action rule gives clear error messages and covers any environment where a CHECK might not be enforced (production MySQL 8.4 enforces them; `18`). `CHECK (amount > 0)` closes the fake-£0-payment hole for free.
 
 **Rejected.** Polymorphic payable (no FK); a `purpose` column (redundant with the FKs — two facts that can disagree); two payment tables (duplicates the gateway/idempotency/webhook/refund machinery and splits reporting); a `NOT NULL` union key via generated column (cannot carry an FK).
 
@@ -105,25 +105,29 @@ Full comparison in `07` §2. **Decision:** one `documents` table, three typed ow
 
 **Rejected.** A bare mutable `stock_quantity` (forbidden; no audit trail). Pure `SUM()` with no projection (no DB-level oversell guard). Full warehouse/lot/valuation modelling (out of scope).
 
-## DD-14 ▲ Application and membership separate; membership row created at approval
+## DD-14 ▲ Three lifecycle concepts: application → member → terms (OD-04 resolved)
 
-**Decision.** `membership_applications` and `memberships` are separate tables (1 : 0..1). The membership row is created **at approval** in `pending_activation` with no number/dates; `payments.membership_id` targets it.
+**Decision.** `membership_applications` (one row per attempt, never overwritten), `memberships` (**one stable row per member, for life**, carrying the membership number) and `membership_terms` (one row per validity term: the free introductory term, then paid renewals) are separate tables. The member row is created **once, at first activation** — in its own transaction after approval and the payment/free decision — together with term 1. Payments attach to **renewal terms** (`payments.membership_term_id`).
 
-**Why.** ACI's confirmed `Payment` field list references `membership_id`, and payment happens *before* activation, so a membership record must exist to be paid for. The rule that matters for numbering is preserved and strengthened: the number, dates, promotion and `active` status are set **only** at activation, enforced by a lifecycle CHECK. This resolves an inconsistency in Phase 2 (architecture `04` §1 vs `08` §5). Consequence documented: "a membership row exists" does not mean "is a member" — only `status='active' AND expires_on >= today` does.
+**Why.** The confirmed rule is that the membership number identifies the *member* across all renewals, so it cannot live on a per-term row (`UNIQUE(number)` would forbid a renewed term reusing it). Separating identity from validity also removes two workarounds of the earlier design: the pre-activation "pending" membership row (needed only so a payment had something to reference — no longer necessary because the initial membership is free, so activation needs no payment) and the `renews_membership_id` lineage (a renewal is simply another term of the same member). "A member exists" now means "was approved and activated"; "is current" is derived from terms (`active` and within dates).
 
-**Rejected.** Payment pointing at the application (contradicts the confirmed Payment shape and the Phase 3 statement that a payment belongs to a membership or an order); creating the membership only at activation (leaves the payment with nothing to reference).
+**Rejected.** One row per term with a copied number (breaks `UNIQUE(number)`, invites drift); a number-per-term with a lineage FK (contradicts the rule); storing status/dates on the member row (duplicates term facts); creating the member before approval.
 
 ## DD-15 Roles: one column, no RBAC tables
 
 Two flat roles as `users.role` with a CHECK. **Why.** ADR-05: nothing in the confirmed requirements needs more; a pivot adds a join to every check. The upgrade path is additive. Supabase's `user_roles` (a user may hold both roles) had no meaning in Laravel.
 
-## DD-16 ▲ Users merged with profiles; user provisioned at activation
+## DD-16 ▲ Users merged with profiles; single `name`; user provisioned at activation
 
-`auth.users` + `profiles` → `users` (ADR-04). Because `account_setup_tokens` must reference a user, the row is created at activation with `password NULL`, `status pending_setup` (▲ C5); a NULL password can never validate and login also requires `status='active'`. **Why.** Keeps `memberships.user_id` and the token FK meaningful and lets the setup flow *set* the first password rather than *create* the account, matching architecture `04` §7's intent while removing its inconsistency. **Rejected:** creating the user only when the password is set (token would need a nullable/absent user and an email key).
+`auth.users` + `profiles` → `users` (ADR-04) with a **single `users.name`** (Laravel-standard; confirmed — no `first_name`/`last_name`). The application collects one `full_name`; at activation it is copied verbatim to `users.name`, so names are never split or reconstructed. Because `account_setup_tokens` must reference a user, the `users` row is created at activation with `password NULL`, `status pending_setup` (▲ C5); a NULL password can never validate and login also requires `status='active'`. There is **no public self-registration** (frontend C-03): accounts exist only through activation (or admin provisioning). **Why.** Keeps `memberships.user_id` and the token FK meaningful, lets the setup flow *set* the first password rather than *create* the account (matching architecture `04` §7's intent), and avoids the unreliable name-splitting that a two-column model would force on single-name applicants. **Rejected:** creating the user only when the password is set (token would need a nullable/absent user and an email key); `first_name`/`last_name`.
 
-## DD-17 Promotions as data; categories as a pivot; snapshot on the membership
+## DD-17 ▲ The free introductory period is a standard rule, not a promotion (OD-10 resolved)
 
-`membership_promotions` + `membership_promotion_category`; resolution query at activation; membership stores promotion id **and** snapshot. ▲ (C4). **Why.** Directly implements the confirmed rules without any hard-coded "six months"; the pivot replaces a JSON array so the category link is a real FK and indexable; the snapshot makes an edited promotion unable to rewrite history.
+**Decision.** Every approved new member receives an introductory term (default **6 months**, `membership_settings.introductory_period_months`), `payment_not_required`, no fee, no payment row. There is no eligibility calculation, no promotion lookup and no re-evaluation after approval (the payment/free decision that follows approval is fixed: "payment not required" for an initial membership). Renewal after the introductory term is a paid term (if the renewal fee is never paid the membership eventually becomes deactivated; the grace period is undefined — OD-22) (fee from `membership_plans`, normally 12 months), started by the member and valid only when an admin confirms payment; there is no automatic charge or automatic renewal. The Promotions capability (`membership_promotions`, `membership_promotion_category`) is **deferred**, retained only as a design reservation for future marketing promotions and explicitly decoupled from the introductory rule (`05`).
+
+**Why.** ACI confirmed the free period as a mandatory new-member benefit; modelling it as a configurable promotion (priority, applicable categories, activation-time resolution, snapshot columns, "free ⇔ promotion" constraints) added machinery to decide something that is not conditional, and created ambiguity over when to evaluate it. A settings value plus a typed term row is the smallest correct representation, keeps the length configurable without hard-coding, and makes the "no fake £0 payment" guarantee structural (`payments.amount > 0`, term 1 has no fee).
+
+**Rejected.** Keeping promotion tables in the initial migrations "just in case" (speculative, undefined behaviour); hard-coding 6 months; storing the free flag on the member; a £0 payment/receipt.
 
 ## DD-18 ▲ Email templates and logs are tables; notifications keep Laravel's shape
 
@@ -133,15 +137,15 @@ Two flat roles as `users.role` with a CHECK. **Why.** ADR-05: nothing in the con
 
 **Decision.** No triggers, stored procedures or events. Use NOT NULL, UNIQUE, FK, CHECK and generated-column keys for everything they can express; document the rest as application rules with reconciliation queries (`15`).
 
-**Why.** Triggers are often unavailable or restricted on shared hosting, are invisible to Laravel tests and factories, and make behaviour depend on hidden DB state. The engine baseline (MySQL ≥ 8.0.16) is stated so the CHECK dependency is explicit and verifiable (OD-08).
+**Why.** Triggers are often unavailable or restricted on shared hosting, are invisible to Laravel tests and factories, and make behaviour depend on hidden DB state. The engine baseline is **MySQL 8.4 (production 8.4.6; minimum ≥ 8.0.19)** — confirmed, OD-08 resolved — so CHECK enforcement is a stated, testable dependency (`18`).
 
 ## DD-20 Time: UTC `TIMESTAMP` for instants, `DATE` for business dates
 
-Instants (`*_at`) are UTC `TIMESTAMP` (Laravel default). Business-calendar facts (`starts_on`, `expires_on`, promotion window) are `DATE`. **Why.** `DATE` is immune to the 2038 `TIMESTAMP` limit and matches how members and promotions reason ("valid until 14 April"). The business timezone used to decide *today* at activation is unresolved (OD-09).
+Instants (`*_at`) are UTC `TIMESTAMP` (Laravel default; connection time zone pinned to `+00:00`, `18` §3.10). Business-calendar facts (`starts_on`, `expires_on`, `activated_on`) are `DATE`. **Why.** `DATE` is immune to the 2038 `TIMESTAMP` limit and matches how members reason ("valid until 14 April"). The business timezone used to decide *today* at activation is unresolved (OD-09).
 
 ## DD-21 Generated-column keys instead of partial unique indexes
 
-MySQL has no partial unique index; "at most one open/active X" is a virtual generated column that is `NULL` when inactive, plus `UNIQUE`. Six uses (`14` §4). **Why.** Portable (MySQL 5.7+/MariaDB 10.2+), no triggers, cheap (virtual), and expresses exactly the business sentence. **Rejected:** application-only uniqueness (racy); soft-delete-style sentinel values (pollutes data).
+MySQL has no partial unique index; "at most one open/active X" is a `VIRTUAL` generated column that is `NULL` when inactive, plus `UNIQUE`. Seven uses (`14` §4). **Why.** Supported by MySQL 8.4 (secondary/UNIQUE indexes on virtual columns), no triggers, cheap (virtual), and expresses exactly the business sentence. **Rejected:** application-only uniqueness (racy); soft-delete-style sentinel values (pollutes data).
 
 ## DD-22 Tables intentionally reduced or removed relative to the reference
 

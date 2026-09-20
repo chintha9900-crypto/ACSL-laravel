@@ -37,8 +37,8 @@ Owners today: a membership application, a payment, a job application. Three opti
 | `payment_id` | BIGINT UNSIGNED | Y | NULL | FK → `payments` |
 | `job_application_id` | BIGINT UNSIGNED | Y | NULL | FK → `job_applications` |
 | `uploaded_by_user_id` | BIGINT UNSIGNED | Y | NULL | FK → `users`. NULL = the anonymous (pre-account) applicant. |
-| `disk` | VARCHAR(30) | N | `'private'` | `CHECK (disk <> 'public')` — a document row can never describe a publicly served file |
-| `storage_path` | VARCHAR(500) | N | — | Server-generated relative key, e.g. `aviation-proof/{application_public_id}/{ulid}.pdf`. Never derived from user input (no traversal surface). |
+| `disk` | VARCHAR(30) `ascii` | N | `'private'` | `CHECK (disk <> 'public')` — a document row can never describe a publicly served file |
+| `storage_path` | VARCHAR(500) `ascii_bin` | N | — | Server-generated relative key, e.g. `aviation-proof/{application_public_id}/{ulid}.pdf`. Never derived from user input (no traversal surface). |
 | `original_filename` | VARCHAR(255) | N | — | Display only; sanitised; never used to build a path |
 | `mime_type` | VARCHAR(127) | N | — | **Server-detected** (magic bytes), not the browser-reported type |
 | `size_bytes` | INT UNSIGNED | N | — | `CHECK (size_bytes > 0)` |

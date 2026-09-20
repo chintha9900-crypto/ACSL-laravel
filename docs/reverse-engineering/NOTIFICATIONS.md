@@ -31,6 +31,8 @@ Rows 2, 3, 4, 5, and 8 below describe the **legacy Lovable app's** membership-re
 
 ## CONFIRMED ACI membership emails (2026-09-15) — supersedes rows 2–5 and 8 above
 
+> **UPDATE (OD-10):** M4 is now the approval email for **every** new member (approved; payment/free decision confirms no payment is required; first N months free — not a promotion email; sent at approval/decision, with activation confirmed by M8/M9). M5–M7 (payment instructions / acknowledgement / rejection) now belong to **renewal** payments, and M10/M11 are the renewal reminder and expiry notices (timing configurable; no auto-charge). See `docs/database/08_NOTIFICATION_SCHEMA.md` and `docs/architecture/06_NOTIFICATION_ARCHITECTURE.md`.
+
 Per WORKFLOWS.md §0, the confirmed membership application/activation workflow requires the following notifications. None of these have been implemented (no Mailable/Notification classes exist yet) — this is a requirements record for the ARCHITECTURE phase.
 
 | # | Trigger | Recipient | Required content |

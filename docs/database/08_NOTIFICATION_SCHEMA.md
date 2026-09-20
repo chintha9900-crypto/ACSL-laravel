@@ -62,14 +62,14 @@ Admin-manageable subject and body for the confirmed membership emails M1–M11 a
 | M1 | `membership.application_submitted` | application submitted |
 | M2 | `membership.more_details_requested` | admin requests more details |
 | M3 | `membership.application_rejected` | rejected |
-| M4 | `membership.approved_free_promotion` | approved + promotion applies (must render the promotion's actual free duration) |
-| M5 | `membership.approved_payment_required` | approved, payment required (renders fee + active bank account at send time) |
-| M6 | `payment.confirmation_submitted` | evidence submitted |
-| M7 | `payment.confirmation_rejected` | evidence rejected (resubmission possible) |
-| M8 | `membership.welcome` | activated |
+| M4 | `membership.approved_introductory` | **every** approval (sent when the payment/free decision confirms payment is not required; activation itself is confirmed by M8/M9): approved, first N months free (N read from the term's `duration_months`/settings — never typed into the copy). Not a promotion email (OD-10). |
+| M5 | `membership.renewal_payment_instructions` | **re-scoped by OD-10:** no longer sent at approval (the initial membership needs no payment). Sent when a member starts a renewal: renewal fee (from the active plan) + active bank account, read at send time |
+| M6 | `payment.confirmation_submitted` | renewal payment evidence submitted |
+| M7 | `payment.confirmation_rejected` | renewal payment evidence rejected (resubmission possible; renewal not restarted) |
+| M8 | `membership.welcome` | activated (first activation) |
 | M9 | `membership.account_setup` | activated (setup link; may be merged with M8) |
-| M10 | `membership.renewal_reminder` | 30/7/0 days before `expires_on` |
-| M11 | `membership.expired` | expired |
+| M10 | `membership.renewal_reminder` | configurable offsets before the current term's `expires_on` (recommended 30/7/0); explains the renewal fee (read from the active plan) and how to renew; **never implies auto-charge or auto-renewal** |
+| M11 | `membership.expired` | the last term expired without a confirmed renewal (the membership number is retained) |
 | — | `referral.invitation` | member sends an invite |
 
 Not templated (remain Blade views): contact-enquiry admin alert and order-placed admin alert (internal mail, no editing need).
@@ -93,22 +93,24 @@ Operational record of each outbound email. Written from Laravel's `NotificationS
 | `status` | VARCHAR(20) | N | `'queued'` | `queued`, `sent`, `failed`. `sent` = accepted by the SMTP server; SMTP provides no delivery receipt, so **`delivered`/`bounced` are not modelled** (DEFER until a provider with webhooks is adopted). |
 | `attempts` | SMALLINT UNSIGNED | N | 0 | |
 | `error_message` | VARCHAR(1000) | Y | NULL | Truncated transport error; no credentials |
-| `membership_application_id` | BIGINT UNSIGNED | Y | NULL | FK — typed link for the dominant use ("was M5 sent for this application?") |
+| `membership_application_id` | BIGINT UNSIGNED | Y | NULL | FK — typed link for application-stage mail ("was M1/M4 sent for this application?") |
+| `membership_id` | BIGINT UNSIGNED | Y | NULL | FK — typed link for member-stage mail (renewal instructions M5, reminders M10, expiry M11) |
 | `order_id` | BIGINT UNSIGNED | Y | NULL | FK — order emails |
 | `queued_at` | TIMESTAMP | N | CURRENT_TIMESTAMP | |
 | `sent_at` | TIMESTAMP | Y | NULL | |
 | `failed_at` | TIMESTAMP | Y | NULL | |
 | `created_at`, `updated_at` | TIMESTAMP | Y | NULL | |
 
-Two typed nullable FKs (not polymorphic) cover the only entities for which "did the email go out" is an operational question. Emails for other entities are found by recipient + template + time. Adding a third link later is an additive column.
+Three typed nullable FKs (application, member, order — not polymorphic) cover the only entities for which "did the email go out" is an operational question. Emails for other entities are found by recipient + template + time. Adding a third link later is an additive column.
 
 | FK | Parent | Cardinality | ON DELETE |
 |---|---|---|---|
 | `user_id` | `users` | many : 0..1 | RESTRICT |
 | `membership_application_id` | `membership_applications` | many : 0..1 | RESTRICT |
+| `membership_id` | `memberships` | many : 0..1 | RESTRICT |
 | `order_id` | `orders` | many : 0..1 | RESTRICT |
 
-Indexes: `(membership_application_id, template_key)`, `(to_email, created_at)`, `(status, queued_at)` (failed-email sweep), FK indexes on `user_id`, `order_id`. `CHECK (status IN ('queued','sent','failed'))`. Soft delete: **NO**. Retention: contains third-party addresses (referral invitees, enquirers) → retention policy open (OD-11, OD-15).
+Indexes: `(membership_application_id, template_key)`, `(to_email, created_at)`, `(status, queued_at)` (failed-email sweep), FK indexes on `user_id`, `membership_id`, `order_id`; `(membership_id, template_key)`. `CHECK (status IN ('queued','sent','failed'))`. Soft delete: **NO**. Retention: contains third-party addresses (referral invitees, enquirers) → retention policy open (OD-11, OD-15).
 
 ## 5. Explicitly not designed
 

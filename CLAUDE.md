@@ -29,8 +29,8 @@ Do not copy its React, TypeScript, TanStack, Supabase, PostgreSQL, or Supabase R
 The target application is:
 
 * Laravel 12 (12.x; current local version 12.69.2)
-* PHP 8.2+ (current local version 8.2.12)
-* MySQL
+* PHP 8.2+ (current local version 8.2.12; production 8.2.33)
+* MySQL 8.4 (production: MySQL 8.4.6, utf8mb4; documented minimum 8.0.19)
 * Blade
 * Livewire where appropriate
 * Laravel Boost
@@ -41,9 +41,9 @@ The target application is:
 * Tailwind CSS
 * SiteGround-compatible deployment
 
-XAMPP is the local development environment (XAMPP MySQL for the local database).
+XAMPP is the local development environment. Note: XAMPP's bundled database is MariaDB 10.4.32, which is **not** production-equivalent; development should ultimately use MySQL 8.x matching production, and database-integrity/integration tests must run on MySQL 8.x (not SQLite). See `docs/database/18_MYSQL_84_COMPATIBILITY_REVIEW.md`.
 
-SiteGround is the production host; SiteGround MySQL is the intended production database.
+SiteGround is the production host (Apache, PHP 8.2.33); its MySQL 8.4.6 is the production database.
 
 No Supabase and no Vercel in the target architecture.
 

@@ -27,11 +27,11 @@ Redirects to `/membership/benefits` (no membership home page). Keep the redirect
 
 ### A4. Membership Benefits — `/membership/benefits`
 * **Purpose:** compare categories, self-check eligibility, explain the process, drive applications.
-* **Sections:** hero band ("Choose your *membership.*") · category cards on a `#004d82` shell in a 2-col layout — **Student** (launch banner, price, benefits, eligibility checker), **Veteran** (price, benefits, checker), **Professional** (3 tiers Core/Premier/Inner-Circle with prices + benefits, checker) · **Application Process** (6 steps: horizontal chevron band ≥`lg`, 2-col grid below).
-* **Components:** `membership.category-card`, `membership.benefit-list`, `membership.eligibility-check` (Alpine accordion: yes/no radios, profession select, proof yes/no, "Apply Now"), `membership.process-steps`, `membership.promotion-banner`.
+* **Sections:** hero band ("Choose your *membership.*") · category cards on a `#004d82` shell in a 2-col layout — **Student** (launch banner, price, benefits, eligibility checker), **Veteran** (price, benefits, checker), **Professional** (3 tiers Core/Premier/Inner-Circle with prices + benefits, checker) · **Application Process** (reference: 6 steps incl. a pre-activation "Payment Confirmation" — re-worded per the note below; horizontal chevron band ≥`lg`, 2-col grid below).
+* **Components:** `membership.category-card`, `membership.benefit-list`, `membership.eligibility-check` (Alpine accordion: yes/no radios, profession select, proof yes/no, "Apply Now"), `membership.process-steps`, `membership.introductory-offer`.
 * **Primary CTA:** Apply Now (each card) → `/membership/apply`. **Secondary:** Check eligibility. **Forms:** the checkers are non-persisted self-assessment.
-* **Data:** all **hard-coded** in the reference (LKR 3,500 student, LKR 3,000 veteran, LKR 5,000/10,000/25,000 professional; benefit lists; "Launch Offer — First 100 eligible students get FREE membership"; study-area and profession lists). **Target: data-driven** — names, fees, currency, duration from `membership_plans`/`membership_categories`; free offer from an **active `membership_promotions` row** (name + free months) — never hard-coded. The "first 100 students" offer is a *different* legacy promotion and must not be conflated with the confirmed introductory promotion.
-* **Conflicts with approved architecture:** the legacy three Professional tiers are **not carried over** — exactly three categories, Professional = one active plan (`08` C-04, approved); process step 5 "Payment Confirmation" must be shown as **conditional** (skipped when a promotion applies), and step 6 should mention the membership number and account setup. Eligibility thresholds in the checkers (≥3 months studying, ≥3 years experience) are legacy assumptions — **TBC with ACI** (aviation-proof types are DB OD-20).
+* **Data:** all **hard-coded** in the reference (LKR 3,500 student, LKR 3,000 veteran, LKR 5,000/10,000/25,000 professional; benefit lists; "Launch Offer — First 100 eligible students get FREE membership"; study-area and profession lists). **Target: data-driven** — names, fees, currency, duration from `membership_plans`/`membership_categories`; the **first-6-month free introductory period** from `membership_settings.introductory_period_months` (standard for every approved new member — **not a promotion**, shown as "First N months free") and the renewal fee from the active plan — never hard-coded. The "first 100 students" offer is a *different* legacy promotion and must not be conflated with the confirmed introductory promotion.
+* **Conflicts with approved architecture:** the legacy three Professional tiers are **not carried over** — exactly three categories, Professional = one active plan (`08` C-04, approved); the process must be re-worded to the approved flow: **submit application with proof → admin review (possible request for more details) → approval and activation → first 6 months free → renewal reminder before expiry → pay renewal fee → renewed (normally 12 months)** — there is **no payment step before activation**; the membership number is issued once and kept for life. Eligibility thresholds in the checkers (≥3 months studying, ≥3 years experience) are legacy assumptions — **TBC with ACI** (aviation-proof types are DB OD-20).
 * **Auth:** none. **Type:** Blade + Alpine (checkers). **Responsive:** cards stack `<md`; process band → 2-col grid.
 
 ### A5. Club Rules — `/membership/rules`
@@ -116,15 +116,14 @@ Status timeline built from `membership_status_history` (Submitted → More detai
 * `submitted` — "We're reviewing your application."
 * `more_details_required` → **B2**.
 * `rejected` — reason (if shared), date they may reapply (cooldown), link to Apply.
-* `approved` + free path — "Your membership is active" (number shown once account/card ready) + account-setup notice.
-* `approved` + paid path, `payment_pending` → **B3**; `payment_confirmation_submitted` — "Awaiting confirmation"; rejected payment → back to pending with reason.
+* `approved` — for **every** new member: approval is not yet activation. Until the membership is activated the page shows "Approved — your membership is being activated" (no payment is required; the first N months are free). Once activated: the membership number, "your first N months are free", and the account-setup notice (activation trigger open — DB OD-23). There is no payment state before activation.
 **Type:** Blade.
 
 ### B2. Respond to request — `/applications/{public_id}/details`
 Shows the admin's request text; response textarea + optional multipart uploads (aviation proof supplements); Submit. Only valid while an unanswered request exists. **Type:** Blade multipart.
 
-### B3. Pay membership fee — `/applications/{public_id}/payment`
-Fee (from the membership's snapshot), **bank details from the active `payment_bank_accounts` row** (bank, account name/number, sort code/IBAN/SWIFT where set, instructions — never hard-coded), reference field, **evidence upload** (image/PDF), Submit confirmation. After submit: read-only "Awaiting confirmation". Not shown for promotional memberships. **Type:** Blade multipart.
+### B3. *(Removed — no pre-activation payment)*
+The initial membership is free for the first 6 months for every approved new member (OD-10), so there is **no "pay membership fee" page for applicants**. Payment exists only for **renewals**, which are made by the signed-in member on `/dashboard/membership` (renewal fee from the active plan, bank details from the active bank account, reference + private evidence upload — `04_MEMBER_PAGES.md` §4). The ID B3 is kept so existing references stay stable.
 
 ### B4. Account setup — `/account/setup/{token}`
 One-time link from the welcome email: "Create your password" (new + confirm), submit, then sign-in. Invalid/expired/used → one generic "This link is no longer valid" page with a way to request help (no reason disclosed). **Type:** Blade (`layouts.auth`).
@@ -135,4 +134,4 @@ One-time link from the welcome email: "Create your password" (new + confirm), su
 |---|---|
 | Reference public pages | 18 (+ `sitemap.xml`; 404/error views) |
 | Of which target changes materially | Apply, Benefits (data-driven), Auth (sign-in only), About (copy/CTA), Rules/Privacy/Terms (content), Jobs (filters/apply) |
-| New pages required by approved workflow | 4 (B1–B4) + forgot-password as its own page |
+| New pages required by approved workflow | 3 (B1, B2, B4; B3 removed) + forgot-password as its own page |

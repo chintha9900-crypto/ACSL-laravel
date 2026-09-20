@@ -24,12 +24,14 @@ Design only. This document consolidates the index, uniqueness, CHECK and generat
 | `membership_applications` | `public_id` | public identifier |
 | `membership_applications` | `open_email_key` (generated) | ≤ 1 open application per email |
 | `membership_details_requests` | `open_request_key` (generated) | ≤ 1 unanswered request per application |
-| `memberships` | `membership_application_id` | 1 application → ≤ 1 membership |
-| `memberships` | `membership_number` | **complete number unique** |
+| `memberships` | `membership_application_id` | 1 application → ≤ 1 member |
+| `memberships` | `user_id` | one person = one member for life |
+| `memberships` | `membership_number` | **complete number unique** (issued once, never changes at renewal) |
 | `memberships` | `(membership_category_id, number_year, number_sequence)` | **sequence never duplicated**, independent of the random digits |
 | `memberships` | `verification_token` | future QR token |
 | `membership_number_sequences` | `(membership_category_id, sequence_year)` | one counter per category/year; the lock target |
-| `membership_promotion_category` | PK `(promotion, category)` | no duplicate links |
+| `membership_terms` | `(membership_id, term_no)` | one row per term number (term 1 = the single introductory term) |
+| `membership_terms` | `open_renewal_key` (generated) | ≤ 1 renewal awaiting payment per member |
 | `payment_bank_accounts` | `active_currency_key` (generated) | ≤ 1 active account per currency |
 | `payments` | `public_id` | |
 | `payments` | `(gateway, idempotency_key)` | idempotent payment creation |
@@ -57,7 +59,7 @@ Design only. This document consolidates the index, uniqueness, CHECK and generat
 
 ### 3.1 Closed vocabularies guarded by `CHECK (col IN (...))`
 
-Only ACI-confirmed or legacy-closed sets. Columns are `VARCHAR`; the PHP backed enum is the primary definition, the CHECK is a backstop against typos and raw writes.
+Only ACI-confirmed or legacy-closed sets. Columns are `VARCHAR` declared `ascii` + `ascii_bin` (exact-match, so the CHECK is not case-insensitive — `18` A-5); the PHP backed enum is the primary definition, the CHECK is a backstop against typos and raw writes.
 
 | Column | Values |
 |---|---|
@@ -66,9 +68,10 @@ Only ACI-confirmed or legacy-closed sets. Columns are `VARCHAR`; the PHP backed 
 | `account_setup_tokens.purpose` | `account_setup`, `membership_link` |
 | `membership_categories.code` | `S`, `P`, `V` |
 | `membership_applications.status` | `submitted`, `more_details_required`, `approved`, `rejected` |
-| `memberships.status` | `pending_activation`, `active`, `expired` |
-| `memberships.payment_status` | `payment_not_required`, `payment_pending`, `payment_confirmation_submitted`, `payment_confirmed`, `payment_rejected` |
-| `membership_status_history.actor_type` | `applicant`, `admin`, `system` |
+| `membership_terms.term_kind` | `introductory`, `renewal` |
+| `membership_terms.status` | `pending_payment`, `active`, `expired` |
+| `membership_terms.payment_status` | `payment_not_required`, `payment_pending`, `payment_confirmation_submitted`, `payment_confirmed`, `payment_rejected` |
+| `membership_status_history.actor_type` | `applicant`, `admin`, `member`, `system` |
 | `payments.status` | `pending`, `processing`, `paid`, `failed`, `cancelled`, `refunded`, `partially_refunded` |
 | `payment_webhooks.processing_status` | `received`, `processing`, `processed`, `failed`, `ignored` |
 | `documents.kind` | `aviation_proof`, `payment_evidence`, `job_application_document` |
@@ -84,27 +87,24 @@ Only ACI-confirmed or legacy-closed sets. Columns are `VARCHAR`; the PHP backed 
 
 **Deliberately *not* CHECK-guarded** (provisional or open vocabularies — enum only): `job_applications.status`, `contact_enquiries.status`, `blog_comments.status`, `blog_posts/news_items/event_listings/job_postings.status`, `payment_refunds.status`, `payments.gateway`, `membership_status_history.event`, `audit_logs.event`.
 
-**Maintainability of CHECK vocabularies:** adding a value to a CHECK-guarded set is a small migration (`ALTER TABLE … DROP CHECK …; ADD CONSTRAINT …`) on a table that is either tiny or metadata-cheap; that friction is intentional for sets that are business-locked (four application statuses, five payment states, eight order/ledger vocabularies). Sets expected to evolve are left to the enum.
+**Maintainability of CHECK vocabularies:** adding a value to a CHECK-guarded set is a small migration (`ALTER TABLE … DROP CONSTRAINT …; ADD CONSTRAINT …`, valid on MySQL ≥ 8.0.19 including 8.4) on a table that is either tiny or metadata-cheap; that friction is intentional for sets that are business-locked (four application statuses, five payment states, eight order/ledger vocabularies). Sets expected to evolve are left to the enum.
 
 ### 3.2 Structural and money CHECKs
 
 | Table | Constraint | Purpose |
 |---|---|---|
-| `payments` | `(membership_id IS NULL) <> (order_id IS NULL)` | **exactly one purpose** |
+| `payments` | `(membership_term_id IS NULL) <> (order_id IS NULL)` | **exactly one purpose** |
 | `payments` | `amount > 0` | no £0 payment |
 | `payment_refunds` | `amount > 0` | |
 | `membership_plans` | `fee_amount > 0`; `duration_months > 0` | |
-| `memberships` | `fee_amount > 0` | |
-| `memberships` | number REGEXP `^[SPV][0-9]{8}$`; number ⇔ components; `number_sequence BETWEEN 1 AND 9999`; `YY`/`SSSS` substrings equal components | **9-character number shape** |
-| `memberships` | lifecycle (pending ⇒ no number/dates; active/expired ⇒ number + dates, `expires_on >= starts_on`) | number only at activation |
-| `memberships` | `status='pending_activation' OR payment_status IN ('payment_not_required','payment_confirmed')` | no activation before payment settled |
-| `memberships` | `(payment_status='payment_not_required') = (membership_promotion_id IS NOT NULL)` | free ⇔ promotion |
-| `memberships` | promotion snapshot all-or-nothing | |
+| `membership_terms` | `(term_kind = 'introductory') = (term_no = 1)`; `(term_kind = 'introductory') = (payment_status = 'payment_not_required')`; introductory ⇒ no fee/plan, renewal ⇒ `fee_amount > 0` + currency + plan | **free ⇔ introductory term; no £0 fee anywhere** |
+| `memberships` | number REGEXP `^[SPV][0-9]{8}$`; `number_sequence BETWEEN 1 AND 9999`; `YY`/`SSSS` substrings equal `number_year`/`number_sequence` | **9-character number shape** (all columns NOT NULL — the row exists only after activation) |
+| `membership_terms` | lifecycle: `pending_payment` ⇒ no dates; `active/expired` ⇒ dates set, `expires_on >= starts_on`; `pending_payment` only for renewals | dates exist exactly when a term is valid |
+| `membership_terms` | `status = 'pending_payment' OR payment_status IN ('payment_not_required','payment_confirmed')` | a term is valid only when payment is settled or not required |
 | `membership_number_sequences` | `last_number BETWEEN 0 AND 9999` | four-digit capacity |
 | `membership_applications` | decision columns ⇔ decided status; `approved ⇒ proof_reviewed_at NOT NULL` | proof review before approval |
-| `membership_promotions` | `ends_on >= starts_on`; free ⇒ months > 0; months ≤ 120 | |
 | `documents` | one-owner arc tied to `kind`; `disk <> 'public'`; `size_bytes > 0`; purge pair | privacy |
-| `audit_logs` | subject pair both-or-neither; `actor_type='user' ⇒ user_id NOT NULL`; `JSON_VALID` on old/new | |
+| `audit_logs` | subject pair both-or-neither; `actor_type='user' ⇒ user_id NOT NULL` | |
 | `product_variants` | `price >= 0`; `quantity_on_hand >= 0`; `quantity_reserved >= 0`; `quantity_reserved <= quantity_on_hand` | **no negative/oversold stock** |
 | `inventory_transactions` | per-type sign matrix; order-driven types require `order_item_id`; not both deltas zero | |
 | `carts` | `user_id IS NOT NULL OR guest_token IS NOT NULL` | |
@@ -122,6 +122,7 @@ Only ACI-confirmed or legacy-closed sets. Columns are `VARCHAR`; the PHP backed 
 | `membership_plans` | `active_category_key` | `IF(is_active=1, membership_category_id, NULL)` | one active plan/category |
 | `membership_applications` | `open_email_key` | `IF(status IN ('submitted','more_details_required'), email, NULL)` | one open application/email |
 | `membership_details_requests` | `open_request_key` | `IF(responded_at IS NULL, membership_application_id, NULL)` | one unanswered request/application |
+| `membership_terms` | `open_renewal_key` | `IF(status = 'pending_payment', membership_id, NULL)` | one renewal awaiting payment/member |
 | `account_setup_tokens` | `live_key` | `IF(used_at IS NULL AND invalidated_at IS NULL, CONCAT(user_id,':',purpose), NULL)` | one live token/(user,purpose) |
 | `payment_bank_accounts` | `active_currency_key` | `IF(is_active=1, currency, NULL)` | one active account/currency |
 | `inventory_transactions` | `once_key` | `IF(type IN ('reservation','sale','release'), CONCAT(order_item_id,':',type), NULL)` | once-only stock events per order line |
@@ -135,14 +136,13 @@ All are `VIRTUAL` (nothing stored beyond the unique index entry), read-only to E
 | Admin application review queue | `membership_applications (status, submitted_at)` | oldest `submitted` first |
 | **Reapplication cooldown** | `(email, status, decided_at)` and `(mobile, status, decided_at)` | newest `rejected` for this applicant |
 | Member's own applications | `(user_id, status)` | dashboard |
-| Expiry job + 30/7/0-day reminders | `memberships (status, expires_on)` | `status='active' AND expires_on = ?` / `< today` |
-| Payment confirmation queue | `memberships (status, payment_status)`; `payments (status, submitted_at)` | evidence awaiting review |
-| Member's memberships (current + history) | `memberships (user_id, status)` | |
+| Expiry job + configurable renewal reminders | `membership_terms (status, expires_on)` | `status='active' AND expires_on = ?` / `< today` |
+| Payment confirmation queue | `membership_terms (status, payment_status)`; `payments (status, submitted_at)` | evidence awaiting review |
+| Member's current term + history | `membership_terms (membership_id, term_no)` unique; `memberships (user_id)` unique | |
 | Membership card / verification | `memberships (membership_number)` unique | lookup by number |
-| **Promotion resolution** | `membership_promotions (is_active, starts_on, ends_on, priority)` + pivot `(category, promotion)` | activation-time resolution query |
 | **Webhook idempotency / sweeper** | `payment_webhooks (gateway, event_id)` unique; `(processing_status, received_at)` | dedupe; re-dispatch stuck events |
 | Payment lookup from provider | `payments (gateway, transaction_reference)` | webhook → payment |
-| Payments by target | `(membership_id, status)`, `(order_id, status)` | |
+| Payments by target | `(membership_term_id, status)`, `(order_id, status)` | |
 | **Unread count** | `notifications (notifiable_type, notifiable_id, read_at)` | `COUNT(*) … read_at IS NULL` |
 | Audit by subject / actor / event | see `09` | |
 | Blog/news/events/jobs public lists | `(status, published_at)`; events `(status, starts_at)` | published-only listing |
@@ -153,17 +153,23 @@ All are `VIRTUAL` (nothing stored beyond the unique index entry), read-only to E
 
 ## 6. Indexes intentionally not created
 
-`users(status)`, `users(last_name, first_name)` (admin search is a small `LIKE` scan; revisit with data), FULLTEXT on blog titles (optional later), `documents(kind)` alone, `audit_logs(ip_address)`, `payments(currency)`, `orders(customer_email)` unless guest checkout is approved, any single-column index on `is_active`/`status` for tables under a few thousand rows. Adding an index later is a cheap online DDL; removing dead weight from a hot append-only table is not free.
+`users(status)`, `users(name)` (admin search is a small `LIKE` scan; revisit with data), FULLTEXT on blog titles (optional later), `documents(kind)` alone, `audit_logs(ip_address)`, `payments(currency)`, `orders(customer_email)` unless guest checkout is approved, any single-column index on `is_active`/`status` for tables under a few thousand rows. Adding an index later is a cheap online DDL; removing dead weight from a hot append-only table is not free.
 
-## 7. Engine constraints that shaped the design
+## 7. Engine constraints that shaped the design (target: MySQL 8.4)
 
-| MySQL rule | Consequence |
+**Target engine (confirmed, OD-08 RESOLVED):** production is **MySQL 8.4.6** (utf8mb4, PHP 8.2.33, Apache). The design targets MySQL **8.4 LTS** behaviour with Laravel's `mysql` driver. Minimum assumption: **MySQL ≥ 8.0.19** (CHECK enforcement since 8.0.16; `ALTER TABLE … DROP CONSTRAINT` since 8.0.19); development should use 8.4.x to match production. MariaDB (including the local XAMPP 10.4.32) is **not** a production-equivalent database and no MariaDB-specific syntax is used. The full compatibility review, with required adjustments, is in `18_MYSQL_84_COMPATIBILITY_REVIEW.md`.
+
+| MySQL rule | Consequence in this design |
 |---|---|
-| CHECK enforced only from 8.0.16 (5.7 ignores it silently); MariaDB from 10.2.1 | Every CHECK-backed invariant also has an application guard and a reconciliation query (`15`). Engine/version verification is OD-08. |
-| A column used in a CHECK may not carry a FK with `CASCADE`/`SET NULL`/`SET DEFAULT` referential actions (`RESTRICT`/`NO ACTION` are permitted — **confirm this exact combination on the target server as the first migration spike**, OD-08) | All FKs on CHECKed columns are `RESTRICT` (`payments.membership_id/order_id`, `documents.*_id`, `carts.user_id`, `orders.coupon_id/shipping_method_id`, `inventory_transactions.order_item_id`, `memberships.membership_promotion_id`, …). |
-| CHECK expressions may not use subqueries or non-deterministic functions | No CHECK depends on another table or on `NOW()`; cross-table rules are application-layer (`15`). |
-| Generated columns cannot reference columns with `ON UPDATE CASCADE`/`SET NULL` FKs | All referenced base columns are `RESTRICT`-FK or plain columns. |
+| CHECK constraints are enforced (8.0.16+) | Used for closed vocabularies, money, number shape, lifecycle consistency, payment purpose. Every CHECK-backed invariant *also* has an application guard and a reconciliation query (`15`). |
+| CHECK names are **schema-wide** unique; a CHECK may not use subqueries, non-deterministic functions, or columns with `CASCADE`/`SET NULL`/`SET DEFAULT` FK actions | Name every CHECK `{table}_{rule}`; all CHECK expressions use only their own row's columns; all history-bearing FKs use the default `NO ACTION` (identical to `RESTRICT` in InnoDB) — `18` §3.1. |
+| Generated columns: deterministic expressions only; a `VIRTUAL` column may carry a secondary (incl. UNIQUE) index; FKs must not reference a virtual column | Seven `*_key` columns (§4) are `VIRTUAL` with a UNIQUE index; none is an FK target. |
 | No partial unique indexes | Replaced by generated `*_key` columns (§4). |
-| Multiple `NULL`s allowed in a UNIQUE index | Used deliberately (`membership_number`, `verification_token`, `guest_token`, `*_key`, `(payment_id, gateway_reference)`). |
-| No triggers/stored procedures | Append-only and cross-row rules are application rules; optional DB-user privilege hardening only. |
-| `TIMESTAMP` ends 2038-01-19 | Far-future business dates use `DATE` (`expires_on`, promotion windows). |
+| Multiple `NULL`s allowed in a UNIQUE index | Used deliberately (`verification_token`, `guest_token`, `*_key`, `(payment_id, gateway_reference)`, `memberships.user_id`). |
+| Native `JSON` type validates on write | No `JSON_VALID` CHECKs are needed or used (`18` §3.9). |
+| InnoDB index key limit 3072 bytes (DYNAMIC) | Widest key is `documents(disk, storage_path)`; keep machine identifiers `ascii` (`18` §3.3). |
+| `REGEXP` = ICU regex; `_bin` collations are case-sensitive | `membership_number` check is exact and case-sensitive (`ascii_bin`). |
+| Default `sql_mode` includes `ONLY_FULL_GROUP_BY`, strict trans tables | Reconciliation queries and reports must be full-group-by clean (`18` §5). |
+| UPDATE reports **changed** rows by default | Compare-and-set updates must always change a column (`18` §5). |
+| No triggers/stored procedures used | Append-only and cross-row rules are application rules; optional DB-user privilege hardening only. |
+| `TIMESTAMP` ends 2038-01-19 | Far-future business dates use `DATE` (`activated_on`, `starts_on`, `expires_on`). |

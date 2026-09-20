@@ -1,94 +1,61 @@
-# 05 — Promotion Schema
+# 05 — Introductory Period and Promotions
 
-Design only. Tables: `membership_promotions`, `membership_promotion_category`. The six-month introductory offer is **one row of data** in `membership_promotions`; nothing in the schema or (later) the code refers to "six months" or "introductory".
+**Revised by the confirmed decision OD-10.** This document now distinguishes two different concepts that earlier revisions conflated:
 
-Legend: **N** = `NOT NULL`, **Y** = nullable. All FKs `ON UPDATE RESTRICT`.
-
-## 1. `membership_promotions` — CONFIRMED
-
-| Column | Type | Null | Default | Notes |
-|---|---|---|---|---|
-| `id` | BIGINT UNSIGNED AI | N | — | PK |
-| `name` | VARCHAR(150) | N | — | e.g. "Introductory free membership" (data) |
-| `description` | TEXT | Y | NULL | Internal/admin description |
-| `is_active` | TINYINT(1) | N | 1 | Master on/off switch |
-| `starts_on` | DATE | N | — | First day the promotion can be applied |
-| `ends_on` | DATE | N | — | Last day the promotion can be applied (inclusive). **Applies to the *activation* date, not to the length of the free period** — see §3. |
-| `grants_free_membership` | TINYINT(1) | N | 1 | The "free membership flag" from the confirmed requirement |
-| `free_duration_months` | SMALLINT UNSIGNED | Y | NULL | Length of the free term. `NOT NULL` when `grants_free_membership = 1`. |
-| `priority` | SMALLINT UNSIGNED | N | — | Lower number = higher priority. Deterministic tie-break: `ORDER BY priority ASC, id ASC`. |
-| `created_by_user_id` | BIGINT UNSIGNED | Y | NULL | FK → `users` RESTRICT |
-| `updated_by_user_id` | BIGINT UNSIGNED | Y | NULL | FK → `users` RESTRICT |
-| `created_at`, `updated_at` | TIMESTAMP | Y | NULL | |
-
-**CHECK constraints**
-
-| Constraint | Meaning |
-|---|---|
-| `ends_on >= starts_on` | valid window |
-| `grants_free_membership = 0 OR free_duration_months > 0` | a free promotion must state how long it is free for |
-| `free_duration_months IS NULL OR free_duration_months <= 120` | sanity bound against typos (10 years); adjustable data-quality guard, not a business rule |
-
-**What a promotion may *not* be:** there is no discount-percentage, coupon or stacking field. The confirmed model is "free for N months"; a non-free promotion (`grants_free_membership = 0`) has no defined behaviour today and is reserved for a future rule change (any such column would be additive).
-
-**Foreign keys**
-
-| FK column | Parent | Cardinality | ON DELETE |
-|---|---|---|---|
-| `created_by_user_id`, `updated_by_user_id` | `users` | many : 0..1 | RESTRICT |
-
-**Indexes**
-
-| Index | Columns | Reason |
+| Concept | What it is | Status in the schema |
 |---|---|---|
-| `…_resolution_index` | `is_active, starts_on, ends_on, priority` | the activation-time resolution query (active, date-in-window, ordered by priority) |
-| FK indexes | the two user FKs | |
+| **Introductory free period** | The first **6 months** of membership are **free for every approved new member**. A standard, mandatory, membership-lifecycle rule — *not* optional, *not* a promotion, coupon or eligibility calculation, nothing is re-evaluated after approval. | **Implemented** — settings-driven introductory term (§1). No promotion tables involved. |
+| **Marketing promotions** | Possible *future* time-limited offers (e.g. campaigns). Not defined by any confirmed requirement. | **DEFERRED** — retained as a design reservation only (§3); **no tables in the initial migration set**. |
 
-**Soft delete: NO.** A promotion is **deactivated** (`is_active = 0`), never deleted, because memberships reference it. **Audit:** every create/update is written to `audit_logs` with old/new values (`promotion.created`, `promotion.updated`) — this is how a later edit of a promotion is still traceable. **Editing after use:** because a membership stores its own snapshot (§3), editing a promotion never rewrites what an existing member was granted.
+**Rule of separation:** promotions never control, shorten, extend, replace or gate the introductory free period. Nothing in `memberships` or `membership_terms` references a promotion.
 
-## 2. `membership_promotion_category` — CONFIRMED (applicable categories, normalised)
+Legend: **N** = `NOT NULL`, **Y** = nullable.
 
-Pivot: which categories a promotion applies to. Replaces the architecture's JSON array (`whereJsonContains`) — an array in a column is not normalised, cannot carry an FK, and cannot be indexed usefully.
+## 1. The introductory free period (authoritative)
 
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `membership_promotion_id` | BIGINT UNSIGNED | N | FK → `membership_promotions`, **ON DELETE CASCADE** (link rows have no independent value; promotions are not deleted in practice) |
-| `membership_category_id` | BIGINT UNSIGNED | N | FK → `membership_categories`, ON DELETE RESTRICT |
-| PK | (`membership_promotion_id`, `membership_category_id`) | | prevents duplicates |
+Workflow: **Application submitted → Admin review → Admin approval → Payment/Free decision (initial membership: payment not required) → Membership activated → first 6 months free → before expiry, renewal/payment notifications → member pays the renewal fee → renewed for another (normally) 12 months.**
 
-Secondary index: `(membership_category_id, membership_promotion_id)` for "which promotions apply to category X". A promotion with **no** pivot rows applies to **no** category (never "all") — an explicit, safe default (application rule R-07).
+| Aspect | Rule | Where it lives |
+|---|---|---|
+| Who gets it | **Every** approved new member, all three categories, no eligibility calculation | Applied unconditionally: the payment/free decision after approval confirms payment is not required, then the activation action creates term 1 |
+| Length | 6 months (confirmed). Configurable data, never hard-coded | `membership_settings.introductory_period_months` (default 6; `04` §5) |
+| Snapshot | Each member's first term stores the length actually granted | `membership_terms.duration_months` (term 1) |
+| Starts | Actual activation date; `expires_on = starts_on + N months − 1 day` (inclusive last day). Example: activated 15 Oct 2026 → expires 14 Apr 2027 | `membership_terms.starts_on/expires_on` |
+| Payment | **None.** `payment_status = payment_not_required`. **No £0 payment row is ever created** — `payments.amount > 0` is CHECK-enforced, `membership_terms.fee_amount` is NULL for term 1 | `04` §9, `06` §3 |
+| Not re-evaluated | The payment/free decision for an initial membership is fixed (always "not required"), not evaluated per member; there is no resolution query, priority, campaign window or category applicability | — |
+| Once per member | Only term 1 can be `introductory` (`term_no = 1` ⇔ introductory); a second membership identity for the same person is blocked by `UNIQUE(user_id)` and rule R-06 | `04` §8–9 |
+| After the period | Member is notified (configurable offsets), pays the **renewal fee** from the database (`membership_plans.fee_amount`), and a renewal term (normally 12 months) starts once payment is admin-confirmed. **No automatic charge; no automatic renewal without payment.** | `04` §9, `06` |
+| Changing the setting | Affects future activations only; existing terms keep their own snapshot | `membership_terms.duration_months` |
+| Email | M4 tells the applicant they are approved and their first N months are free (N read from the term/settings — never typed into the template) | `08` |
 
-## 3. Resolution and application (how the schema supports the confirmed rules)
+The renewal **fee amount is not fixed by any document** — it is entered by ACI in `membership_plans` (OD-02); renewal notification offsets are configuration (`config/membership.php`).
 
-**Resolution query (run once, inside the activation transaction):**
+**Legacy note:** the reference app's "first 100 students free" launch offer is a different, unconfirmed legacy idea; it is not carried over and is not the introductory period. If ACI ever wants it, it would be a *marketing promotion* (§3).
 
-```sql
-SELECT p.*
-FROM membership_promotions p
-JOIN membership_promotion_category pc ON pc.membership_promotion_id = p.id
-WHERE pc.membership_category_id = :category
-  AND p.is_active = 1
-  AND p.grants_free_membership = 1
-  AND :activation_date BETWEEN p.starts_on AND p.ends_on
-ORDER BY p.priority ASC, p.id ASC
-LIMIT 1;
-```
+## 2. What was removed from the previous design
 
-| Confirmed rule | Schema mechanism |
+| Removed | Why |
 |---|---|
-| Multiple promotions, several active at once | no uniqueness on window/category overlap |
-| Exactly **one** promotion per membership, no stacking | `memberships.membership_promotion_id` is a single nullable FK; `LIMIT 1` |
-| Deterministic tie-break by configurable priority | `priority` column + `id` final tie-break |
-| Eligibility decided at **activation** | the query is called from the activation action with the activation date; nothing is pre-computed at application/approval time |
-| Record which promotion applied | `memberships.membership_promotion_id` **plus** snapshot `promotion_name`, `promotion_free_months` |
-| Free period runs its full course even if the campaign ends earlier | `memberships.expires_on` is computed once from `starts_on + promotion_free_months − 1 day` and stored; `ends_on` gates *activation*, never expiry |
-| No payment, no fake £0 payment | free ⇒ `payment_status = 'payment_not_required'` ⇔ promotion set (memberships CHECK); **no `payments` row is created**, and `payments.amount > 0` is CHECK-enforced so a £0 payment cannot be inserted even by mistake |
-| Not hard-coded to 6 months | `free_duration_months` per promotion |
+| Promotion resolution "at activation" / "at the approval decision" (old OD-10) | The free period is unconditional; there is nothing to resolve |
+| `membership_promotions` and `membership_promotion_category` tables (from the initial set) | They existed to *decide* the free period; that decision no longer exists |
+| `memberships.membership_promotion_id`, `promotion_name`, `promotion_free_months` | Replaced by the term snapshot (`term_kind`, `duration_months`) |
+| Constraint "free ⇔ promotion applied" | Replaced by "free ⇔ introductory term" (`04` §9) |
+| Priority/tie-break, applicable-categories pivot, promotion audit events for the free period | Not applicable to a mandatory rule |
+| Old OD-05 "may a person receive a promotion more than once?" | Obsolete: the introductory term is once per member (`17`) |
 
-Worked example (from `WORKFLOWS.md` §0.6): promotion window 2026-10-01 → 2027-03-31, activation 2026-10-15, `free_duration_months = 6` ⇒ `starts_on = 2026-10-15`, `expires_on = 2027-04-14` (inclusive last day). The promotion's own `ends_on` (2027-03-31) is earlier than the expiry, and that is correct.
+## 3. Marketing promotions — DEFERRED (design reservation)
 
-**Unresolved rules that affect eligibility but not the schema:** whether a returning member may receive a free promotion again (OD-05); whether a paid-path applicant should be re-evaluated for a promotion at post-payment activation (OD-10). The schema can express any answer because `memberships.user_id` + `membership_promotion_id` make "has this person had this promotion" a simple query.
+If ACI later defines optional marketing promotions, they are a **separate capability** with their own tables and behaviour and must not touch the introductory rule. Nothing about them is confirmed, so **no tables are created now and no behaviour is invented** (for example, whether a promotion could discount a renewal fee is undefined).
+
+Reserved shape (reference only, not scheduled, not in the migration set):
+
+| Table | Purpose |
+|---|---|
+| `membership_promotions` | name, description, `is_active`, `starts_on`, `ends_on`, `priority`, created/updated by, timestamps; *what the promotion does* (discount, extra months, …) is deliberately **undefined** |
+| `membership_promotion_category` | pivot: which categories a promotion applies to (normalised; no JSON array) |
+
+Constraints on any future design: (1) never referenced by `membership_terms`' introductory logic; (2) if a promotion ever affects a renewal, the term must **snapshot** the applied promotion (name and effect) exactly as plans are snapshotted; (3) a promotion that grants free time would still need the "no £0 payment" rule (`payments.amount > 0`); (4) audit-logged. The earlier column design (`free_duration_months`, `grants_free_membership`, `priority`, windows) may be reused but must be re-confirmed against the then-defined behaviour.
 
 ## 4. Audit
 
-`audit_logs` events: `promotion.created`, `promotion.updated`, `promotion.deactivated`, `promotion.applied` (the last also appears in `membership_status_history` as `membership.promotion_applied`).
+Introductory-term events use `membership_status_history` (`membership.introductory_term_started`) and `audit_logs` (`membership.activated`); there are no `promotion.*` audit events until marketing promotions exist.

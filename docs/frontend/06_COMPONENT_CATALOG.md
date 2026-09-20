@@ -108,7 +108,7 @@ Tokens/classes referenced (`02`): `gradient-primary`, `gradient-hero`, `shadow-c
 | Component | Purpose | Visual | Variants | Used in | Type | Depends on |
 |---|---|---|---|---|---|---|
 | `ui.badge` | Label chip | `rounded-md border px-2.5 py-0.5 text-xs font-semibold` | `default`, `secondary`, `destructive`, `outline`, `eyebrow` (outline + `border-secondary text-secondary`), `glass` (white/10 on dark), `small` | everywhere | B | — |
-| `ui.status-badge` | Status → badge mapping | wraps `ui.badge`; one central map: application (`submitted`=secondary, `more_details_required`=outline, `approved`=default, `rejected`=destructive), membership (`pending_activation`, `active`=success, `expired`=muted), payment status (five + gateway statuses), job/enquiry/comment statuses | by domain | member + admin | B | ui.badge |
+| `ui.status-badge` | Status → badge mapping | wraps `ui.badge`; one central map: application (`submitted`=secondary, `more_details_required`=outline, `approved`=default, `rejected`=destructive), membership term (`pending_payment`=warning, `active`=success, `expired`=muted; introductory term labelled "Free introductory period"), payment status (five + gateway statuses), job/enquiry/comment statuses | by domain | member + admin | B | ui.badge |
 
 ## 11. Pagination (1)
 
@@ -133,10 +133,10 @@ Tokens/classes referenced (`02`): `gradient-primary`, `gradient-hero`, `shadow-c
 | `membership.benefit-list` | Tick list | check icon (gold) + text, dashed dividers | on-dark | benefits | B | x-icon |
 | `membership.process-steps` | Application process | ≥lg horizontal chevron band; <lg 2-col grid; numbered steps with icons; step 5 conditional | — | benefits | B | x-icon |
 | `membership.eligibility-check` | Self-assessment | collapsible panel: radios, select, "Apply Now"; non-persisted | student / professional / veteran | benefits | B+A | form.radio-group, form.select |
-| `membership.promotion-banner` | Active offer | tinted alert-like bar with sparkle icon, name + "free for N months" from data | on-dark, on-light | benefits, apply, member membership | B | ui.alert |
+| `membership.introductory-offer` | Introductory free-period notice | tinted alert-like bar with sparkle icon, "First N months free for every approved new member" — N from `membership_settings` (not a promotion) | on-dark, on-light | benefits, apply, member membership | B | ui.alert |
 | `membership.status-timeline` | Lifecycle history | vertical list of events (actor, note, time) | applicant view / admin view | status page, admin detail | B | ui.badge |
 | `membership.digital-card` | Membership card | branded card: logo, name, **number**, category, status, valid-until; print/PDF stylesheet | screen / PDF | member card | B | logo |
-| `membership.payment-instructions` | Bank details + reference | labelled rows from active bank account, copy buttons | — | applicant payment, member membership | B+A | ui.card |
+| `membership.payment-instructions` | Bank details + reference | labelled rows from active bank account, copy buttons | — | member renewal payment | B+A | ui.card |
 | `membership.details-request` | Admin request + response | request text card + response form/history | applicant / admin | respond page, admin detail | B | form.textarea, form.file-upload |
 | `membership.application-summary` | Read-only application facts | labelled rows by category | applicant / admin | status page, admin detail | B | admin.info-grid |
 | `membership.next-action-card` | "What to do next" | primary card with one CTA driven by state | per state | dashboard overview, status page | B | ui.card, ui.button |
@@ -146,7 +146,7 @@ Tokens/classes referenced (`02`): `gradient-primary`, `gradient-hero`, `shadow-c
 
 | Component | Purpose | Visual | Variants | Used in | Type | Depends on |
 |---|---|---|---|---|---|---|
-| `admin.crud-manager` | Generic list + modal form | table (Item, Order, Active, actions) + `New` + config-driven form | per entity config | testimonials, FAQs, team, hero, social/footer links, promotions?, bank accounts? | LW | data-table, ui.modal, form.* |
+| `admin.crud-manager` | Generic list + modal form | table (Item, Order, Active, actions) + `New` + config-driven form | per entity config | testimonials, FAQs, team, hero, social/footer links, bank accounts? | LW | data-table, ui.modal, form.* |
 | `admin.review-panel` | Application decision | action buttons with guard states (Approve disabled until proof reviewed) + modals | — | application detail | LW | ui.confirm-dialog, ui.modal |
 | `admin.payment-panel` | Payment review | evidence list, reference, Confirm / Reject | — | membership detail | LW | admin.document-list, ui.modal |
 | `admin.document-list` | Secure file list | rows (name, type, size, uploaded, **Open** via policy route) | proof, evidence, job docs | review + payment + job app | B | ui.icon-button |

@@ -17,8 +17,8 @@
 
 | Job | Schedule | Domain | Purpose |
 |---|---|---|---|
-| `SendMembershipRenewalReminders` | daily | Membership | Queries memberships expiring in exactly 30/7/0 days, dispatches M10 notifications (`WORKFLOWS.md` §0.12, CONFIRMED) |
-| `ExpireMemberships` | daily | Membership | Flips `status` to `expired` for any membership past `expires_on` with no renewal; dispatches M11 | 
+| `SendMembershipRenewalReminders` | daily | Membership | Queries **current membership terms** whose `expires_on` matches a **configurable** reminder offset (recommended 30/7/0 days) and that have no confirmed or pending renewal; dispatches M10 (`WORKFLOWS.md` §0.12 as amended by OD-10). Never charges or renews anything. |
+| `ExpireMembershipTerms` | daily | Membership | Flips `MembershipTerm.status` to `expired` for any term past `expires_on`; dispatches M11 when the member has no confirmed renewal. The membership record and number are unaffected. |
 | `ExpireAccountSetupTokens` | hourly (or via a `deleted_at`/`expires_at` check on read) | Identity & Access | Housekeeping for unused setup tokens past their expiry (`04_MEMBERSHIP_ARCHITECTURE.md` §7) |
 | `CleanUpOrphanedFiles` | daily/weekly | Files/Documents | Safety-net for any file left behind by a failed/interrupted request (`07_FILE_STORAGE_ARCHITECTURE.md` §4) |
 | `ReconcileInventoryBalances` | daily (optional, only if a cached stock-balance column is used) | Commerce | Recomputes cached `ProductVariant` stock from the `InventoryTransaction` ledger as a consistency check (`09_ECOMMERCE_ARCHITECTURE.md` §2) |

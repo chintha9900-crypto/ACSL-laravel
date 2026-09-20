@@ -17,8 +17,7 @@ Two distinct, deliberately separate audit mechanisms — do not conflate them:
 
 - Application status changes and admin decisions (also captured richly in `MembershipStatusHistory` — an `AuditLog` entry is still written for the generic "an admin did X" view, e.g. `membership_application.reviewed`).
 - Payment confirmation/rejection decisions.
-- Membership activation and membership-number generation.
-- Which promotion was applied to a membership.
+- Membership activation (including the introductory term start) and membership-number generation (once per member); renewal start and renewal-payment confirmation.
 - Role grants/revocations (`user.role_changed`) and account suspend/activate (`user.suspended`/`user.activated`) — important account changes.
 - Settings changes (`site_settings.updated`, `payment_instructions.updated` — the bank/payment-details entity, `08_PAYMENT_ARCHITECTURE.md` §5) — logged with `old_values`/`new_values` so a change to, say, the published bank account number is traceable to a specific admin and moment.
 - Refunds (`payment.refunded`, `08_PAYMENT_ARCHITECTURE.md` §1) — amount, reason, and which admin authorized it.

@@ -58,14 +58,14 @@ Reference-vs-target auth screens:
 
 **Footer** (from reference): brand + description + social icons · Explore (About, Membership, Blog, Jobs, Contact) · Legal (Privacy, Terms + admin-managed footer links) · Get in touch (email, phone, address) · bottom bar (© year site name; tagline). Content comes from `site_settings`, `social_links`, `footer_links`. Add News & Events to Explore (missing in reference).
 
-**Member sidebar** (reference 10 items → target 8): Overview · Profile · Membership · Notifications · Job Applications · My Comments · Refer a Friend · Security. Removed: *Billing Details* (folded into Membership — payment is now part of the approved workflow, not a separate payment-link page), *Promotions* (was just the public benefits list; real promotions are shown inside the membership flow), *Change Password* (renamed Security; the reference had two duplicate forms). "Admin Panel" link shows only if the server says the user is admin. Sign out is a POST form.
+**Member sidebar** (reference 10 items → target 8): Overview · Profile · Membership · Notifications · Job Applications · My Comments · Refer a Friend · Security. Removed: *Billing Details* (folded into Membership — payment is now part of the approved workflow, not a separate payment-link page), *Promotions* (was just the public benefits list; the free first-6-month period is a standard introductory term shown inside the membership flow, not a promotion), *Change Password* (renamed Security; the reference had two duplicate forms). "Admin Panel" link shows only if the server says the user is admin. Sign out is a POST form.
 
 **Admin sidebar** — reference is a flat list of 18; target groups the same pages and adds those the approved architecture needs:
 
 | Group | Items |
 |---|---|
 | Overview | Dashboard |
-| Membership | Applications · Memberships · Promotions* · Plans & categories* · Bank details* |
+| Membership | Applications · Members & terms · Plans & categories* · Bank details* |
 | People | Users |
 | Content | Blog · News · Events · Comments · FAQs · Testimonials · Team · Hero banners · Social & footer links* |
 | Jobs | Job postings · Job applications |
@@ -125,10 +125,10 @@ resources/
       layout/    section page-hero container
       nav/       header footer dropdown mobile-menu sidebar sidebar-link
       content/   rich-text post-card list-card job-item job-detail feature-card stat-card comment accordion
-      membership/ category-card benefit-list process-steps eligibility-check promotion-banner status-badge status-timeline card payment-instructions details-request
+      membership/ category-card benefit-list process-steps eligibility-check introductory-offer status-badge status-timeline card payment-instructions details-request
       admin/     page-header table-toolbar data-table row-actions info-grid stat-card action-card
     public/  home about membership/{benefits,rules,faq,apply} blog/{index,show} news-events news/show events/show jobs contact legal/{privacy,terms}
-    applications/  status respond-details payment
+    applications/  status respond-details
     auth/    login forgot-password reset-password account-setup
     member/  overview profile membership notifications job-applications comments refer security
     admin/   …one folder per area

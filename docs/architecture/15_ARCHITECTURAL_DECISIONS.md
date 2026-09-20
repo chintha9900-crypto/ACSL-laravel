@@ -42,22 +42,22 @@ Status of every ADR below: **Accepted** (for this design phase — subject to hu
 **Consequences**: closes 4 distinct legacy weaknesses simultaneously (see `05_AUTHORIZATION_ARCHITECTURE.md` §10 summary table).
 **Alternatives rejected**: reusing Laravel's built-in password-reset broker unmodified — assumes an existing account/password to reset, doesn't fit "applicant creates their first password."
 
-### ADR-07 — Per-category membership number sequence via locked counter table
-**Context**: CONFIRMED, non-negotiable 9-character format, per-category sequencing, no `MAX()+1`, transaction-safe.
-**Decision**: `membership_number_sequences` table, `SELECT ... FOR UPDATE` inside the activation transaction (`04_MEMBERSHIP_ARCHITECTURE.md` §4).
-**Consequences**: collision-free under concurrency; one extra table, trivial maintenance.
-**Alternatives rejected**: `MAX()+1` (explicitly forbidden); global `AUTO_INCREMENT` with a display-only prefix (doesn't give independent per-category sequences); optimistic retry-on-duplicate-key (viable but more moving parts than the locked-counter approach for no added benefit here).
+### ADR-07 — Per-category/year membership number sequence via locked counter table; number issued once per member
+**Context**: CONFIRMED, non-negotiable 9-character format, per-category (per-year) sequencing, no `MAX()+1`, transaction-safe; **the number identifies the member for life and never changes at renewal (OD-04)**.
+**Decision**: `membership_number_sequences` table, `SELECT ... FOR UPDATE` inside the **first-activation** transaction (`04_MEMBERSHIP_ARCHITECTURE.md` §4); the number lives on the stable `Membership` (member) record, renewals are separate `MembershipTerm` rows and never call the generator.
+**Consequences**: collision-free under concurrency; one extra table, trivial maintenance; a member keeps one number across all renewals.
+**Alternatives rejected**: `MAX()+1` (explicitly forbidden); global `AUTO_INCREMENT` with a display-only prefix (doesn't give independent per-category sequences); optimistic retry-on-duplicate-key (more moving parts than the locked-counter approach); a new number per renewal term (contradicts the confirmed rule).
 
-### ADR-08 — Promotion eligibility resolved at activation time via priority-ordered query
-**Context**: CONFIRMED: multiple promotions may be active; exactly one applies; deterministic priority-based resolution; evaluated at activation, not application/approval.
-**Decision**: `ResolveEligiblePromotion` queries active, date-in-range, category-matching promotions ordered by a `priority` column, takes the first (`04_MEMBERSHIP_ARCHITECTURE.md` §5).
-**Consequences**: adding a new promotion or changing precedence is a data change, never a code change.
-**Alternatives rejected**: hard-coded "introductory promotion" special case in code (explicitly forbidden by ACI).
+### ADR-08 — The free introductory period is a standard membership rule, not a promotion (supersedes the earlier "promotion eligibility" ADR)
+**Context**: CONFIRMED (OD-10): the initial membership is free for the first 6 months for **every** approved new member; not optional, not an eligibility calculation, no re-evaluation after approval; renewal afterwards is paid.
+**Decision**: the introductory period is the member's first `MembershipTerm` (`introductory`, `payment_not_required`), its length read from `membership_settings.introductory_period_months` (default 6) at activation (after approval and the payment/free decision) and snapshotted; no promotion lookup exists in the activation path (`04_MEMBERSHIP_ARCHITECTURE.md` §5). The Promotions domain is **deferred** for possible future marketing promotions and never controls this rule.
+**Consequences**: no promotion resolution machinery in the initial build; the length is configurable data; no fake £0 payment (structurally impossible); adding or changing a *future* marketing promotion can never alter the mandatory rule.
+**Alternatives rejected**: modelling the free period as a configurable promotion with priority/category applicability and activation-time resolution (decides something that is not conditional; ambiguous evaluation timing); hard-coding "6 months" in code (explicitly forbidden).
 
 ### ADR-09 — Two distinct payment-status vocabularies, not one shared enum
-**Context**: the Phase 2 instructions specify two different status value sets under the name "payment status" — one business-workflow-shaped (Membership), one gateway-transaction-shaped (generic `Payment`/Commerce).
+**Context**: the Phase 2 instructions specify two different status value sets under the name "payment status" — one business-workflow-shaped (membership term), one gateway-transaction-shaped (generic `Payment`/Commerce).
 **Decision**: keep them as separate enums on separate models, synchronized by application-layer event listeners (`08_PAYMENT_ARCHITECTURE.md` §3).
-**Consequences**: each vocabulary stays meaningful for its own purpose; a free (`payment_not_required`) membership never needs a nonsensical gateway status.
+**Consequences**: each vocabulary stays meaningful for its own purpose; the free introductory term (`payment_not_required`) never needs a nonsensical gateway status; the business-workflow vocabulary now lives on `MembershipTerm`.
 **Alternatives rejected**: one unified enum covering both — would force meaningless values into one context or the other.
 
 ### ADR-10 — Provider-independent payment gateway interface

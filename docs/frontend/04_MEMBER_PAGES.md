@@ -18,14 +18,14 @@ Access: `auth` middleware, active user (`users.status = active`); all data scope
 * **Reference layout:** greeting "Welcome back, {name}" · 3 stat cards (Membership status, Unread notifications, Job applications) · two cards: Recent notifications (title, 2-line message, "New" badge, "View all →") and Recent job applications (title, company, status badge).
 * **Defects to fix:** "unread" counted only the 5 most recent notifications; "Membership" showed the legacy System-A status (or "Not applied").
 * **Target functionality:**
-  * **Membership card (primary):** current state from `memberships` + `membership_applications` with one **next action** — *Apply* · *Respond to request* · *Pay fee* · *Awaiting confirmation* · *View digital card* · *Renew* (renewal rules pending, DB OD-04).
+  * **Membership card (primary):** current state from `memberships` + the current `membership_terms` row with one **next action** — *View digital card* · *Renew* (near expiry) · *Pay renewal fee* · *Awaiting confirmation* · *Resubmit payment evidence* (renewal start-date/lapse rules pending, DB OD-21). Application-stage actions (respond to a details request) live on the pre-account signed-link pages.
   * Stat cards: membership status, **true unread count** (`read_at IS NULL`), job applications.
   * Recent notifications (5) and recent job applications (5).
 * **Data:** `memberships`, `membership_applications`, `notifications`, `job_applications`. **Type:** Blade.
 
 ## 3. Profile — `/dashboard/profile`
 * **Reference layout:** cards — *Avatar* (80 px circle + "Upload new avatar", "JPG or PNG, max 2MB" — limit not enforced) · *Personal information* (2-col grid: first name, last name, country, aviation role, other role, phone, occupation, company, LinkedIn URL; bio textarea; Save) · *Change password* (duplicate of the Password page).
-* **Target:** fields map to `users` (`first_name`, `last_name`, `country`, `aviation_occupation`, `job_title`, `company`, `phone`, `linkedin_url`, `bio`, `avatar_path`); "Other role" merged into `aviation_occupation`. Avatar upload via multipart to the **public** disk (server-enforced type/size; old file removed). **Duplicate password card removed** (one place: Security). Membership number is **read-only** here (from `memberships`, not an email-matching lookup as in the reference). Email change is not offered (identity/verification rules TBC).
+* **Target:** fields map to `users` (a **single `name`** — no first/last split — `country`, `aviation_occupation`, `job_title`, `company`, `phone`, `linkedin_url`, `bio`, `avatar_path`); "Other role" merged into `aviation_occupation`. Avatar upload via multipart to the **public** disk (server-enforced type/size; old file removed). **Duplicate password card removed** (one place: Security). Membership number is **read-only** here (from `memberships`, not an email-matching lookup as in the reference). Email change is not offered (identity/verification rules TBC).
 * **Type:** Blade (Form Request validation, `url` rule on LinkedIn).
 
 ## 4. Membership — `/dashboard/membership`
@@ -34,31 +34,30 @@ Access: `auth` middleware, active user (`users.status = active`); all data scope
 
 | State (data) | Content |
 |---|---|
-| No application | Empty card + **Apply now** (→ `/membership/apply`) |
-| Application `submitted` | Summary (category, submitted date), "Under review", link to status page |
-| `more_details_required` | Admin's request, **Respond** button (→ B2 in `03`) |
-| `rejected` | Decision note, "You may reapply from {date}" (cooldown from settings) or **Apply again** if eligible |
-| `approved` / membership `pending_activation` + `payment_pending` | Fee, bank details, **Pay membership fee** (B3) |
+| *(Application-stage states — submitted / more details / rejected — are shown on the pre-account **signed-link status page**, `03` §B, because a new applicant has no account until activation. A signed-in user with no membership sees "You are not a member yet" + **Apply now**.)* | |
+| Current term = **introductory** (`term_kind = introductory`, `active`) | Membership number, category, status badge, **"Your first N months are free — valid until {expires_on}"** (N and date from the term, never hard-coded), **Digital card**, account/security link. No payment section. |
+| Introductory (or any) term nearing expiry, no renewal yet | Same, plus a **Renew** card: renewal fee (from the active plan), length (normally 12 months), **Renew now** (starts a renewal). No auto-renewal notice: "your membership will not renew unless you pay." |
+| Renewal term `pending_payment` / `payment_pending` | Renewal fee, currency, **bank details from the active bank account**, reference field, **evidence upload**, Submit confirmation |
 | `payment_confirmation_submitted` | "Payment evidence submitted — awaiting confirmation" (reference shown, evidence list) |
-| Payment rejected (back to `payment_pending`) | Reason + resubmit form (application is **not** restarted) |
-| Membership `active` | Membership number, category, status badge, **Valid until**, promotion badge ("Free membership — {promotion name}") when applied, **Digital card** (view/download), account/security link |
-| Membership `expired` | Expired badge + last term; **Renew** (rules pending — DB OD-04) |
+| Payment rejected (back to `payment_pending`) | Reason + resubmit form (the renewal is **not** restarted) |
+| Renewal term `active` | Number (**unchanged**), category, **new valid-until date**, term history |
+| No current term (`expired`) | Expired badge + last term dates; **Renew** (start-date/lapse rules pending — DB OD-21); the **membership number is retained** |
 
-* **History:** table/list of all terms and applications (each with dates, status, promotion, fee snapshot) — "historical membership records" are preserved by design.
-* **Removed:** "Pay now" external links; `$` prices (currency from the membership snapshot; currency itself TBC — DB OD-01).
-* **Type:** Blade; payment/response forms are multipart POST.
+* **History:** list of all terms (introductory then renewals) with dates, status, fee snapshot, payment status — "historical membership records" are preserved by design. One membership number is shown for the whole lifetime.
+* **Removed:** "Pay now" external links; `$` prices (currency from the term snapshot; currency itself TBC — DB OD-01); any "promotion" badge for the free period (it is a standard introductory term, not a promotion).
+* **Type:** Blade; the renewal payment form is a multipart POST.
 
 ## 5. Digital membership card — `/dashboard/membership/card`
 * **New** (no reference UI). **Content (approved):** ACI branding/logo, member name, **membership number**, category, status, valid-until date — nothing else (no address/contact). **Actions:** View on screen, **Download PDF** (generated on demand, `07_FILE_STORAGE_ARCHITECTURE.md` §5). Future QR verification token is reserved (DB) — no UI now.
-* **Availability:** only when `status = active`. Visual design of the card is TBC (architecture OD #8) — use design tokens (navy card, gradient accent).
+* **Availability:** whenever the member has a current term (`active` and within its dates); the card shows the current term's valid-until date and the lifetime membership number. Visual design of the card is TBC (architecture OD #8) — use design tokens (navy card, gradient accent).
 * **Type:** Blade (print/PDF view shared).
 
 ## 6. Billing / payments — folded into Membership
-The reference *Billing Details* page (payment status + "Pay now") **does not exist as a separate page**. A **Payment** section appears on the Membership page when a payment row exists: fee, currency, status (`pending`, `processing`, `paid`, `failed`), submitted reference, evidence documents (download via policy), rejection reason, paid date. Free (promotional) memberships show "No payment required" — **never** a £0 payment or receipt. Invoice/receipt PDFs: not confirmed (TBC).
+The reference *Billing Details* page (payment status + "Pay now") **does not exist as a separate page**. A **Payment** section appears on the Membership page when a payment row exists: fee, currency, status (`pending`, `processing`, `paid`, `failed`), submitted reference, evidence documents (download via policy), rejection reason, paid date. The first (introductory, free) term shows "No payment required" — **never** a £0 payment or receipt. Payments exist only for **renewal** terms. Invoice/receipt PDFs: not confirmed (TBC).
 
 ## 7. Notifications — `/dashboard/notifications`
 * **Reference layout:** header "Notifications" + "{n} unread" + "Mark all read"; list of cards (title, "New" badge, message, timestamp, per-item "Mark read"); unread card `border-primary/40`. Empty: "No notifications."
-* **Target:** same layout; unread = `read_at IS NULL` over **all** notifications, paginated (reference capped at 100 with no pagination); items may deep-link to the related page (e.g. Pay membership fee). Mark read / mark all read are POSTs. In-app notifications supplement, not replace, email (M1–M11). **Type:** Blade.
+* **Target:** same layout; unread = `read_at IS NULL` over **all** notifications, paginated (reference capped at 100 with no pagination); items may deep-link to the related page (e.g. Renew membership). Mark read / mark all read are POSTs. In-app notifications supplement, not replace, email (M1–M11). **Type:** Blade.
 
 ## 8. Security (password) — `/dashboard/security` (reference `/dashboard/password`)
 * **Reference layout:** card "New password": New password (show/hide eye) + Confirm + Update; min 8 chars.
@@ -77,7 +76,7 @@ The reference *Billing Details* page (payment status + "Pay now") **does not exi
 * **Target:** same single-email form (POST, throttled); the **session list becomes a persisted history** of the member's invitations (`referral_invitations`: invitee email + date) — the confirmed minimum. No codes, tracking, rewards or address book (unresolved, DB OD-15). Success/failure flash (the reference's "sent but not emailed" warning becomes an honest queued-email flash). **Type:** Blade.
 
 ## 12. Promotions — **dropped**
-The reference page listed the public `membership_benefits` bullets as "Member perks" — not a promotions engine. Real promotions are data (`membership_promotions`) and surface **inside the membership flow** (banner on benefits, badge on the member's membership). No sidebar item (`08` D-07 if ACI wants member perks later).
+The reference page listed the public `membership_benefits` bullets as "Member perks" — not a promotions engine. The mandatory first-6-month free period is **not a promotion** (it is the introductory term, shown as "first N months free" on the benefits page and the member's membership). Marketing promotions are a deferred capability. No sidebar item (`08` D-07 if ACI wants member perks later).
 
 ## 13. Other member routes discovered
 None. The member area is exactly the 10 routes above (Overview, Profile, Membership, Billing, Notifications, Promotions, Comments, Job Applications, Refer, Password). `/verify` and shop routes referenced in older notes do not exist in the snapshot.

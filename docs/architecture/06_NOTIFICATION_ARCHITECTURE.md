@@ -11,21 +11,23 @@ Implements every confirmed notification in `docs/reverse-engineering/NOTIFICATIO
 - **Queued by default**: every notification implements `ShouldQueue` so a slow/failed SMTP send never blocks the HTTP request that triggered it — directly fixes the legacy's synchronous, in-request `sendAppEmail` calls (`NOTIFICATIONS.md`).
 - **Failure visibility**: a failed send lands in Laravel's `failed_jobs` table (queue) and is logged, rather than the legacy's silent `{sent:false, note:...}` return value that no caller ever surfaced to the end user (`NOTIFICATIONS.md` §"Email infrastructure"). Whether ACI wants a UI-visible "this email may not have sent" indicator anywhere is `TBC` — not assumed here.
 
-## 2. Membership notifications (CONFIRMED REQUIREMENT list — M1–M11)
+## 2. Membership notifications (CONFIRMED REQUIREMENT list — M1–M11, re-scoped by OD-10)
+
+> **Re-scope note (OD-10).** The initial membership is free for the first 6 months for every approved new member, so **no payment email is sent at approval**. M4 is the single approval email for every new member; M5–M7 (payment instructions / acknowledgement / rejection) now belong to **renewal payments**, and M10 is the renewal reminder. The M-numbers are kept for continuity with `NOTIFICATIONS.md`.
 
 | ID | Class (proposed) | Trigger | Notes |
 |---|---|---|---|
 | M1 | `Membership\ApplicationSubmitted` | `MembershipApplicationSubmitted` event | To applicant; admin copy TBC (legacy pattern, not reconfirmed — see `16_OPEN_DECISIONS.md`) |
 | M2 | `Membership\MoreDetailsRequested` | admin review Action | Includes a link back into the system to respond (§`04_MEMBERSHIP_ARCHITECTURE.md` §2), never "reply to this email" |
 | M3 | `Membership\ApplicationRejected` | admin review Action | |
-| M4 | `Membership\ApprovedFreePromotion` | `ResolveEligiblePromotion` returns a match | Must name the actual configured free-duration (not hard-coded "6 months" text — reads from the applied `MembershipPromotion` row) |
-| M5 | `Membership\ApprovedPaymentRequired` | `ResolveEligiblePromotion` returns no match | Includes fee amount + `BankAccountDetails` read at send time (`08_PAYMENT_ARCHITECTURE.md` §5) |
-| M6 | `Payments\ConfirmationSubmitted` | `SubmitPaymentEvidence` Action | Acknowledgement only |
-| M7 | `Payments\ConfirmationRejected` | `RejectPayment` Action | States resubmission is possible, application not restarted |
+| M4 | `Membership\ApprovedIntroductory` | approval and the payment/free decision for **every** new member (activation follows; M8/M9 are sent at activation) | Confirms approval and that the member's **first N months are free** (N read from the introductory term/`membership_settings` — never hard-coded "6 months" text). Not a promotion email. Mandatory. |
+| M5 | `Membership\RenewalPaymentInstructions` | member starts a renewal (`StartRenewal`) | **Re-scoped:** renewal fee (from the active plan) + `BankAccountDetails` read at send time (`08_PAYMENT_ARCHITECTURE.md` §5). Not sent at approval. |
+| M6 | `Payments\ConfirmationSubmitted` | `SubmitPaymentEvidence` Action | Acknowledgement of **renewal** payment evidence only |
+| M7 | `Payments\ConfirmationRejected` | `RejectPayment` Action | States resubmission is possible; the renewal is not restarted |
 | M8 | `Membership\Welcome` | `MembershipActivated` event | |
 | M9 | `Membership\AccountSetup` | `MembershipActivated` event | Carries the one-time setup link (`04_MEMBERSHIP_ARCHITECTURE.md` §7); **may be merged into one email with M8** at implementation time — kept as two logical messages here so the setup-link content isn't accidentally dropped if M8's copy is edited later |
-| M10 | `Membership\RenewalReminder` | scheduled job, 30/7/0 days before `expires_on` | Parameterized by days-remaining; never implies auto-charge |
-| M11 | `Membership\Expired` | scheduled job, on `expires_on` | |
+| M10 | `Membership\RenewalReminder` | scheduled job, **configurable** offsets before the current term's `expires_on` (recommended 30/7/0 days) | Parameterized by days-remaining; explains the renewal fee and how to renew; **never implies auto-charge or automatic renewal** |
+| M11 | `Membership\Expired` | scheduled job, when the last term expires without a confirmed renewal | Notice that the term has expired; the membership number is retained |
 
 ## 3. Non-membership notifications (carried forward from legacy scope, not newly invented)
 

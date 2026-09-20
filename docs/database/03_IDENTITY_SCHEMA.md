@@ -19,13 +19,12 @@ Application-layer rules that MySQL cannot express (recorded in `15_DATA_INTEGRIT
 
 ## 2. `users` — REWORK (merges legacy `auth.users` + `profiles`)
 
-Purpose: every person who can authenticate. Members, admins, and users provisioned at membership activation who have not yet set a password.
+Purpose: every person who can authenticate. Members, admins, and users provisioned at membership activation who have not yet set a password. There is **no public self-registration**: a member account is created only by the activation action (frontend C-03, approved).
 
 | Column | Type | Null | Default | Notes |
 |---|---|---|---|---|
 | `id` | BIGINT UNSIGNED AI | N | — | PK |
-| `first_name` | VARCHAR(100) | N | — | |
-| `last_name` | VARCHAR(100) | N | — | |
+| `name` | VARCHAR(255) | N | — | **Single full-name field** (Laravel's standard `users.name`; confirmed decision — there are **no** `first_name`/`last_name` columns). At membership activation it is copied **verbatim** from `membership_applications.full_name`; names are never split or reconstructed. Length is ≥ the application's 160 so the copy can never truncate. |
 | `email` | VARCHAR(255) | N | — | **UNIQUE**. Stored lower-cased. Collation is case-insensitive so `UNIQUE` is case-insensitive too. |
 | `email_verified_at` | TIMESTAMP | Y | NULL | Set when the setup link is used (the link proves control of the mailbox). |
 | `password` | VARCHAR(255) | **Y** | NULL | NULL while `status = pending_setup`. A NULL password can never validate (Laravel's hasher rejects an empty hash); the login action must additionally refuse `status <> 'active'`. |
@@ -56,7 +55,7 @@ Purpose: every person who can authenticate. Members, admins, and users provision
 
 **Legacy dropped:** `profiles.id = auth.users.id` 1:1 split; `profiles.is_active` (→ `status`); `profiles.email` duplicate; `avatar_url` (full URL → `avatar_path`).
 
-**Note on `first_name`/`last_name` vs the membership application `full_name`:** the application keeps its own `full_name` snapshot (an applicant may not have a user yet, and the name on the application is the name that was reviewed). The card shows the *application-time* name unless the member later edits their profile — display rule is an implementation decision, not a schema one.
+**Note on `name` vs the membership application `full_name`:** the application keeps its own `full_name` snapshot (the name that was reviewed). At activation the provisioned user's `name` is set to that same value; afterwards the member may edit their profile name, and the application row is left untouched. The membership card shows the current `users.name`. Greeting text uses the whole name (no first-name extraction). Public-facing surfaces that need a short label (e.g. blog comment author) use `name` as is.
 
 ## 3. `account_setup_tokens` — CONFIRMED (secure one-time account setup)
 
@@ -66,7 +65,7 @@ Purpose: replaces plaintext temporary passwords (`WORKFLOWS.md` §0.13). One row
 |---|---|---|---|---|
 | `id` | BIGINT UNSIGNED AI | N | — | PK |
 | `user_id` | BIGINT UNSIGNED | N | — | FK → `users.id` |
-| `membership_id` | BIGINT UNSIGNED | N | — | FK → `memberships.id` — the activation this token belongs to |
+| `membership_id` | BIGINT UNSIGNED | N | — | FK → `memberships.id` — the (stable) member record created by the activation this token belongs to |
 | `purpose` | VARCHAR(30) | N | `'account_setup'` | `CHECK (purpose IN ('account_setup','membership_link'))`. `membership_link` is used only if OD-06 resolves to "confirm before linking to an existing account". |
 | `token_hash` | CHAR(64) `ascii_bin` | N | — | **UNIQUE**. SHA-256 hex of a ≥40-character CSPRNG token. High-entropy secret, so an unsalted SHA-256 is appropriate (same rationale as Laravel's own reset tokens). The plaintext is never stored, logged, or written to `audit_logs`. |
 | `expires_at` | TIMESTAMP | N | — | Issue time + `membership_settings.account_setup_token_ttl_hours` |

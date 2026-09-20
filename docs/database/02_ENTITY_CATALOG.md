@@ -1,6 +1,6 @@
 # 02 — Entity Catalog
 
-Complete catalogue of the **54** designed application tables, plus deferred/not-proposed structures. Column-level detail (types, nullability, defaults, FKs with delete behaviour) is in the per-domain documents `03`–`12`; this catalogue is the index and the cross-check.
+Complete catalogue of the **53** designed application tables, plus deferred/not-proposed structures. Column-level detail (types, nullability, defaults, FKs with delete behaviour) is in the per-domain documents `03`–`12`; this catalogue is the index and the cross-check.
 
 ## Legend
 
@@ -19,7 +19,7 @@ Complete catalogue of the **54** designed application tables, plus deferred/not-
 
 | Table | Purpose | PK | Important columns | Important FKs | Unique | Important indexes | Audit / history | Status | Pri |
 |---|---|---|---|---|---|---|---|---|---|
-| `users` | Everyone who can log in (member/admin), incl. pending-setup accounts | id | `email`, `password`(NULL until setup), `role`, `status`, profile fields | — | `email` | `role` | role/suspend/email changes → `audit_logs` | CONFIRMED | P0 |
+| `users` | Everyone who can log in (member/admin), incl. pending-setup accounts | id | `name` (single field), `email`, `password`(NULL until setup), `role`, `status`, profile fields | — | `email` | `role` | role/suspend/email changes → `audit_logs` | CONFIRMED | P0 |
 | `account_setup_tokens` | One-time hashed account-setup tokens | id | `token_hash`, `purpose`, `expires_at`, `used_at`, `invalidated_at`, `live_key` | `user_id`, `membership_id`, `issued_by_user_id` | `token_hash`, `live_key` | `(user_id,purpose)`, `expires_at` | issue/use/invalidate → `audit_logs` | CONFIRMED | P1 |
 
 ## 2. Membership (`04`)
@@ -27,27 +27,26 @@ Complete catalogue of the **54** designed application tables, plus deferred/not-
 | Table | Purpose | PK | Important columns | Important FKs | Unique | Important indexes | Audit / history | Status | Pri |
 |---|---|---|---|---|---|---|---|---|---|
 | `membership_categories` | The exactly-three categories S/P/V | id | `code`, `name`, `is_active` | — | `code` (CHECK S/P/V) | — | changes → `audit_logs` | CONFIRMED | P1 |
-| `membership_plans` | Fee/currency/duration per category (commercial config) | id | `fee_amount`, `currency`, `duration_months`, `is_active`, `active_category_key` | `membership_category_id` | `active_category_key` (one active plan/category) | — | price changes = new row; audited | CONFIRMED | P1 |
-| `membership_settings` | Singleton: cooldown days, setup-token TTL | tinyint =1 | `reapplication_cooldown_days`, `account_setup_token_ttl_hours` | `updated_by_user_id` | PK (CHECK id=1) | — | old/new → `audit_logs` | DERIVED | P1 |
+| `membership_plans` | **Renewal** fee/currency/duration per category (commercial config; the free introductory term has no plan) | id | `fee_amount`, `currency`, `duration_months`, `is_active`, `active_category_key` | `membership_category_id` | `active_category_key` (one active plan/category) | — | price changes = new row; audited | CONFIRMED | P1 |
+| `membership_settings` | Singleton: introductory free months (6), cooldown days, setup-token TTL | tinyint =1 | `introductory_period_months`, `reapplication_cooldown_days`, `account_setup_token_ttl_hours` | `updated_by_user_id` | PK (CHECK id=1) | — | old/new → `audit_logs` | DERIVED | P1 |
 | `membership_applications` | One row per application attempt; never overwritten | id · pub | `status`, applicant snapshot, aviation fields, `proof_reviewed_at`, `decided_at`, `open_email_key` | `user_id`, `membership_category_id`, reviewer/decider users | `public_id`, `open_email_key` | `(status,submitted_at)`, `(email,status,decided_at)`, `(mobile,status,decided_at)`, `(user_id,status)` | `membership_status_history` + `audit_logs`; row is append-only by policy | CONFIRMED | P1 |
 | `membership_details_requests` | Each "more details" request and the applicant's response | id | `request_message`, `responded_at`, `open_request_key` | `membership_application_id`, `requested_by_user_id` | `open_request_key` | `(application,requested_at)` | is itself history | DERIVED | P1 |
-| `memberships` | One row per membership term (from approval; activated later) | id | `status`, `payment_status`, fee/plan snapshot, promotion snapshot, `membership_number`, `number_year`, `number_sequence`, `starts_on`, `expires_on`, `verification_token` | application (1:1), `user_id`, category, plan, promotion, `renews_membership_id` | `membership_application_id`, `membership_number`, `(category,number_year,number_sequence)`, `verification_token` | `(user_id,status)`, `(status,expires_on)`, `(status,payment_status)` | history + audit; never deleted | CONFIRMED | P1 |
+| `memberships` | **Stable member record — one row per member for life** (created once, at first activation; carries the membership number) | id | `membership_number`, `number_year`, `number_sequence`, `activated_at`, `activated_on`, `verification_token` | originating application (1:1), `user_id` (1:1), category | `membership_application_id`, `user_id`, `membership_number`, `(category,number_year,number_sequence)`, `verification_token` | — (state is derived from terms) | history + audit; never deleted | CONFIRMED | P1 |
+| `membership_terms` | One row per validity term: term 1 = free introductory term (no payment); further terms = paid renewals | id | `term_no`, `term_kind`, `status`, `payment_status`, `duration_months`, `fee_amount`/`fee_currency` (renewals), `starts_on`, `expires_on`, `open_renewal_key` | `membership_id`, `membership_plan_id` (renewals only) | `(membership_id,term_no)`, `open_renewal_key` | `(status,expires_on)`, `(status,payment_status)` | history + audit; never deleted | CONFIRMED | P1 |
 | `membership_number_sequences` | Per (category, year) counter; lock target for number issue | id | `sequence_year`, `last_number` (0–9999) | `membership_category_id` | `(membership_category_id, sequence_year)` | — | issuance recorded in history/audit | CONFIRMED | P1 |
-| `membership_status_history` | Append-only lifecycle/payment/number/promotion events | id | `event`, `from_status`, `to_status`, `actor_type`, `note` | `membership_application_id`, `membership_id`, `actor_user_id` | — | `(application,id)`, `(membership_id)`, `(event,created_at)` | is the history | CONFIRMED | P1 |
+| `membership_status_history` | Append-only lifecycle/payment/number events | id | `event`, `from_status`, `to_status`, `actor_type`, `note` | `membership_application_id`, `membership_id`, `membership_term_id`, `actor_user_id` | — | `(application,id)`, `(membership_id,id)`, `(membership_term_id)`, `(event,created_at)` | is the history | CONFIRMED | P1 |
 
-## 3. Promotions (`05`)
+## 3. Introductory period and promotions (`05`)
 
-| Table | Purpose | PK | Important columns | Important FKs | Unique | Important indexes | Audit / history | Status | Pri |
-|---|---|---|---|---|---|---|---|---|---|
-| `membership_promotions` | Configurable promotions (the 6-month offer is one row) | id | `name`, `is_active`, `starts_on`, `ends_on`, `grants_free_membership`, `free_duration_months`, `priority` | created/updated by users | — | `(is_active,starts_on,ends_on,priority)` | create/update → `audit_logs`; applied promotion snapshotted on membership | CONFIRMED | P1 |
-| `membership_promotion_category` | Which categories a promotion applies to | composite | — | promotion (CASCADE), category (RESTRICT) | PK | `(category,promotion)` | via promotion audit | DERIVED | P1 |
+No tables in the initial set. The mandatory first-6-month free period is the member's **term 1** (`membership_terms`, driven by `membership_settings.introductory_period_months`) — it is **not** a promotion. `membership_promotions` and `membership_promotion_category` are **DEFERRED** (future marketing promotions only; see §12).
+
 
 ## 4. Payments (`06`)
 
 | Table | Purpose | PK | Important columns | Important FKs | Unique | Important indexes | Audit / history | Status | Pri |
 |---|---|---|---|---|---|---|---|---|---|
 | `payment_bank_accounts` | Approved ACI bank/payment details | id | bank/account fields, `currency`, `is_active`, `active_currency_key` | created/updated users | `active_currency_key` | — | edits audited | CONFIRMED | P1 |
-| `payments` | Shared payment ledger (membership XOR order) | id · pub | `gateway`, `transaction_reference`, `idempotency_key`, `amount`(>0), `currency`, `status`, `paid_at`, `failed_at`, `metadata` | `user_id`, `membership_id`, `order_id`, `bank_account_id`, `reviewed_by_user_id` | `public_id`, `(gateway,idempotency_key)` | `(gateway,transaction_reference)`, `(membership_id,status)`, `(order_id,status)`, `(status,submitted_at)` | audit + membership history; never deleted | CONFIRMED | P1 |
+| `payments` | Shared payment ledger (membership **renewal term** XOR order) | id · pub | `gateway`, `transaction_reference`, `idempotency_key`, `amount`(>0), `currency`, `status`, `paid_at`, `failed_at`, `metadata` | `user_id`, `membership_term_id`, `order_id`, `bank_account_id`, `reviewed_by_user_id` | `public_id`, `(gateway,idempotency_key)` | `(gateway,transaction_reference)`, `(membership_term_id,status)`, `(order_id,status)`, `(status,submitted_at)` | audit + membership history; never deleted | CONFIRMED | P1 |
 | `payment_refunds` | Refund attempts against a payment | id | `amount`(>0), `status`, `gateway_reference`, `idempotency_key` | `payment_id`, `requested_by_user_id` | `idempotency_key`, `(payment_id,gateway_reference)` | `(payment_id,status)` | audit `payment.refunded` | CONFIRMED | P3 |
 | `payment_webhooks` | Idempotent inbound provider events | id | `gateway`, `event_id`, `event_type`, `payload`(JSON), `processing_status`, `signature_state` | `payment_id` | `(gateway,event_id)` | `(processing_status,received_at)` | is itself the record | CONFIRMED | P3 |
 
@@ -122,15 +121,16 @@ Complete catalogue of the **54** designed application tables, plus deferred/not-
 ## 11. Classification summary
 
 * **CONFIRMED tables (44):** all rows marked CONFIRMED above (including those with a TBC sub-aspect noted in the same cell, e.g. `job_applications`, `blog_comments`, `team_members`, `carts`).
-* **DERIVED / support tables (9):** `membership_settings`, `membership_details_requests`, `membership_promotion_category`, `email_logs`, `blog_post_blog_tag`, `product_images`, `cart_items`, `order_addresses`, `order_status_history`.
+* **DERIVED / support tables (8):** `membership_settings`, `membership_details_requests`, `email_logs`, `blog_post_blog_tag`, `product_images`, `cart_items`, `order_addresses`, `order_status_history`.
 * **TBC — concept confirmed, rules unresolved, minimal design (1):** `referral_invitations`.
-* Total: 44 + 9 + 1 = **54**.
+* Total: 44 + 8 + 1 = **53** (previous revision: 54 — `membership_promotions` and `membership_promotion_category` deferred, `membership_terms` added).
 * **Deferred / TBC structures not proposed as tables:** see §12.
 
 ## 12. Deferred / not proposed
 
 | Structure | Decision | Why |
 |---|---|---|
+| `membership_promotions`, `membership_promotion_category` | **DEFER** (retained as a design reservation, `05` §3) | The mandatory first-6-month free period is not a promotion (OD-10); no confirmed requirement defines marketing promotions |
 | `roles`, `permissions`, pivots | DEFER | Two flat roles satisfy the confirmed model (`03` §1) |
 | `pages` (generic CMS page) | DEFER | Unconfirmed new scope (OD-17); minimal shape in `10` §14 |
 | `event_registrations` | DEFER | No business rules exist (OD-17) |

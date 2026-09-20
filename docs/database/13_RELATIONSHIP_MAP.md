@@ -2,51 +2,47 @@
 
 Design only. Mermaid notation: `||` exactly one · `o|` zero or one · `o{` zero or many · `|{` one or many. Every FK is `ON UPDATE RESTRICT`; delete behaviour is stated in the tables under each diagram (`RESTRICT` unless noted).
 
-## 1. Identity → Membership Application → Membership → Promotion → Payment
+## 1. Identity → Membership Application → Member → Terms → Payment
 
 ```mermaid
 erDiagram
-    users ||--o{ membership_applications : "applies (user_id NULL until linked)"
+    users |o--o{ membership_applications : "user_id (normally NULL — no account yet)"
     membership_categories ||--o{ membership_applications : "selected category"
-    membership_categories ||--o{ membership_plans : "commercial terms"
+    membership_categories ||--o{ membership_plans : "renewal pricing"
     membership_categories ||--o{ membership_number_sequences : "counter per year"
     membership_applications ||--o{ membership_details_requests : "more-details loop"
-    membership_applications ||--o| memberships : "approval creates (UNIQUE)"
-    membership_plans ||--o{ memberships : "terms at approval (snapshotted)"
-    membership_categories ||--o{ memberships : "category"
-    users |o--o{ memberships : "owner (set at activation)"
-    memberships |o--o| memberships : "renews_membership_id"
-    membership_promotions |o--o{ memberships : "applied once (snapshotted)"
-    membership_promotions ||--o{ membership_promotion_category : "applies to"
-    membership_categories ||--o{ membership_promotion_category : "eligible"
-    memberships |o--o{ payments : "membership_id (XOR order_id)"
+    membership_applications ||--o| memberships : "activation after approval (UNIQUE)"
+    membership_categories ||--o{ memberships : "category at first activation"
+    users |o--o| memberships : "owner (UNIQUE, set at activation)"
+    memberships ||--|{ membership_terms : "term 1 introductory + renewals"
+    membership_plans |o--o{ membership_terms : "renewal terms only (snapshotted)"
+    membership_terms |o--o{ payments : "membership_term_id (XOR order_id) — renewals only"
     payment_bank_accounts |o--o{ payments : "instructed account"
     payments ||--o{ payment_refunds : "refunded by"
     payments |o--o{ payment_webhooks : "matched event"
     memberships ||--o{ account_setup_tokens : "activation setup link"
     users ||--o{ account_setup_tokens : "token for"
-    membership_applications ||--o{ membership_status_history : "timeline"
-    memberships |o--o{ membership_status_history : "after approval"
+    membership_applications |o--o{ membership_status_history : "application-stage events"
+    memberships |o--o{ membership_status_history : "member-stage events"
+    membership_terms |o--o{ membership_status_history : "term/payment events"
 ```
 
 | Parent → Child | Cardinality | FK column | ON DELETE | Note |
 |---|---|---|---|---|
-| `users` → `membership_applications` | 0..1 : many | `user_id` | RESTRICT | NULL for a pre-account applicant |
+| `users` → `membership_applications` | 0..1 : many | `user_id` | RESTRICT | normally NULL (no account before activation) |
 | `membership_categories` → `membership_applications` | 1 : many | `membership_category_id` | RESTRICT | |
-| `membership_applications` → `memberships` | 1 : 0..1 | `membership_application_id` (UNIQUE) | RESTRICT | application may exist without a membership; never the reverse |
-| `users` → `memberships` | 0..1 : many | `user_id` | RESTRICT | one user, many terms over time |
-| `membership_plans` → `memberships` | 1 : many | `membership_plan_id` | RESTRICT | fee/duration also **snapshotted** on the row |
-| `membership_promotions` → `memberships` | 0..1 : many | `membership_promotion_id` | RESTRICT | name/free months also snapshotted; **only one** promotion per membership by construction |
-| `memberships` → `memberships` | 0..1 : 0..1 | `renews_membership_id` | RESTRICT | renewal lineage |
-| `memberships` → `payments` | 0..1 : many | `payments.membership_id` | RESTRICT | free membership ⇒ zero payments |
-| `orders` → `payments` | 0..1 : many | `payments.order_id` | RESTRICT | **XOR** with `membership_id` (CHECK) |
+| `membership_applications` → `memberships` | 1 : 0..1 | `membership_application_id` (UNIQUE) | RESTRICT | the *originating* application; an application may exist without a member, never the reverse |
+| `users` → `memberships` | 0..1 : 0..1 | `user_id` (UNIQUE) | RESTRICT | one person = one member for life |
+| `memberships` → `membership_terms` | 1 : 1..many | `membership_id` | RESTRICT | term 1 is the introductory (free) term; renewals are further terms of the **same** member — the number never changes |
+| `membership_plans` → `membership_terms` | 0..1 : many | `membership_plan_id` | RESTRICT | renewal terms only; fee/duration also **snapshotted** on the term |
+| `membership_terms` → `payments` | 0..1 : many | `payments.membership_term_id` | RESTRICT | **renewal** terms only — the introductory term has zero payments |
+| `orders` → `payments` | 0..1 : many | `payments.order_id` | RESTRICT | **XOR** with `membership_term_id` (CHECK) |
 | `payments` → `payment_refunds` | 1 : many | `payment_id` | RESTRICT | |
 | `payments` → `payment_webhooks` | 0..1 : many | `payment_id` | RESTRICT | idempotency key is `(gateway,event_id)`, not this FK |
-| `membership_promotions` ↔ `membership_categories` | many : many | pivot | promotion side CASCADE, category side RESTRICT | |
 | `memberships` → `account_setup_tokens` | 1 : many | `membership_id` | RESTRICT | at most one *live* token per (user, purpose) |
-| `membership_applications` → `membership_status_history` | 1 : many | `membership_application_id` | RESTRICT | append-only |
+| `membership_applications` / `memberships` / `membership_terms` → `membership_status_history` | 0..1 : many each | `membership_application_id`, `membership_id`, `membership_term_id` | RESTRICT | append-only; at least one of application/member anchors every row |
 
-**Reading the chain:** an *application* is created and reviewed; on approval a *membership* row is created in `pending_activation` with a snapshot of the plan terms; a *payment* is created only when no promotion applies; activation (free path immediately, paid path after admin confirmation) atomically issues the number (`membership_number_sequences`), sets dates, and records the promotion snapshot; the user and setup token are provisioned; history and audit rows are written.
+**Reading the chain:** an *application* is created and reviewed; on approval, in one transaction, a **member** row is created with the membership number (issued once from the row-locked sequence) plus **term 1** (introductory, first N months free, no payment); the user and setup token are provisioned; history and audit rows are written. Before the introductory term ends the member is reminded (no auto-charge) and may start a **renewal**: a `pending_payment` term plus a `payments` row; when an admin confirms the payment the renewal term becomes valid. The `memberships` row and its number persist across every renewal. Marketing promotions (deferred, `05` §3) have no place in this chain.
 
 ## 2. Identity → Documents
 
@@ -77,6 +73,7 @@ erDiagram
     users |o--o{ email_logs : "recipient if a user"
     membership_applications |o--o{ email_logs : "related email"
     orders |o--o{ email_logs : "related email"
+    memberships |o--o{ email_logs : "renewal/expiry emails"
     email_templates ||..o{ email_logs : "template_key snapshot (no FK)"
     users |o--o{ audit_logs : "actor"
     audit_logs }o..o| membership_applications : "subject_type/subject_id (morph, no FK)"
@@ -86,7 +83,7 @@ erDiagram
 |---|---|---|---|
 | `users` → `notifications` | polymorphic (`notifiable_type='user'`, `notifiable_id`) | n/a (no FK) | Laravel contract; only `user` alias allowed |
 | `users` → `email_logs` | typed, nullable | RESTRICT | recipients may be non-users |
-| `membership_applications` / `orders` → `email_logs` | typed, nullable | RESTRICT | dominant operational lookups |
+| `membership_applications` / `memberships` / `orders` → `email_logs` | typed, nullable | RESTRICT | dominant operational lookups (application-stage mail; renewal/expiry mail; order mail) |
 | `email_templates` → `email_logs` | **no FK**, `template_key` snapshot | — | log survives template changes |
 | `users` → `audit_logs` | typed, nullable | RESTRICT | actor; NULL = system/guest |
 | any entity → `audit_logs` | polymorphic (`subject_type/subject_id`) | n/a | the approved exception |
@@ -127,7 +124,7 @@ erDiagram
     orders ||--|{ order_items : "price snapshot"
     orders ||--|{ order_addresses : "shipping (+ optional billing) snapshot"
     orders ||--|{ order_status_history : "lifecycle"
-    orders |o--o{ payments : "order_id (XOR membership_id)"
+    orders |o--o{ payments : "order_id (XOR membership_term_id)"
     coupons |o--o{ orders : "RESTRICT + code snapshot"
     shipping_methods |o--o{ orders : "RESTRICT + name snapshot"
     product_variants ||--o{ order_items : "RESTRICT (soft-deleted only)"
@@ -160,7 +157,7 @@ erDiagram
 
 | Class of relationship | ON DELETE | Examples |
 |---|---|---|
-| Historical / financial / legal / lifecycle | **RESTRICT** | applications, memberships, payments, refunds, webhooks, documents, history, audit, orders, order items, ledger, job applications, users |
+| Historical / financial / legal / lifecycle | **RESTRICT** | applications, memberships, membership terms, payments, refunds, webhooks, documents, history, audit, orders, order items, ledger, job applications, users |
 | Pure child/link rows | CASCADE | pivot rows, `cart_items`, `product_images`, `blog_comments` |
 | Optional attribution/taxonomy | SET NULL | `blog_posts.author_id`, `created_by_user_id`, `products.product_category_id`, `carts.coupon_id` |
 

@@ -4,7 +4,7 @@ Design only. One table: `audit_logs`. Together with `membership_status_history` 
 
 | Mechanism | Scope | Shape |
 |---|---|---|
-| `membership_status_history` | Membership/payment lifecycle facts for one application | typed FKs, no polymorphism |
+| `membership_status_history` | Application-stage and member/term/payment lifecycle facts | typed FKs (application / member / term), no polymorphism |
 | `order_status_history` | Order lifecycle facts for one order | typed FK |
 | **`audit_logs`** | Cross-domain "who did what" for administrative and security-sensitive actions | the **one approved polymorphic exception** (ADR-15) |
 
@@ -31,7 +31,7 @@ Append-only. No `updated_at`, no soft delete, no delete path in the application.
 | `request_id` | CHAR(36) | Y | NULL | UUID assigned per HTTP request/job; correlates several audit rows written by one action and ties them to application logs |
 | `created_at` | TIMESTAMP | N | CURRENT_TIMESTAMP | |
 
-**CHECK constraints:** `actor_type IN ('user','system','guest')`; `(subject_type IS NULL) = (subject_id IS NULL)`; `actor_type <> 'user' OR user_id IS NOT NULL`; `old_values IS NULL OR JSON_VALID(old_values)` and likewise `new_values`.
+**CHECK constraints:** `actor_type IN ('user','system','guest')`; `(subject_type IS NULL) = (subject_id IS NULL)`; `actor_type <> 'user' OR user_id IS NOT NULL`. (No `JSON_VALID` CHECK: the native MySQL `JSON` type already rejects invalid JSON — `18` §3.9.)
 
 **Foreign key**
 
@@ -50,7 +50,7 @@ Append-only. No `updated_at`, no soft delete, no delete path in the application.
 
 ## 2. What is logged (schema-relevant summary; full list in `12_AUDIT_LOGGING_ARCHITECTURE.md` §2)
 
-Application decisions and status changes; payment confirmation/rejection/refund; membership activation, membership-number issue, promotion applied; role/suspension changes; settings changes (`site_settings`, `membership_settings`, `payment_bank_accounts`, `email_templates`, `membership_plans`, `membership_promotions`) with old/new values; account-setup token lifecycle; **private-document access** (`aviation_proof`, `payment_evidence`) — upload, view, purge; blocked security-sensitive attempts (e.g. last-admin demotion); rejected webhook deliveries.
+Application decisions and status changes; payment confirmation/rejection/refund; membership activation (incl. introductory term start), membership-number issue, renewal start/confirmation; role/suspension changes; settings changes (`site_settings`, `membership_settings`, `payment_bank_accounts`, `email_templates`, `membership_plans`) with old/new values; account-setup token lifecycle; **private-document access** (`aviation_proof`, `payment_evidence`) — upload, view, purge; blocked security-sensitive attempts (e.g. last-admin demotion); rejected webhook deliveries.
 
 **Never stored:** passwords or hashes, setup tokens (plain or hashed), `verification_token`, full bank credentials beyond ACI's own published account, file contents. Redaction is applied to `old_values`/`new_values` before insert via a per-model redaction list, not by trusting callers.
 
@@ -67,4 +67,4 @@ Application decisions and status changes; payment confirmation/rejection/refund;
 | One audit table per domain | Same shape ×N; cross-domain "what did this admin do" needs UNION (ADR-15). |
 | Storing a single combined diff column | The confirmed field list has separate `old_values`/`new_values`, and "what was it before" stays directly queryable. |
 | `spatie/laravel-activitylog` | Equivalent design; a package-vs-custom choice for implementation (architecture open decision #28), not a schema question. If the package were adopted its own table shape would replace this one, so the choice must be made before the audit migration is written. |
-| Polymorphism in `membership_status_history` | Not needed — every event has an application; a nullable typed `membership_id` covers the rest. |
+| Polymorphism in `membership_status_history` | Not needed — every event anchors to an application (before activation) or to the member (after), with an optional typed `membership_term_id`. |

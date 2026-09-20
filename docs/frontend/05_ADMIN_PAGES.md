@@ -35,7 +35,7 @@ The reference admin has 18 pages (`/admin/*`). Each is documented, followed by t
   3. **Aviation proof:** document list (name, type, size, uploaded, **Open** via secure route — never a public URL); **Mark proof reviewed** button (required before Approve).
   4. **More-details history:** each request and the applicant's response + response files.
   5. **History timeline:** from `membership_status_history` (events, actor, note, time).
-  6. **Decision panel:** **Approve** (disabled until proof reviewed; confirm modal explains the outcome: *free promotion → membership activated immediately, number issued* / *no promotion → payment instructions sent*), **Request more details** (modal: message, "emailed and saved on the application"), **Reject** (modal: note/reason shown to applicant). Reapplication cooldown date shown after rejection.
+  6. **Decision panel:** **Approve** (disabled until proof reviewed; confirm modal explains the outcome for **every** new member: *the application becomes `approved` (approval is not immediate activation), then the payment/free decision confirms no payment is required for an initial membership, then activation issues the membership number once, starts the first N months free and sends the account-setup email (activation trigger: DB OD-23)* — there is no promotion check and no payment step), **Request more details** (modal: message, "emailed and saved on the application"), **Reject** (modal: note/reason shown to applicant). Reapplication cooldown date shown after rejection.
   7. After approval: link to the **Membership** record.
 * **Modals:** request details, reject, approve-confirm. **Emails:** M2/M3/M4/M5 are queued by the actions (an email status flash replaces the reference's "emailSent" toast note).
 * **Permissions:** admin; one decision at a time (compare-and-set) — a second admin sees "already decided". **Type:** **Livewire** (list = table base; detail = review component).
@@ -44,12 +44,12 @@ The reference admin has 18 pages (`/admin/*`). Each is documented, followed by t
 * **Purpose:** view memberships/terms, **confirm or reject payment evidence**, monitor activation and expiry.
 * **Nav:** Membership → Memberships.
 * **List — reference:** Member (name/email), Plan, Applied, Status badge (`pending, active, rejected, suspended, expired`), Payment badge, actions: status `Select` (any → any), **Approve** (pending), **Send/Update payment link** (dialog: URL, amount USD, status). *This is the legacy System-A page and is superseded.*
-* **List — target:** columns: Member, **Membership number**, Category, Status (`pending_activation/active/expired`), **Payment status** (five states), Starts, Expires, Promotion. Filters: status, payment status, category, "expiring within 30 days", "awaiting payment confirmation", search (name/email/number). No free-form status select; no payment-link dialog; no `suspended/rejected` states.
-* **Detail:** membership facts (fee snapshot, plan, promotion snapshot, dates), **Payment panel** — bank account instructed, reference, **evidence documents** (secure open), payment status, history; actions **Confirm payment** (→ activation, number issued, setup email) and **Reject payment** (modal: reason → membership back to `payment_pending`, applicant notified). Refund (payment) action: **deferred** (P3, DB OD-13). Links to the source application and account-setup resend (re-issues a token).
+* **List — target:** columns: Member, **Membership number**, Category, **Current term** (introductory/renewal), current-term status (`active`/`expired`/renewal `pending_payment`), **payment status** (renewals only), Starts, Expires. One row per **member** (the number never changes). Filters: current status, payment status, category, "expiring within 30 days", "renewal awaiting payment confirmation", search (name/email/number). No free-form status select; no payment-link dialog; no `suspended/rejected` states.
+* **Detail:** member facts (number, category, activation date, linked application), a **term history** (introductory term, then renewals — each with length, dates, fee snapshot, payment status), and for a renewal awaiting payment a **Payment panel** — bank account instructed, reference, **evidence documents** (secure open), payment status, history; actions **Confirm payment** (→ the renewal term becomes valid; the membership number is unchanged) and **Reject payment** (modal: reason → renewal term back to `payment_pending`, member notified). Refund (payment) action: **deferred** (P3, DB OD-13). Links to the source application and account-setup resend (re-issues a token).
 * **Permissions:** admin; confirm/reject are audit-logged; guarded state transitions only. **Type:** Livewire.
 
-## 5. Promotions — `/admin/promotions` (new)
-List (Name, Active, Window, Free months, Priority, Categories) + create/edit form: name, description, active, **starts_on / ends_on**, free-membership flag, **free duration (months)**, **priority** (lower = higher), applicable categories (checkbox group). **No delete** — deactivate. Edits audit-logged. Shows "used by N memberships". **Type:** Blade dialog form (or CRUD component).
+## 5. Promotions — DEFERRED (no admin page in the first build)
+The mandatory first-6-month free membership is **not** a promotion and needs no admin promotions page — its length is a single value on the **Membership settings** page (`introductory_period_months`, default 6). A Promotions admin page is reserved for a future marketing-promotions capability that no confirmed requirement defines (`docs/database/05_PROMOTION_SCHEMA.md` §3).
 
 ## 6. Plans & categories — `/admin/plans` (new)
 Three fixed categories (read-only code S/P/V; name/description/active editable) and their **plans** (fee, currency, duration, active). **Price change = "New plan version"** (never edit a plan already used — DB rule R-25); only one active plan per category. **Type:** Blade.
@@ -105,7 +105,7 @@ Reference has **no admin UI** for `social_links` / `footer_links` (they were see
 
 ## 19. Reports — `/admin/reports`
 * **Reference:** header + month/year selects + **Print** and **Save as PDF** (both `window.print()`); 4 summary cards (New signups 12-mo, Active memberships, Signups in selected month, Memberships in selected month); 2×2 grid: line chart (monthly signups), bar chart (cumulative membership growth), pie (membership type in selected month, 8-colour palette), "Monthly Activity" table (Month, Sign-ups, Memberships, Applications, Enquiries; selected month highlighted). Print stylesheet hides everything except `#report-printable`.
-* **Target metrics (approved model):** applications submitted / approved / rejected, activations by category, **free (promotion) vs paid**, payments confirmed (per currency), expiries upcoming, enquiries, members active. Same page structure; month/year filters; printable view. Server-generated PDF is optional (TBC). Chart library and exact charts deferred (`08` D-03). **Type:** Blade (numbers server-side).
+* **Target metrics (approved model):** applications submitted / approved / rejected, activations by category, **members in their free introductory term vs paid renewals**, renewals started/confirmed, payments confirmed (per currency), expiries upcoming, enquiries, members active. Same page structure; month/year filters; printable view. Server-generated PDF is optional (TBC). Chart library and exact charts deferred (`08` D-03). **Type:** Blade (numbers server-side).
 
 ## 20. Site settings — `/admin/settings`
 * **Reference:** card with `sm:2-col` form: Site name, Site description (textarea), Contact email, Phone, Address (textarea), Logo URL, Favicon URL, Facebook/LinkedIn/Instagram/YouTube URLs; Save.
@@ -115,7 +115,7 @@ Reference has **no admin UI** for `social_links` / `footer_links` (they were see
 List of the 12 keyed templates (M1–M11 + referral invitation): Ref, Name, Active, Updated. Edit: subject + body with a **placeholder reference panel** (available variables per template), plain-text/limited-Markdown editor, **Preview** with sample data. No create/delete. Mandatory templates cannot be deactivated. Edits audit-logged. **Type:** Blade (+ Alpine preview).
 
 ## 22. Membership settings — `/admin/membership-settings` (new)
-Reapplication cooldown (days), account-setup link lifetime (hours). Could be a section of Site settings. **Type:** Blade.
+**Introductory free period (months, default 6)**, reapplication cooldown (days), account-setup link lifetime (hours). Could be a section of Site settings. **Type:** Blade.
 
 ## 23. Audit log — `/admin/audit-log` (new)
 Read-only table: Time, Actor, Event, Subject, IP; filters: event, actor, subject type, date range; row expands to old/new values (redacted). No edit/delete. **Type:** Livewire table.
@@ -125,6 +125,6 @@ Read-only table: Time, Actor, Event, Subject, IP; filters: event, actor, subject
 | | Count |
 |---|---|
 | Reference admin pages | 18 (Overview, Users, Memberships, Membership Applications, Blog, News, Events, Comments, Jobs, Job Applications, Enquiries, Subscribers, Testimonials, FAQs, Team, Hero, Reports, Settings) |
-| New pages required by approved architecture | 7 (Promotions, Plans & categories, Bank details, Email templates, Membership settings, Audit log, Social & footer links) |
+| New pages required by approved architecture | 6 (Plans & categories, Bank details, Email templates, Membership settings, Audit log, Social & footer links) — Promotions is deferred |
 | Reference pages substantially redesigned | 3 (Membership applications, Memberships, Reports) |
 | Livewire 3 components (approved for admin only, `08` C-01) | table base ×1 (reused by ~9 lists) · review screen ×2 (application, membership/payment) · crud-manager ×1 |
