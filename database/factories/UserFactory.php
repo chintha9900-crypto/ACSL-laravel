@@ -34,6 +34,39 @@ class UserFactory extends Factory
     }
 
     /**
+     * Indicate that the account is active and able to sign in.
+     */
+    public function active(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'active',
+        ]);
+    }
+
+    /**
+     * Indicate that the account was provisioned but the member has not yet set a password.
+     */
+    public function pendingSetup(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'pending_setup',
+            'password' => null,
+            'email_verified_at' => null,
+            'remember_token' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the account is suspended.
+     */
+    public function suspended(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'suspended',
+        ]);
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static
