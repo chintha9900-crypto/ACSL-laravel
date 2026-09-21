@@ -5,7 +5,149 @@
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+/*
+ * ACI design tokens — Navy + Sky Blue + White. Headings: Sora | Body: Plus Jakarta Sans.
+ * Provisional starting point from the reference application (docs/frontend/02); the final
+ * palette and logo are controlled brand assets supplied by ACI (docs/frontend/08 C-02).
+ */
+@theme inline {
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'Sora', ui-sans-serif, system-ui, sans-serif;
+
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --radius-2xl: calc(var(--radius) + 8px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary-glow: var(--primary-glow);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --shadow-elegant: 0 10px 40px -10px oklch(0.18 0.08 250 / 0.25);
+    --shadow-glow: 0 0 60px -10px oklch(0.65 0.16 230 / 0.4);
+    --shadow-card: 0 1px 3px 0 oklch(0 0 0 / 0.05), 0 4px 16px -4px oklch(0.18 0.08 250 / 0.08);
+}
+
+:root {
+    --radius: 0.75rem;
+
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.27 0.04 257);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.27 0.04 257);
+
+    --primary: oklch(0.22 0.08 257); /* navy */
+    --primary-foreground: oklch(1 0 0);
+    --primary-glow: oklch(0.65 0.16 230);
+
+    --secondary: oklch(0.65 0.16 230); /* sky */
+    --secondary-foreground: oklch(1 0 0);
+
+    --muted: oklch(0.97 0.005 250);
+    --muted-foreground: oklch(0.5 0.02 257);
+
+    --accent: oklch(0.95 0.025 230);
+    --accent-foreground: oklch(0.22 0.08 257);
+
+    --destructive: oklch(0.6 0.22 25);
+    --destructive-foreground: oklch(1 0 0);
+
+    --border: oklch(0.92 0.01 250);
+    --input: oklch(0.92 0.01 250);
+    --ring: oklch(0.65 0.16 230);
+}
+
+@layer base {
+    * {
+        border-color: var(--color-border);
+    }
+
+    body {
+        -webkit-font-smoothing: antialiased;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        font-family: var(--font-display);
+        letter-spacing: -0.02em;
+    }
+}
+
+@utility gradient-hero {
+    background: linear-gradient(135deg, oklch(0.22 0.08 257) 0%, oklch(0.32 0.1 250) 50%, oklch(0.45 0.14 235) 100%);
+}
+
+@utility gradient-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-glow) 100%);
+}
+
+@utility text-gradient {
+    background: linear-gradient(135deg, var(--primary-glow), oklch(0.78 0.12 220));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* Reusable pieces matching the reference's shadcn Card, Input/Textarea and Button. */
+@layer components {
+    .ui-card {
+        @apply rounded-xl border border-border/60 bg-card text-card-foreground shadow-card;
+    }
+
+    .field-control {
+        @apply block w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm;
+    }
+
+    input.field-control {
+        @apply h-9;
+    }
+
+    textarea.field-control {
+        @apply min-h-[60px] py-2;
+    }
+
+    .field-control[aria-invalid='true'] {
+        @apply border-destructive focus-visible:ring-destructive;
+    }
+
+    .btn {
+        @apply inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .btn-sm {
+        @apply h-8 px-3 text-xs;
+    }
+
+    .btn-lg {
+        @apply h-10 px-8;
+    }
+
+    .btn-ghost {
+        @apply hover:bg-accent hover:text-accent-foreground;
+    }
+
+    .btn-gradient {
+        @apply gradient-primary text-primary-foreground shadow-glow hover:opacity-95;
+    }
 }

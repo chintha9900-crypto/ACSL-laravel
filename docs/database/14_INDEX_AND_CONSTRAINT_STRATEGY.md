@@ -4,7 +4,7 @@ Design only. This document consolidates the index, uniqueness, CHECK and generat
 
 ## 1. Index principles
 
-1. **Index for a named access path**, not for a column. Every non-unique index below is justified by a query in a workflow (review queue, cooldown check, expiry job, unread count, webhook lookup…).
+1. **Index for a named access path**, not for a column. Every non-unique index below is justified by a query in a workflow (review queue, expiry job, unread count, webhook lookup…).
 2. **Foreign-key columns are always indexed** (InnoDB requires it; Laravel's `foreignId()->constrained()` creates it). They are not repeated in the tables below unless a composite index covers them.
 3. **Composite indexes lead with the equality column, then the range/sort column** (`status, submitted_at`; `email, status, decided_at`).
 4. **Unique indexes carry business invariants** (idempotency, "exactly one", identifiers); they are the last line of defence behind application checks.
@@ -134,7 +134,7 @@ All are `VIRTUAL` (nothing stored beyond the unique index entry), read-only to E
 | Workflow | Index | Query it serves |
 |---|---|---|
 | Admin application review queue | `membership_applications (status, submitted_at)` | oldest `submitted` first |
-| **Reapplication cooldown** | `(email, status, decided_at)` and `(mobile, status, decided_at)` | newest `rejected` for this applicant |
+| *(Former reapplication-cooldown lookup — **no longer used**; there is no cooldown)* | `(email, status, decided_at)` and `(mobile, status, decided_at)` | indexes retained from an earlier design; no workflow queries them |
 | Member's own applications | `(user_id, status)` | dashboard |
 | Expiry job + configurable renewal reminders | `membership_terms (status, expires_on)` | `status='active' AND expires_on = ?` / `< today` |
 | Payment confirmation queue | `membership_terms (status, payment_status)`; `payments (status, submitted_at)` | evidence awaiting review |

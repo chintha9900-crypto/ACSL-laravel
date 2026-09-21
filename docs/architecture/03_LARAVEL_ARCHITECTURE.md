@@ -101,7 +101,7 @@ Concretely: `Actions/Membership/ActivateMembership` fires a `MembershipActivated
 
 ## 6. Configuration & service providers
 
-- Domain-specific configuration (renewal reminder offsets, introductory-period and reapplication-cooldown defaults — the latter also editable via the `membership_settings` singleton — bank-detail field set, membership number format constants) lives in dedicated config files (`config/membership.php`, `config/payments.php`) rather than hard-coded constants — directly satisfies the CONFIRMED REQUIREMENT that the cooldown period, promotion parameters, and similar values remain admin/config-configurable, not hard-coded into application logic (`WORKFLOWS.md` §0.6, §0.11, §0.14).
+- Domain-specific configuration (renewal reminder offsets, introductory-period default — also editable via the `membership_settings` singleton — bank-detail field set, membership number format constants) lives in dedicated config files (`config/membership.php`, `config/payments.php`) rather than hard-coded constants — directly satisfies the CONFIRMED REQUIREMENT that the introductory period, promotion parameters, and similar values remain admin/config-configurable, not hard-coded into application logic (`WORKFLOWS.md` §0.6, §0.11). *(There is no reapplication cooldown, `WORKFLOWS.md` §0.14.)*
 - One `AppServiceProvider`-registered binding for the `PaymentGatewayContract` (see `08_PAYMENT_ARCHITECTURE.md`) so the concrete gateway (manual bank transfer today, a real gateway later) is swappable via config, not a code change.
 
 ## 7. Frontend architecture — preserving ACI's visual design without Supabase

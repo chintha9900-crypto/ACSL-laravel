@@ -12,7 +12,7 @@ An applicant submits an application with mandatory aviation proof. An admin revi
 |---|---|---|
 | `MembershipCategory` | The 3 categories (Student/`S`, Professional/`P`, Veteran/`V`) as configurable data | Referenced by `MembershipApplication`, `Membership`, `MembershipPlan` |
 | `MembershipPlan` | Renewal pricing per category (fee, currency, normally 12 months) — data, not code | belongsTo `MembershipCategory`; snapshotted onto each renewal term |
-| `MembershipSettings` | Typed singleton: introductory free months (default 6), reapplication cooldown, setup-link lifetime | read by activation/renewal Actions |
+| `MembershipSettings` | Typed singleton: introductory free months (default 6), setup-link lifetime (the legacy `reapplication_cooldown_days` column is unused/deprecated) | read by activation/renewal Actions |
 | `MembershipApplication` | One row per application attempt for **new** membership | belongsTo category; hasMany proof `Document`s; hasOne `Membership` (after approval); hasMany status-history entries |
 | `Membership` | **The stable member record — one per member for life; owns the membership number** | belongsTo originating `MembershipApplication`; belongsTo `User`; belongsTo category; hasMany `MembershipTerm` |
 | `MembershipTerm` | One validity term: term 1 = **introductory (free)**, later terms = **paid renewals** | belongsTo `Membership`; belongsTo `MembershipPlan` (renewals); hasMany `Payment` (renewals) |
@@ -36,10 +36,11 @@ The deferred **Promotions** capability (`05` in the database set) is a *separate
 
 ## 3. Reapplication after rejection
 
-**CONFIRMED REQUIREMENT** (`WORKFLOWS.md` §0.14): reapplication allowed; default cooldown 30 days, admin-configurable; every historical application retained; a new application undergoes the full process again.
+**CONFIRMED REQUIREMENT** (`WORKFLOWS.md` §0.14): reapplication after rejection is allowed **with no cooldown or waiting period**; every historical application retained; a new application undergoes the full process again.
 
-- **Laravel mechanism**: the cooldown lives in the typed singleton `membership_settings.reapplication_cooldown_days` (default 30). The eligibility check blocks only when the applicant's newest `rejected` application falls inside the cooldown window, and **blocks any new application from a person who already has a `Membership` record** — they renew instead (one member identity for life). A database unique key already prevents two *open* applications for one email.
-- A `MembershipApplication` is immutable once terminal except for the fields the workflow itself updates; a fresh application after cooldown is always a **new row**.
+- **Laravel mechanism**: the eligibility check blocks a new application only when (a) an *open* application already exists for the email (a database unique key, `open_email_key`, enforces this), or (b) the person **already has a `Membership` record** — they use the existing membership/renewal process instead, never a second member identity (a membership is the lifelong identity; expired or lapsed members renew rather than reapply). A past rejection never blocks a new application.
+- A `MembershipApplication` is immutable once terminal except for the fields the workflow itself updates; a reapplication after rejection is always a **new row**.
+- `membership_settings.reapplication_cooldown_days` exists from an earlier design but is **unused/deprecated**: no rule reads it and the application must not use it.
 
 ## 4. Membership number — authoritative generation (issued once per member)
 
@@ -119,7 +120,7 @@ Step C — Actions/Membership/ActivateMembership (single DB::transaction, first 
 MembershipApplication.status:  submitted ─┬─▶ more_details_required ─┐
                                             │◀────────────────────────┘
                                             ├─▶ approved ──▶ PAYMENT/FREE DECISION ──▶ ACTIVATION
-                                            └─▶ rejected  ──(cooldown, configurable)──▶ new application allowed
+                                            └─▶ rejected  ──(no cooldown)──▶ new application allowed
                                             (a person who already has a Membership renews; they do not reapply)
 
 PAYMENT/FREE DECISION (every approved new member): payment NOT required — first 6 months free (standard rule, no £0 payment)

@@ -90,7 +90,7 @@ Typed singleton for membership-workflow tunables. **Not** a key/value table.
 |---|---|---|---|---|
 | `id` | TINYINT UNSIGNED | N | 1 | PK, `CHECK (id = 1)` |
 | `introductory_period_months` | SMALLINT UNSIGNED | N | **6** | Length of the free introductory term granted to **every** approved new member. `CHECK (introductory_period_months > 0)`. Confirmed default; configurable data, never hard-coded in code or views. Changing it affects **only future** activations (each term snapshots its own length). |
-| `reapplication_cooldown_days` | SMALLINT UNSIGNED | N | 30 | Confirmed default (WORKFLOWS §0.14), admin-configurable |
+| `reapplication_cooldown_days` | SMALLINT UNSIGNED | N | 30 | **UNUSED / DEPRECATED.** ACI's decision is that there is **no** rejection cooldown (WORKFLOWS §0.14). The column exists from an earlier design and is retained unchanged; no rule reads or writes it, and the application must not use it. A future migration may drop it. |
 | `account_setup_token_ttl_hours` | SMALLINT UNSIGNED | N | 72 | Placeholder within the 24–72 h range; data, not a rule |
 | `updated_by_user_id` | BIGINT UNSIGNED | Y | NULL | FK → `users` RESTRICT |
 | `created_at`, `updated_at` | TIMESTAMP | Y | NULL | |
@@ -109,8 +109,8 @@ One row per application attempt for **new** membership. **Never overwritten, nev
 | `membership_category_id` | BIGINT UNSIGNED | N | — | FK. Exactly one category. |
 | `status` | VARCHAR(30) | N | `'submitted'` | `CHECK (status IN ('submitted','more_details_required','approved','rejected'))` |
 | `full_name` | VARCHAR(160) | N | — | Snapshot of the reviewed name; copied verbatim to `users.name` at activation (no splitting) |
-| `email` | VARCHAR(255) | N | — | Stored lower-cased; the cooldown/duplicate key |
-| `mobile` | VARCHAR(40) | N | — | Used for duplicate/cooldown matching |
+| `email` | VARCHAR(255) | N | — | Stored lower-cased; the duplicate key (`open_email_key`) |
+| `mobile` | VARCHAR(40) | N | — | Contact number; no uniqueness or matching rule applies |
 | `address` | VARCHAR(400) | N | — | |
 | `aviation_role` | VARCHAR(160) | N | — | Student → course name; Professional → occupation; Veteran → position held |
 | `aviation_organisation` | VARCHAR(200) | N | — | Student → training institute; Professional → employer; Veteran → most recent aviation employer |
@@ -142,9 +142,9 @@ One row per application attempt for **new** membership. **Never overwritten, nev
 
 **Foreign keys:** `user_id` → `users`; `membership_category_id` → `membership_categories`; `proof_reviewed_by_user_id`, `decided_by_user_id` → `users` — all many : 0..1/1, `RESTRICT`.
 
-**Indexes:** `UNIQUE(public_id)`; `UNIQUE(open_email_key)`; `(status, submitted_at)` (review queue); `(email, status, decided_at)` and `(mobile, status, decided_at)` (**reapplication cooldown**); `(user_id, status)`; FK indexes.
+**Indexes:** `UNIQUE(public_id)`; `UNIQUE(open_email_key)`; `(status, submitted_at)` (review queue); `(email, status, decided_at)` and `(mobile, status, decided_at)` (created for a former cooldown lookup; **no rule uses them now** — retained, not removed); `(user_id, status)`; FK indexes.
 
-**Cooldown:** allowed when there is no open application (DB-enforced) **and** the newest `rejected` application for the same email/mobile has `decided_at + reapplication_cooldown_days <= now`. Soft delete: **NO**.
+**Reapplication:** a rejected applicant may submit a new application at any time — there is **no cooldown**. A new application is refused only when (a) an open application exists for the same email (DB-enforced by `open_email_key`) or (b) that email already has a `memberships` row, in which case the person uses the existing membership/renewal process (R-06 in `15`). Soft delete: **NO**.
 
 ## 7. `membership_details_requests` — the real "more details required" workflow
 

@@ -49,7 +49,7 @@ Reconciled with the confirmed business decisions OD-10, OD-04 and OD-08 (and the
 None of these blocks generating migrations.
 
 ### OD-21 — Renewal details not yet confirmed (NEW)
-* **Issue:** (a) when a renewal term starts (day after the current term ends vs the confirmation date); (b) whether/how long an expired member may still renew vs must reapply (see also OD-22 for deactivation after non-payment); (c) whether the category may change at renewal (the number's prefix is the original category).
+* **Issue:** (a) when a renewal term starts (day after the current term ends vs the confirmation date); (b) whether/how long an expired member may still renew (a member — including a lapsed one — never reapplies: an existing `memberships` row means renewal, R-06 in `15`; only any time limit on renewing is open; see also OD-22 for deactivation after non-payment); (c) whether the category may change at renewal (the number's prefix is the original category).
 * **Why it matters:** these are renewal-Action rules; the schema is neutral to all three (dates are set by the confirm action; category is on `memberships` and derivable per term via the plan).
 * **Recommended defaults (until ACI decides):** (a) contiguous — start the day after the current `expires_on` when renewing while current, else on confirmation; (b) an expired member can renew with no time limit invented by us; (c) category is fixed; no change supported.
 * **Schema change if answered differently:** none expected; (c) could add a nullable category snapshot to terms. **Resolve:** P4-late (renewal Actions), non-blocking.

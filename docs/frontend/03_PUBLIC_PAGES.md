@@ -55,8 +55,8 @@ Redirects to `/membership/benefits` (no membership home page). Keep the redirect
 | Professional | Occupation · Employer/Organisation · *Select plan (Basic/Intermediate/Inner Circle)* | `aviation_role` · `aviation_organisation` · **plan selector removed** (`08` C-04, approved) |
 | Veteran | Previous Employer(s) · Position Held · Years of Experience | `previous_employers` · `aviation_role` · `years_experience` · **+ new required field "Most recent aviation employer" → `aviation_organisation`** (reference had no such field) |
 
-* **Behaviour:** Alpine shows only the selected category's fields; **single multipart POST**; server validates per category; mobile validated server-side (reference used `react-phone-number-input`, default country LK — phone widget deferred, `08` D-11). Success page shows: reference (`public_id`), "we will email you at each status change", a **status link** (`/applications/{public_id}` signed), no "Submit another application" (an open application exists; cooldown rules apply).
-* **Blocked states to design:** open application already exists for this email → message + link to its status; recently rejected (within cooldown) → message with the date they may reapply; validation failures inline (no toast-only errors).
+* **Behaviour:** Alpine shows only the selected category's fields; **single multipart POST**; server validates per category; mobile validated server-side (reference used `react-phone-number-input`, default country LK — phone widget deferred, `08` D-11). Success page shows: reference (`public_id`), "we will email you at each status change", a **status link** (`/applications/{public_id}` signed), no "Submit another application" (an open application exists, so a second one for the same email is refused).
+* **Blocked states to design:** open application already exists for this email → message + link to its status; email already belongs to an existing membership → message (they use the existing membership/renewal process; a **rejected** applicant is *not* blocked — there is no cooldown); validation failures inline (no toast-only errors).
 * **CTA:** Submit application. **Secondary:** Back to benefits. **Auth:** none (throttled). **Data:** categories/plans CMS; form Static. **Type:** **Blade** multipart (not Livewire: sensitive uploads, `01` §5).
 
 ### A8. Blog — `/blog`
@@ -115,7 +115,7 @@ These serve the **pre-account applicant** (secure signed expiring link tied to t
 Status timeline built from `membership_status_history` (Submitted → More details requested ⇄ Submitted → Approved / Rejected; there is no "under review" status), category, submitted date, latest admin message (decision note or details request), next-action card:
 * `submitted` — "We're reviewing your application."
 * `more_details_required` → **B2**.
-* `rejected` — reason (if shared), date they may reapply (cooldown), link to Apply.
+* `rejected` — reason (if shared), link to Apply again (they may reapply at any time; no cooldown).
 * `approved` — for **every** new member: approval is not yet activation. Until the membership is activated the page shows "Approved — your membership is being activated" (no payment is required; the first N months are free). Once activated: the membership number, "your first N months are free", and the account-setup notice (activation trigger open — DB OD-23). There is no payment state before activation.
 **Type:** Blade.
 

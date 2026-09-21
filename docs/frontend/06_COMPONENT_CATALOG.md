@@ -100,7 +100,7 @@ Tokens/classes referenced (`02`): `gradient-primary`, `gradient-hero`, `shadow-c
 
 | Component | Purpose | Visual | Variants | Used in | Type | Depends on |
 |---|---|---|---|---|---|---|
-| `ui.alert` | Inline notice | `rounded-lg border px-4 py-3 text-sm` with icon | info, success, warning, destructive | payment states, cooldown, more-details request | B | x-icon |
+| `ui.alert` | Inline notice | `rounded-lg border px-4 py-3 text-sm` with icon | info, success, warning, destructive | payment states, more-details request | B | x-icon |
 | `ui.toast` | Flash message | top-right stack, auto-dismiss, coloured by type | success, error, warning | all layouts | B+A | session flash |
 
 ## 10. Badges (2)

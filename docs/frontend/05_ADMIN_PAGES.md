@@ -35,7 +35,7 @@ The reference admin has 18 pages (`/admin/*`). Each is documented, followed by t
   3. **Aviation proof:** document list (name, type, size, uploaded, **Open** via secure route — never a public URL); **Mark proof reviewed** button (required before Approve).
   4. **More-details history:** each request and the applicant's response + response files.
   5. **History timeline:** from `membership_status_history` (events, actor, note, time).
-  6. **Decision panel:** **Approve** (disabled until proof reviewed; confirm modal explains the outcome for **every** new member: *the application becomes `approved` (approval is not immediate activation), then the payment/free decision confirms no payment is required for an initial membership, then activation issues the membership number once, starts the first N months free and sends the account-setup email (activation trigger: DB OD-23)* — there is no promotion check and no payment step), **Request more details** (modal: message, "emailed and saved on the application"), **Reject** (modal: note/reason shown to applicant). Reapplication cooldown date shown after rejection.
+  6. **Decision panel:** **Approve** (disabled until proof reviewed; confirm modal explains the outcome for **every** new member: *the application becomes `approved` (approval is not immediate activation), then the payment/free decision confirms no payment is required for an initial membership, then activation issues the membership number once, starts the first N months free and sends the account-setup email (activation trigger: DB OD-23)* — there is no promotion check and no payment step), **Request more details** (modal: message, "emailed and saved on the application"), **Reject** (modal: note/reason shown to applicant). A rejected applicant may apply again immediately (no cooldown).
   7. After approval: link to the **Membership** record.
 * **Modals:** request details, reject, approve-confirm. **Emails:** M2/M3/M4/M5 are queued by the actions (an email status flash replaces the reference's "emailSent" toast note).
 * **Permissions:** admin; one decision at a time (compare-and-set) — a second admin sees "already decided". **Type:** **Livewire** (list = table base; detail = review component).
@@ -115,7 +115,7 @@ Reference has **no admin UI** for `social_links` / `footer_links` (they were see
 List of the 12 keyed templates (M1–M11 + referral invitation): Ref, Name, Active, Updated. Edit: subject + body with a **placeholder reference panel** (available variables per template), plain-text/limited-Markdown editor, **Preview** with sample data. No create/delete. Mandatory templates cannot be deactivated. Edits audit-logged. **Type:** Blade (+ Alpine preview).
 
 ## 22. Membership settings — `/admin/membership-settings` (new)
-**Introductory free period (months, default 6)**, reapplication cooldown (days), account-setup link lifetime (hours). Could be a section of Site settings. **Type:** Blade.
+**Introductory free period (months, default 6)**, account-setup link lifetime (hours). *(No reapplication-cooldown setting: there is no cooldown.)* Could be a section of Site settings. **Type:** Blade.
 
 ## 23. Audit log — `/admin/audit-log` (new)
 Read-only table: Time, Actor, Event, Subject, IP; filters: event, actor, subject type, date range; row expands to old/new values (redacted). No edit/delete. **Type:** Livewire table.

@@ -239,8 +239,8 @@ After activation, the **digital membership card must be available in the member 
 **CONFIRMED — final decision**: a rejected application does **not** permanently prevent an applicant from applying again.
 
 - Reapplication is allowed.
-- Recommended cooldown period: **30 days** from rejection before a new application from the same applicant is accepted.
-- The 30-day figure is **admin-configurable data**, not hard-coded, so ACI can change it later without a code change.
+- **There is no cooldown or waiting period.** A rejected applicant may submit a new application at any time. *(An earlier draft of this section recommended a 30-day cooldown; ACI's final decision is that there is none. The `membership_settings.reapplication_cooldown_days` column that was added for it is unused/deprecated — nothing reads or writes it.)*
+- An applicant who **already has a membership** must use the existing membership/renewal process; they cannot create a new membership application or a second member identity (a membership is the lifelong member identity, individual periods are terms).
 - **Previous applications must remain in the historical record** — a new application is a new row/entity, never an overwrite of the rejected one (this also resolves the legacy duplicate-check gap noted in VALIDATION.md/LEGACY_RISKS.md, where a rejected applicant could never reapply with the same email/mobile at all).
 - A new application must go through the **normal** eligibility, proof, and admin-review process in full (§0.1–§0.5) — no shortcut or carry-over from the earlier rejected application.
 
@@ -301,7 +301,7 @@ Per the Database Rule and Implementation Rule, this is a conceptual recommendati
 
 ### Remaining business decisions requiring ACI approval (do not infer)
 
-All previously-open structural questions (reapplication cooldown, per-category vs. global membership-number sequencing, and whether multiple promotions can be active/how conflicts resolve) are now **CONFIRMED and closed** — see §0.6, §0.11, §0.14. The specification also explicitly defers several details to ARCHITECTURE as non-blocking implementation choices (exact bank-detail field set, exact card visual design, exact renewal pricing/workflow) — those are noted inline above and are **not** listed again here. What remains genuinely open:
+All previously-open structural questions (reapplication after rejection — now decided: no cooldown, per-category vs. global membership-number sequencing, and whether multiple promotions can be active/how conflicts resolve) are now **CONFIRMED and closed** — see §0.6, §0.11, §0.14. The specification also explicitly defers several details to ARCHITECTURE as non-blocking implementation choices (exact bank-detail field set, exact card visual design, exact renewal pricing/workflow) — those are noted inline above and are **not** listed again here. What remains genuinely open:
 
 - Final commercial names, pricing, and standard duration for the three membership categories.
 - Exact acceptable aviation-proof document types/formats per category (the requirement that proof is mandatory and admin-reviewed is settled; the accepted formats are not — §0.5).
