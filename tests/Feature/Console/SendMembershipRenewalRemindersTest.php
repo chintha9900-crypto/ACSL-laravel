@@ -6,6 +6,7 @@ use App\Actions\Membership\StartRenewal;
 use App\Models\Membership;
 use App\Models\MembershipTerm;
 use App\Notifications\Membership\RenewalReminder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -17,6 +18,18 @@ class SendMembershipRenewalRemindersTest extends MysqlTestCase
 {
     use CreatesRenewals;
     use CreatesReviewableApplications;
+
+    /**
+     * "Today" as the command itself sees it (`SendMembershipRenewalReminders`
+     * anchors its offset math on `config('membership.business_timezone')`,
+     * not the app's default UTC) — expiry fixtures below must be built the
+     * same way, or a date built from UTC `now()` can land on the wrong
+     * calendar day whenever UTC and the business timezone currently disagree.
+     */
+    private function businessToday(): Carbon
+    {
+        return Carbon::now(config('membership.business_timezone'))->startOfDay();
+    }
 
     /**
      * An active term expiring on a given date, independent of the activation
@@ -50,7 +63,7 @@ class SendMembershipRenewalRemindersTest extends MysqlTestCase
     public function test_a_reminder_is_sent_at_the_configured_offset(int $days): void
     {
         Notification::fake();
-        $term = $this->activeTermExpiringOn(now()->addDays($days)->toDateString());
+        $term = $this->activeTermExpiringOn($this->businessToday()->addDays($days)->toDateString());
 
         $this->artisan('membership:send-renewal-reminders')->assertSuccessful();
 
@@ -64,12 +77,34 @@ class SendMembershipRenewalRemindersTest extends MysqlTestCase
         );
     }
 
+    /**
+     * The command anchors its offset math on the business timezone
+     * (`SendMembershipRenewalReminders::handle()`), not the app's default
+     * UTC. Travelling to a UTC instant where Colombo has already rolled to
+     * the next calendar date proves the offset is still measured from the
+     * business date, not from a UTC "today" that disagrees with it.
+     */
+    public function test_the_offset_is_measured_from_the_business_date_not_utc(): void
+    {
+        Notification::fake();
+        // 20:00 UTC on 26 Sep is already 01:30 on 27 Sep in Colombo.
+        $this->travelTo(Carbon::parse('2026-09-26 20:00:00', 'UTC'));
+        $this->assertSame('2026-09-27', $this->businessToday()->toDateString());
+
+        $term = $this->activeTermExpiringOn($this->businessToday()->addDays(14)->toDateString());
+        $this->assertSame('2026-10-11', $term->expires_on->toDateString());
+
+        $this->artisan('membership:send-renewal-reminders')->assertSuccessful();
+
+        Notification::assertSentTo($term->membership->user, RenewalReminder::class);
+    }
+
     public function test_no_reminder_is_sent_outside_the_configured_offsets(): void
     {
         Notification::fake();
-        $this->activeTermExpiringOn(now()->addDays(29)->toDateString());
-        $this->activeTermExpiringOn(now()->addDays(15)->toDateString());
-        $this->activeTermExpiringOn(now()->addDays(2)->toDateString());
+        $this->activeTermExpiringOn($this->businessToday()->addDays(29)->toDateString());
+        $this->activeTermExpiringOn($this->businessToday()->addDays(15)->toDateString());
+        $this->activeTermExpiringOn($this->businessToday()->addDays(2)->toDateString());
 
         $this->artisan('membership:send-renewal-reminders')->assertSuccessful();
 
@@ -79,7 +114,7 @@ class SendMembershipRenewalRemindersTest extends MysqlTestCase
     public function test_running_the_command_twice_does_not_send_a_duplicate_reminder(): void
     {
         Notification::fake();
-        $term = $this->activeTermExpiringOn(now()->addDays(30)->toDateString());
+        $term = $this->activeTermExpiringOn($this->businessToday()->addDays(30)->toDateString());
 
         $this->artisan('membership:send-renewal-reminders')->assertSuccessful();
         $this->artisan('membership:send-renewal-reminders')->assertSuccessful();
@@ -98,7 +133,7 @@ class SendMembershipRenewalRemindersTest extends MysqlTestCase
     {
         Notification::fake();
         $membership = $this->renewableMembership();
-        $this->activeTermExpiringOn(now()->addDays(30)->toDateString(), $membership);
+        $this->activeTermExpiringOn($this->businessToday()->addDays(30)->toDateString(), $membership);
 
         // A newer term already exists (e.g. the member already started renewing).
         app(StartRenewal::class)->handle($membership->fresh());
@@ -110,7 +145,7 @@ class SendMembershipRenewalRemindersTest extends MysqlTestCase
 
     public function test_the_reminder_creates_a_mail_and_database_notification(): void
     {
-        $term = $this->activeTermExpiringOn(now()->addDays(14)->toDateString());
+        $term = $this->activeTermExpiringOn($this->businessToday()->addDays(14)->toDateString());
 
         $this->artisan('membership:send-renewal-reminders')->assertSuccessful();
 

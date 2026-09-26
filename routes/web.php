@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\Admin\BlogCategoryController;
+use App\Http\Controllers\Admin\BlogPostController as AdminBlogPostController;
 use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\MembershipActivationController;
 use App\Http\Controllers\Admin\MembershipApplicationController as AdminMembershipApplicationController;
 use App\Http\Controllers\Admin\MembershipApplicationReviewController;
 use App\Http\Controllers\Admin\MembershipSetupLinkController;
 use App\Http\Controllers\Admin\PaymentReviewController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\Member\DashboardController;
 use App\Http\Controllers\Member\DocumentController as MemberDocumentController;
@@ -58,6 +61,11 @@ Route::get('privacy', function () {
 Route::get('terms', function () {
     return view('terms');
 })->name('terms');
+
+Route::controller(BlogController::class)->prefix('blog')->name('blog.')->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('{post:slug}', 'show')->name('show');
+});
 
 Route::controller(MembershipApplicationController::class)->group(function () {
     Route::get('membership/apply', 'create')->name('membership.apply');
@@ -140,6 +148,24 @@ Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(fu
     Route::get('payments', [PaymentReviewController::class, 'index'])->name('payments.index');
     Route::post('payments/{payment}/confirm', [PaymentReviewController::class, 'confirm'])->name('payments.confirm');
     Route::post('payments/{payment}/reject', [PaymentReviewController::class, 'reject'])->name('payments.reject');
+
+    Route::controller(AdminBlogPostController::class)->prefix('blog')->name('blog.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('{post}/edit', 'edit')->name('edit');
+        Route::patch('{post}', 'update')->name('update');
+        Route::delete('{post}', 'destroy')->name('destroy');
+        Route::post('{post}/publish', 'publish')->name('publish');
+        Route::post('{post}/unpublish', 'unpublish')->name('unpublish');
+    });
+
+    Route::controller(BlogCategoryController::class)->prefix('blog-categories')->name('blog-categories.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::patch('{category}', 'update')->name('update');
+        Route::delete('{category}', 'destroy')->name('destroy');
+    });
 });
 
 Route::post('applications/{application}/respond', [MoreDetailsResponseController::class, 'store'])

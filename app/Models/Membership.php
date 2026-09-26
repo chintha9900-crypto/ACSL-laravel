@@ -63,16 +63,30 @@ class Membership extends Model
      * dates (docs/database/04 §8's derived-state definition). Never inferred
      * from a bare `status = active` alone — the daily expiry job may not have
      * run yet, so a term can sit at `active` past its own `expires_on`.
+     *
+     * "Today" is anchored to the business timezone (docs/database/04's
+     * calendar-date fields are set that way by `ActivateMembership` and
+     * `ConfirmPayment`), not the app's default UTC — otherwise a term that
+     * just started "today" in the business timezone can appear not-yet-
+     * current whenever UTC hasn't rolled over to the same calendar date yet.
+     *
+     * Compared as plain `Y-m-d` strings, matching `ExpireMembershipTerms` and
+     * `SendMembershipRenewalReminders` — `starts_on`/`expires_on` are DATE
+     * columns with no timezone of their own, so comparing them as Carbon
+     * instants (each implicitly midnight in whatever timezone parsed them)
+     * would reintroduce the same UTC/business-timezone offset mismatch this
+     * method exists to avoid.
      */
     public function currentTerm(): ?MembershipTerm
     {
-        $today = Carbon::today();
+        $today = Carbon::now(config('membership.business_timezone'))->toDateString();
 
         return $this->terms->first(
             fn (MembershipTerm $term): bool => $term->status === MembershipTerm::STATUS_ACTIVE
                 && $term->starts_on !== null
                 && $term->expires_on !== null
-                && $today->betweenIncluded($term->starts_on, $term->expires_on)
+                && $today >= $term->starts_on->toDateString()
+                && $today <= $term->expires_on->toDateString()
         );
     }
 

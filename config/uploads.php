@@ -47,4 +47,15 @@ return [
         'extensions' => ['pdf', 'jpg', 'jpeg', 'png'],
     ],
 
+    /*
+    | Blog post featured image (docs/database/10 §3). Stored on the public
+    | disk. The reference's "1200x630 JPEG crop" tooling (docs/frontend/06 §5
+    | image-upload/D-02) is deferred — no cropper package is installed for
+    | this task, so this is a plain upload at whatever size is supplied.
+    */
+    'blog_featured_image' => [
+        'max_kb' => 3072,
+        'extensions' => ['jpg', 'jpeg', 'png'],
+    ],
+
 ];

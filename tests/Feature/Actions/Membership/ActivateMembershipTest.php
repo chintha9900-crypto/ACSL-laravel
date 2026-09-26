@@ -110,6 +110,25 @@ class ActivateMembershipTest extends MysqlTestCase
         $this->assertSame('2027-01-01', MembershipTerm::query()->firstOrFail()->starts_on->toDateString());
     }
 
+    /**
+     * `Membership::hasCurrentTerm()` must agree with the business-timezone
+     * date this term was just stamped with (`starts_on`), not the app's
+     * default UTC — otherwise a term that starts "today" in the business
+     * timezone can appear not-yet-current for as long as UTC hasn't reached
+     * that same calendar date yet.
+     */
+    public function test_a_freshly_activated_term_is_current_even_before_utc_reaches_the_business_timezones_date(): void
+    {
+        // 20:00 UTC on 26 Sep is already 01:30 on 27 Sep in Colombo.
+        $this->at('2026-09-26 20:00:00');
+
+        $membership = $this->activate($this->approved());
+
+        $this->assertSame('2026-09-27', $membership->terms->first()->starts_on->toDateString());
+        $this->assertTrue($membership->hasCurrentTerm());
+        $this->assertNotNull($membership->currentTerm());
+    }
+
     public function test_the_introductory_term_is_free_and_uses_the_configured_duration(): void
     {
         $this->at('2026-10-15 06:00:00');

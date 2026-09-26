@@ -40,4 +40,9 @@ trait CreatesUploads
     {
         return $this->realUpload($name, $this->pdfContent());
     }
+
+    protected function pngUpload(string $name = 'photo.png'): UploadedFile
+    {
+        return $this->realUpload($name, $this->pngContent(), 'image/png');
+    }
 }

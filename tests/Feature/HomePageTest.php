@@ -47,4 +47,16 @@ class HomePageTest extends TestCase
         $response->assertDontSee('href="/membership/benefits"', false);
         $response->assertDontSee('E-Shop');
     }
+
+    /**
+     * The shared public header's "Sign In" button, on any public page — it
+     * must point at the real `login` route, not somewhere else.
+     */
+    public function test_the_public_headers_sign_in_button_points_to_the_login_route(): void
+    {
+        $response = $this->get(route('home'))->assertOk();
+
+        $response->assertSee('href="'.route('login').'"', false);
+        $response->assertSee('Sign In');
+    }
 }

@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Membership;
 use App\Models\MembershipTerm;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -36,15 +35,9 @@ class MembershipController extends Controller
         // be active AND today must fall within its own dates. The daily job that
         // flips a lapsed term to `expired` (docs/architecture/04 §9) does not exist
         // yet, so a term can sit at status=active after its own expiry date — this
-        // page must not present that as a live membership.
-        $today = Carbon::today();
-
-        $currentTerm = $membership->terms->first(
-            fn (MembershipTerm $term): bool => $term->status === MembershipTerm::STATUS_ACTIVE
-                && $term->starts_on !== null
-                && $term->expires_on !== null
-                && $today->betweenIncluded($term->starts_on, $term->expires_on)
-        );
+        // page must not present that as a live membership. Reuses the model's own
+        // definition (`Membership::currentTerm()`) instead of a second copy of it.
+        $currentTerm = $membership->currentTerm();
 
         // Outside that window, fall back to the most recent term by term_no so the
         // page still has something meaningful to show — clearly not as "current".

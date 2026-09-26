@@ -26,6 +26,41 @@ class AuthenticatedSessionControllerTest extends MysqlTestCase
             ->assertDontSee('Register');
     }
 
+    /**
+     * The normal email/password form, for a guest — not just any 200. Covers
+     * every control named in the "can't see the login form" report: email
+     * input, password input, Sign In button, Forgot Password link.
+     */
+    public function test_a_guest_sees_the_email_and_password_login_form(): void
+    {
+        $response = $this->get('/login')->assertOk();
+
+        $response->assertSee('method="POST"', false);
+        $response->assertSee('action="'.route('login').'"', false);
+        $response->assertSee('type="email"', false);
+        $response->assertSee('name="email"', false);
+        $response->assertSee('type="password"', false);
+        $response->assertSee('name="password"', false);
+        $response->assertSee('type="submit"', false);
+        $response->assertSee('Sign in');
+        $response->assertSee('href="'.route('password.request').'"', false);
+        $response->assertSee('Forgot?');
+    }
+
+    /**
+     * The exact behaviour behind "/login doesn't show the form when I visit
+     * it directly": the `guest` middleware redirects an already-authenticated
+     * visitor away (to `/`, bootstrap/app.php's `redirectUsersTo`), by design
+     * — it is not shown a second sign-in form. This is not a bug; logging
+     * out (or clearing the session cookie) restores the guest experience.
+     */
+    public function test_an_already_authenticated_user_is_redirected_away_from_login(): void
+    {
+        $user = User::factory()->active()->create();
+
+        $this->actingAs($user)->get('/login')->assertRedirect('/');
+    }
+
     public function test_guest_is_redirected_to_login_from_a_protected_route(): void
     {
         $this->registerProtectedRoute();

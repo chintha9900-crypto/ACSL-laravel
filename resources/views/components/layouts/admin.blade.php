@@ -28,6 +28,8 @@
                     <nav aria-label="Admin" class="flex flex-wrap items-center gap-4">
                         <a href="{{ route('admin.membership-applications.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Membership applications</a>
                         <a href="{{ route('admin.payments.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Payments</a>
+                        <a href="{{ route('admin.blog.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Blog posts</a>
+                        <a href="{{ route('admin.blog-categories.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Blog categories</a>
                     </nav>
                 </div>
 
