@@ -27,6 +27,7 @@
                     <span class="font-display text-lg font-bold">Aviation Club International <span class="font-normal text-primary-foreground/70">Member</span></span>
                     <nav aria-label="Member" class="flex items-center gap-4 text-sm font-medium text-primary-foreground/85">
                         <a href="{{ route('member.dashboard') }}" class="hover:text-secondary">Dashboard</a>
+                        <a href="{{ route('member.membership.show') }}" class="hover:text-secondary">Membership</a>
                         <a href="{{ route('member.profile.show') }}" class="hover:text-secondary">Profile</a>
                     </nav>
                 </div>

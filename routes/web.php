@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\MembershipApplicationController as AdminMembershi
 use App\Http\Controllers\Admin\MembershipApplicationReviewController;
 use App\Http\Controllers\Admin\MembershipSetupLinkController;
 use App\Http\Controllers\Member\DashboardController;
+use App\Http\Controllers\Member\MembershipController as MemberMembershipController;
 use App\Http\Controllers\Member\ProfileController;
 use App\Http\Controllers\Membership\ApplicationStatusController;
 use App\Http\Controllers\Membership\MembershipApplicationController;
@@ -43,6 +44,10 @@ Route::get('dashboard/profile', [ProfileController::class, 'show'])
 Route::patch('dashboard/profile', [ProfileController::class, 'update'])
     ->middleware(['auth', 'active'])
     ->name('member.profile.update');
+
+Route::get('dashboard/membership', [MemberMembershipController::class, 'show'])
+    ->middleware(['auth', 'active'])
+    ->name('member.membership.show');
 
 Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('membership-applications', [AdminMembershipApplicationController::class, 'index'])
