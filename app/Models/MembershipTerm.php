@@ -13,9 +13,26 @@ class MembershipTerm extends Model
 {
     public const KIND_INTRODUCTORY = 'introductory';
 
+    public const KIND_RENEWAL = 'renewal';
+
+    public const STATUS_PENDING_PAYMENT = 'pending_payment';
+
     public const STATUS_ACTIVE = 'active';
 
+    public const STATUS_EXPIRED = 'expired';
+
     public const PAYMENT_NOT_REQUIRED = 'payment_not_required';
+
+    /**
+     * The three allowed term statuses (docs/database/04 §9) and how a member sees them.
+     *
+     * @var array<string, string>
+     */
+    public const STATUS_LABELS = [
+        self::STATUS_PENDING_PAYMENT => 'Renewal pending',
+        self::STATUS_ACTIVE => 'Active',
+        self::STATUS_EXPIRED => 'Expired',
+    ];
 
     /**
      * Get the attributes that should be cast.

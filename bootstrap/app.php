@@ -15,6 +15,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'active' => EnsureUserIsActive::class,
         ]);
+
+        // Laravel's "guest" middleware auto-redirects an already-authenticated visitor
+        // to any GET route whose path is literally "dashboard" (Auth\Middleware\
+        // RedirectIfAuthenticated::defaultRedirectUri()). The member dashboard lives at
+        // that path, so this pins the existing "/" redirect explicitly rather than
+        // letting that add the member dashboard route silently change it.
+        $middleware->redirectUsersTo('/');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

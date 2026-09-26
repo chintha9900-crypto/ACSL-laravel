@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\MembershipActivationController;
 use App\Http\Controllers\Admin\MembershipApplicationController as AdminMembershipApplicationController;
 use App\Http\Controllers\Admin\MembershipApplicationReviewController;
 use App\Http\Controllers\Admin\MembershipSetupLinkController;
+use App\Http\Controllers\Member\DashboardController;
 use App\Http\Controllers\Membership\ApplicationStatusController;
 use App\Http\Controllers\Membership\MembershipApplicationController;
 use App\Http\Controllers\Membership\MoreDetailsResponseController;
@@ -25,6 +26,13 @@ Route::controller(MembershipApplicationController::class)->group(function () {
 Route::get('applications/{application}', [ApplicationStatusController::class, 'show'])
     ->middleware(['signed', 'throttle:60,1'])
     ->name('applications.show');
+
+// Named "member.dashboard", not "dashboard": Laravel's guest middleware treats a
+// route literally named "dashboard" as its default post-login redirect target,
+// which would silently change the existing sign-in redirect for every user.
+Route::get('dashboard', [DashboardController::class, 'show'])
+    ->middleware(['auth', 'active'])
+    ->name('member.dashboard');
 
 Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('membership-applications', [AdminMembershipApplicationController::class, 'index'])
