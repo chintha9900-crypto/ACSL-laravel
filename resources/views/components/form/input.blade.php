@@ -1,4 +1,4 @@
-@props(['name', 'label', 'type' => 'text', 'hint' => null, 'required' => true, 'labelKey' => null, 'rows' => 2])
+@props(['name', 'label', 'type' => 'text', 'hint' => null, 'required' => true, 'labelKey' => null, 'rows' => 2, 'value' => null])
 
 @php
     $id = str_replace(['[', ']', '.'], '_', $name);
@@ -20,13 +20,13 @@
             @if ($hasError) aria-invalid="true" @endif
             @if ($describedBy !== '') aria-describedby="{{ $describedBy }}" @endif
             {{ $attributes->class(['field-control']) }}
-        >{{ old($name) }}</textarea>
+        >{{ old($name, $value) }}</textarea>
     @else
         <input
             id="{{ $id }}"
             name="{{ $name }}"
             type="{{ $type }}"
-            value="{{ old($name) }}"
+            value="{{ old($name, $value) }}"
             @required($required)
             @if ($hasError) aria-invalid="true" @endif
             @if ($describedBy !== '') aria-describedby="{{ $describedBy }}" @endif

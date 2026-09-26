@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\MembershipApplicationController as AdminMembershi
 use App\Http\Controllers\Admin\MembershipApplicationReviewController;
 use App\Http\Controllers\Admin\MembershipSetupLinkController;
 use App\Http\Controllers\Member\DashboardController;
+use App\Http\Controllers\Member\ProfileController;
 use App\Http\Controllers\Membership\ApplicationStatusController;
 use App\Http\Controllers\Membership\MembershipApplicationController;
 use App\Http\Controllers\Membership\MoreDetailsResponseController;
@@ -33,6 +34,15 @@ Route::get('applications/{application}', [ApplicationStatusController::class, 's
 Route::get('dashboard', [DashboardController::class, 'show'])
     ->middleware(['auth', 'active'])
     ->name('member.dashboard');
+
+// "dashboard/profile" does not collide with the "dashboard" auto-redirect (that
+// check matches the exact URI "dashboard", not a prefix) — see the note above.
+Route::get('dashboard/profile', [ProfileController::class, 'show'])
+    ->middleware(['auth', 'active'])
+    ->name('member.profile.show');
+Route::patch('dashboard/profile', [ProfileController::class, 'update'])
+    ->middleware(['auth', 'active'])
+    ->name('member.profile.update');
 
 Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('membership-applications', [AdminMembershipApplicationController::class, 'index'])

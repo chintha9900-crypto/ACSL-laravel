@@ -25,4 +25,17 @@ return [
         'extensions' => ['pdf', 'jpg', 'jpeg', 'png'],
     ],
 
+    /*
+    | Member profile avatar (docs/frontend/04 §3). Stored on the public disk.
+    | The legacy reference claimed "max 2MB" in its UI but never enforced it
+    | (docs/reverse-engineering/STORAGE.md); this makes that limit real.
+    */
+    'avatar' => [
+        // Maximum size of the uploaded file, in kilobytes.
+        'max_kb' => 2048,
+
+        // Accepted formats. Checked against the file content, not the filename.
+        'extensions' => ['jpg', 'jpeg', 'png'],
+    ],
+
 ];

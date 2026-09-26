@@ -23,7 +23,13 @@
 
         <header class="bg-primary text-primary-foreground">
             <div class="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 lg:px-8">
-                <span class="font-display text-lg font-bold">Aviation Club International <span class="font-normal text-primary-foreground/70">Member</span></span>
+                <div class="flex flex-wrap items-center gap-x-6 gap-y-1">
+                    <span class="font-display text-lg font-bold">Aviation Club International <span class="font-normal text-primary-foreground/70">Member</span></span>
+                    <nav aria-label="Member" class="flex items-center gap-4 text-sm font-medium text-primary-foreground/85">
+                        <a href="{{ route('member.dashboard') }}" class="hover:text-secondary">Dashboard</a>
+                        <a href="{{ route('member.profile.show') }}" class="hover:text-secondary">Profile</a>
+                    </nav>
+                </div>
 
                 <form method="POST" action="{{ route('logout') }}" class="flex items-center gap-3 text-sm">
                     @csrf
