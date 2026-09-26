@@ -133,13 +133,19 @@ class DashboardControllerTest extends MysqlTestCase
             ->assertDontSee($introductory->expires_on->format('j F Y'));
     }
 
-    public function test_the_current_term_falls_back_to_the_most_recent_term_when_none_are_active(): void
+    /**
+     * A lapsed membership (M11: "membership benefits are unavailable" / "member
+     * cannot log in" to the ordinary member experience) is funnelled to the
+     * membership/renewal page rather than shown a normal, if "Inactive", dashboard
+     * — superseding this test's earlier A5.1 expectation now that renewal exists.
+     */
+    public function test_a_lapsed_membership_is_redirected_to_the_membership_page_instead_of_the_dashboard(): void
     {
         $membership = $this->activatedMember();
         $introductory = $membership->terms->first();
         $introductory->forceFill(['status' => 'expired', 'expired_at' => now()])->save();
 
-        $latestExpired = $this->insertTerm($membership, [
+        $this->insertTerm($membership, [
             'term_no' => 2,
             'term_kind' => MembershipTerm::KIND_RENEWAL,
             'status' => MembershipTerm::STATUS_EXPIRED,
@@ -155,11 +161,8 @@ class DashboardControllerTest extends MysqlTestCase
 
         $this->actingAs($membership->user)
             ->get(route('member.dashboard'))
-            ->assertOk()
-            ->assertSee('Inactive')
-            ->assertSee(MembershipTerm::STATUS_LABELS[MembershipTerm::STATUS_EXPIRED])
-            ->assertSee($latestExpired->expires_on->format('j F Y'))
-            ->assertDontSee($introductory->expires_on->format('j F Y'));
+            ->assertRedirect(route('member.membership.show'))
+            ->assertSessionHas('warning');
     }
 
     public function test_a_user_with_no_membership_gets_a_not_found_response(): void

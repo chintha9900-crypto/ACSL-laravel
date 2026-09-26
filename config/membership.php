@@ -30,4 +30,20 @@ return [
      */
     'business_timezone' => 'Asia/Colombo',
 
+    /*
+     | Renewal reminders (M10) — days before a term's `expires_on` to send one.
+     | Approved exactly as listed; the scheduled command matches on the exact
+     | day, not "within N days", so each interval fires once per term.
+     */
+    'renewal_reminder_days' => [30, 14, 1],
+
+    /*
+     | Grace period (M11, OD-22 resolved for this rule) — how long after a term
+     | expires the member may still renew it through the normal bank-transfer
+     | flow before... [what happens after the grace period is not itself defined
+     | by this rule and is not invented here]. Calendar months, same
+     | no-overflow convention as term lengths.
+     */
+    'renewal_grace_period_months' => 1,
+
 ];

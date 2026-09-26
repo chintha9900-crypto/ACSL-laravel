@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * The stable, lifelong member record (docs/database/04 §8). Created once, by
@@ -55,5 +56,28 @@ class Membership extends Model
     public function terms(): HasMany
     {
         return $this->hasMany(MembershipTerm::class)->orderBy('term_no');
+    }
+
+    /**
+     * The term that is currently valid: `active` and today within its own
+     * dates (docs/database/04 §8's derived-state definition). Never inferred
+     * from a bare `status = active` alone — the daily expiry job may not have
+     * run yet, so a term can sit at `active` past its own `expires_on`.
+     */
+    public function currentTerm(): ?MembershipTerm
+    {
+        $today = Carbon::today();
+
+        return $this->terms->first(
+            fn (MembershipTerm $term): bool => $term->status === MembershipTerm::STATUS_ACTIVE
+                && $term->starts_on !== null
+                && $term->expires_on !== null
+                && $today->betweenIncluded($term->starts_on, $term->expires_on)
+        );
+    }
+
+    public function hasCurrentTerm(): bool
+    {
+        return $this->currentTerm() !== null;
     }
 }
