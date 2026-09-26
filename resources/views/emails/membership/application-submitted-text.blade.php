@@ -1,11 +1,11 @@
-Aviation Club International
+Dear Applicant,
 
-Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
+Your membership application has been received successfully. We will get back to you soon.
 
-Thank you for applying for {!! $category !!} membership with Aviation Club International. Your application reference is {!! $reference !!}.
-
-We will email you whenever there is an update. You can check your application's status at any time:
+You can check your application status using the secure link below:
 
 {!! $url !!}
 
-Aviation Club International
+Regards,
+Aviation Club Team
+aviationclub.lk

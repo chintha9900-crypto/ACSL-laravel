@@ -26,16 +26,16 @@ class ApplicationSubmitted extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        // The body is fixed, approved copy with no applicant-specific detail
+        // (not even a name) beyond the one thing explicitly requested: the
+        // application's own existing signed status link — no new URL/token
+        // system, just `MembershipApplication::statusUrl()` as already used
+        // elsewhere (e.g. the applicant-facing status page itself).
         return (new MailMessage)
-            ->subject("We've received your Aviation Club International application")
+            ->subject('Application Received — Aviation Club')
             ->view(
                 ['emails.membership.application-submitted', 'emails.membership.application-submitted-text'],
-                [
-                    'name' => $this->application->full_name,
-                    'reference' => $this->application->public_id,
-                    'category' => $this->application->category->name,
-                    'url' => $this->application->statusUrl(),
-                ],
+                ['url' => $this->application->statusUrl()],
             );
     }
 }

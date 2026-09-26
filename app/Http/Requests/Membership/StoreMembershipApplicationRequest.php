@@ -65,6 +65,10 @@ class StoreMembershipApplicationRequest extends FormRequest
                 'required',
                 File::types($proof['extensions'])->max($proof['max_kb']),
             ],
+            // The declaration is a submission-time confirmation only — it is
+            // never stored (see applicationData() below), just like the
+            // reference application never persisted a "read the rules" tick.
+            'declaration' => ['accepted'],
         ];
     }
 
@@ -84,6 +88,7 @@ class StoreMembershipApplicationRequest extends FormRequest
             'proof_documents.*.mimes' => 'Each document must be a PDF, JPG or PNG file.',
             'proof_documents.*.max' => 'Each document must not be larger than '.round($proof['max_kb'] / 1024, 1).' MB.',
             'proof_documents.*.uploaded' => 'A document could not be uploaded. Please check its size and try again.',
+            'declaration.accepted' => 'Please confirm the declaration to submit your application.',
         ];
     }
 

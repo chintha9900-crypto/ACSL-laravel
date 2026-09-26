@@ -16,13 +16,33 @@ use App\Http\Controllers\Member\RenewalController;
 use App\Http\Controllers\Member\SecurityController;
 use App\Http\Controllers\Membership\ApplicationStatusController;
 use App\Http\Controllers\Membership\MembershipApplicationController;
+use App\Http\Controllers\Membership\MembershipBenefitsController;
 use App\Http\Controllers\Membership\MoreDetailsResponseController;
 use App\Http\Controllers\Membership\VerificationController;
+use App\Models\MembershipSetting;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
-});
+    return view('home');
+})->name('home');
+
+Route::get('about', function () {
+    return view('about');
+})->name('about');
+
+Route::get('membership/benefits', [MembershipBenefitsController::class, 'show'])->name('membership.benefits');
+
+Route::get('rules', function () {
+    return view('rules');
+})->name('rules');
+
+// Static Q&A content today; the one dynamic fact (the introductory period's
+// length) is read from membership settings, never hard-coded.
+Route::get('faq', function () {
+    return view('faq', [
+        'introductoryMonths' => (int) MembershipSetting::current()->introductory_period_months,
+    ]);
+})->name('faq');
 
 Route::controller(MembershipApplicationController::class)->group(function () {
     Route::get('membership/apply', 'create')->name('membership.apply');

@@ -1,9 +1,22 @@
 @props(['title' => 'Aviation Club International'])
 
-@php($onApply = request()->routeIs('membership.apply*'))
 {{-- The approved ACI logo is a controlled brand asset supplied by ACI (docs/frontend/08 C-02).
      Until it is added at public/images/aci-logo.png the name is shown as text; nothing is invented. --}}
 @php($hasLogo = file_exists(public_path('images/aci-logo.png')))
+{{--
+    Every page these link to already exists as a real route — no nav entry
+    ever points at an unbuilt page (Blog/News/Jobs/Contact aren't linked
+    because they don't exist yet). "Become a Member" isn't repeated here: the
+    red "Join Now"/"Become a Member" button already covers it, so the text
+    nav doesn't duplicate it.
+--}}
+@php($navLinks = [
+    ['route' => 'home', 'label' => 'Home'],
+    ['route' => 'about', 'label' => 'About'],
+    ['route' => 'membership.benefits', 'label' => 'Membership'],
+    ['route' => 'rules', 'label' => 'Rules'],
+    ['route' => 'faq', 'label' => 'FAQ'],
+])
 
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -35,9 +48,11 @@
                     @endif
                 </a>
 
-                <nav class="hidden items-center gap-2 lg:flex" aria-label="Main">
-                    <a href="{{ url('/') }}" class="rounded-md px-4 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-primary {{ request()->is('/') ? 'font-semibold text-primary' : '' }}">Home</a>
-                    <a href="{{ route('membership.apply') }}" @if ($onApply) aria-current="page" @endif class="rounded-md px-4 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-primary {{ $onApply ? 'font-semibold text-primary' : '' }}">Become a Member</a>
+                <nav class="hidden items-center gap-1 lg:flex" aria-label="Main">
+                    @foreach ($navLinks as $link)
+                        @php($isActive = request()->routeIs($link['route']))
+                        <a href="{{ route($link['route']) }}" @if ($isActive) aria-current="page" @endif class="rounded-md px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-primary {{ $isActive ? 'font-semibold text-primary' : '' }}">{{ $link['label'] }}</a>
+                    @endforeach
                 </nav>
 
                 <div class="hidden items-center gap-3 lg:flex">
@@ -54,8 +69,10 @@
 
                     <div class="absolute inset-x-0 top-16 border-t border-border bg-background">
                         <div class="container mx-auto flex flex-col gap-1 px-4 py-3">
-                            <a href="{{ url('/') }}" class="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted {{ request()->is('/') ? 'bg-muted text-primary' : '' }}">Home</a>
-                            <a href="{{ route('membership.apply') }}" @if ($onApply) aria-current="page" @endif class="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted {{ $onApply ? 'bg-muted text-primary' : '' }}">Become a Member</a>
+                            @foreach ($navLinks as $link)
+                                @php($isActive = request()->routeIs($link['route']))
+                                <a href="{{ route($link['route']) }}" @if ($isActive) aria-current="page" @endif class="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted {{ $isActive ? 'bg-muted text-primary' : '' }}">{{ $link['label'] }}</a>
+                            @endforeach
                             <div class="mt-2 flex gap-2 border-t border-border pt-2">
                                 <a href="{{ route('login') }}" class="btn btn-sm flex-1 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground">Sign In</a>
                                 <a href="{{ route('membership.apply') }}" class="btn btn-sm btn-brand flex-1">Join Now</a>
@@ -101,7 +118,9 @@
                     {{-- `hover:text-white` (not `hover:text-secondary`, now a mid-gray) keeps
                          the hover state legible against the brand-red background. --}}
                     <ul class="space-y-2 text-sm text-primary-foreground/75">
-                        <li><a href="{{ url('/') }}" class="hover:text-white">Home</a></li>
+                        @foreach ($navLinks as $link)
+                            <li><a href="{{ route($link['route']) }}" class="hover:text-white">{{ $link['label'] }}</a></li>
+                        @endforeach
                         <li><a href="{{ route('membership.apply') }}" class="hover:text-white">Become a Member</a></li>
                         <li><a href="{{ route('login') }}" class="hover:text-white">Sign In</a></li>
                     </ul>

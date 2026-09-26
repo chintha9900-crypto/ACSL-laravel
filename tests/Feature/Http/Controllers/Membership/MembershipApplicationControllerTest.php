@@ -54,6 +54,7 @@ class MembershipApplicationControllerTest extends MysqlTestCase
             'aviation_role' => 'First Officer',
             'aviation_organisation' => 'Example Airlines',
             'proof_documents' => [$this->pdf()],
+            'declaration' => '1',
             ...$overrides,
         ];
     }
@@ -115,6 +116,51 @@ class MembershipApplicationControllerTest extends MysqlTestCase
             ->assertSee('does not immediately activate membership')
             ->assertDontSee('ACSL')
             ->assertDontSee('password');
+    }
+
+    public function test_the_page_shows_a_mandatory_declaration_linking_to_the_rules_page(): void
+    {
+        $this->professional();
+
+        $this->get('/membership/apply')
+            ->assertSee('name="declaration"', false)
+            ->assertSee('Club Rules and Policies')
+            ->assertSee('href="'.route('rules').'"', false);
+    }
+
+    public function test_the_mobile_field_offers_a_country_code_selector_with_flags(): void
+    {
+        $this->professional();
+        $html = $this->get('/membership/apply')->assertOk()->getContent();
+
+        // The country selector and the number field carry no `name` of their
+        // own — only the hidden, JS-combined field is ever named "mobile".
+        $this->assertStringContainsString('data-mobile-country', $html);
+        $this->assertStringContainsString('data-mobile-number', $html);
+        $this->assertStringContainsString('data-mobile-combined', $html);
+        $this->assertSame(1, preg_match_all('/<input\b[^>]*\bname="mobile"/', $html), 'Exactly one <input name="mobile"> should exist — the <noscript> fallback.');
+        $this->assertStringContainsString('🇱🇰', $html);
+        $this->assertStringContainsString('Sri Lanka', $html);
+        $this->assertStringContainsString('+94', $html);
+    }
+
+    public function test_the_mobile_field_has_a_noscript_fallback_that_still_submits_as_mobile(): void
+    {
+        $this->professional();
+        $html = $this->get('/membership/apply')->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<noscript>\s*<input[^>]*name="mobile"/', $html);
+    }
+
+    public function test_a_combined_country_code_and_number_is_accepted_as_the_mobile_value(): void
+    {
+        $this->professional();
+
+        // This is exactly what the page's JS produces before submitting —
+        // the `mobile` field/validation/storage are otherwise untouched.
+        $this->submit($this->payload(['mobile' => '+94 77 123 4567']))->assertSessionHasNoErrors();
+
+        $this->assertSame('+94 77 123 4567', MembershipApplication::query()->firstOrFail()->mobile);
     }
 
     public function test_page_is_one_form_offering_every_active_category_as_a_radio_choice(): void
@@ -189,10 +235,31 @@ class MembershipApplicationControllerTest extends MysqlTestCase
     {
         $this->submit([])->assertSessionHasErrors([
             'category', 'full_name', 'email', 'mobile', 'address',
-            'aviation_role', 'aviation_organisation', 'proof_documents',
+            'aviation_role', 'aviation_organisation', 'proof_documents', 'declaration',
         ]);
 
         $this->assertSame(0, $this->tableCount('membership_applications'));
+    }
+
+    public function test_submission_without_the_declaration_confirmed_is_rejected(): void
+    {
+        $this->professional();
+
+        $this->submit($this->payload(['declaration' => null]))->assertSessionHasErrors([
+            'declaration' => 'Please confirm the declaration to submit your application.',
+        ]);
+
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+    }
+
+    public function test_the_declaration_is_never_persisted_on_the_application(): void
+    {
+        $this->professional();
+
+        $this->submit($this->payload())->assertSessionHasNoErrors();
+
+        $application = MembershipApplication::query()->firstOrFail();
+        $this->assertArrayNotHasKey('declaration', $application->toArray());
     }
 
     /**
@@ -497,7 +564,11 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
     // --- confirmation page ----------------------------------------------------
 
-    public function test_submission_redirects_to_a_signed_confirmation_that_shows_the_reference(): void
+    /**
+     * The confirmation page shows only the plain success message now
+     * (explicit instruction) — no reference, category note or buttons.
+     */
+    public function test_submission_redirects_to_a_signed_confirmation_showing_only_the_success_message(): void
     {
         $this->professional();
 
@@ -510,9 +581,10 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
         $this->get($location)
             ->assertOk()
-            ->assertSee('Application received')
-            ->assertSee($application->public_id)
-            ->assertSee('does not create a member account')
+            ->assertSee('Your application was successfully submitted. We will get back to you soon.')
+            ->assertDontSee($application->public_id)
+            ->assertDontSee('does not create a member account')
+            ->assertDontSee('View application status')
             ->assertDontSee('Submit another application');
     }
 

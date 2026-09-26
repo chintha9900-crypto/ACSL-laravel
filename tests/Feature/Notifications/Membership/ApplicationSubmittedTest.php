@@ -21,17 +21,36 @@ class ApplicationSubmittedTest extends MysqlTestCase
         $this->assertNotInstanceOf(ShouldQueue::class, $notification);
     }
 
-    public function test_the_email_names_the_applicant_reference_category_and_status_link(): void
+    /**
+     * The body is fixed, approved copy — no applicant name, reference or
+     * category — plus the one explicitly requested addition: the
+     * application's own existing signed status link.
+     */
+    public function test_the_email_uses_the_approved_fixed_subject_and_body(): void
     {
-        $this->freezeTime();
         $application = $this->application('submitted', ['full_name' => 'Nimal Perera'], 'P');
         $message = (new ApplicationSubmitted($application))->toMail(new User);
         $html = $message->render();
 
-        $this->assertSame("We've received your Aviation Club International application", $message->subject);
-        $this->assertStringContainsString('Hello Nimal Perera,', $html);
-        $this->assertStringContainsString($application->public_id, $html);
-        $this->assertStringContainsString($application->category->name, $html);
+        $this->assertSame('Application Received — Aviation Club', $message->subject);
+        $this->assertStringContainsString('Dear Applicant,', $html);
+        $this->assertStringContainsString('Your membership application has been received successfully. We will get back to you soon.', $html);
+        $this->assertStringContainsString('You can check your application status using the secure link below:', $html);
+        $this->assertStringContainsString(e($application->statusUrl()), $html);
+        $this->assertStringContainsString('Aviation Club Team', $html);
+        $this->assertStringContainsString('aviationclub.lk', $html);
+        $this->assertStringNotContainsString('Nimal Perera', $html);
+    }
+
+    public function test_the_status_link_is_the_applications_existing_signed_url_mechanism(): void
+    {
+        $application = $this->application('submitted', [], 'P');
+
+        // The email must link to exactly the same signed URL the applicant's
+        // own status page already produces — no separate URL/token system.
+        $this->assertStringContainsString('signature=', $application->statusUrl());
+
+        $html = (new ApplicationSubmitted($application))->toMail(new User)->render();
         $this->assertStringContainsString(e($application->statusUrl()), $html);
     }
 }

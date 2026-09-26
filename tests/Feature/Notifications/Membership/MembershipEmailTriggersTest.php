@@ -44,6 +44,7 @@ class MembershipEmailTriggersTest extends MysqlTestCase
             'aviation_role' => 'First Officer',
             'aviation_organisation' => 'Example Airlines',
             'proof_documents' => [$this->pdfUpload()],
+            'declaration' => '1',
         ])->assertSessionHasNoErrors()->assertRedirect();
 
         Notification::assertCount(1);

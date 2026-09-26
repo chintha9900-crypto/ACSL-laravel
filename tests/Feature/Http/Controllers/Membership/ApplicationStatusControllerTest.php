@@ -225,7 +225,13 @@ class ApplicationStatusControllerTest extends MysqlTestCase
 
     // --- link from the A2.1 confirmation page ---------------------------------
 
-    public function test_confirmation_page_links_to_a_working_signed_status_page(): void
+    /**
+     * The confirmation page itself is now a plain success message only (no
+     * reference, no link — explicit instruction); this proves the
+     * `statusUrl()` capability it used to surface is nonetheless still
+     * generated correctly and reachable on its own.
+     */
+    public function test_the_applications_own_status_url_still_works_even_though_the_confirmation_page_no_longer_shows_it(): void
     {
         Storage::fake('private');
         MembershipCategory::factory()->professional()->create();
@@ -239,14 +245,18 @@ class ApplicationStatusControllerTest extends MysqlTestCase
             'aviation_role' => 'First Officer',
             'aviation_organisation' => 'Example Airlines',
             'proof_documents' => [$this->pdfUpload()],
+            'declaration' => '1',
         ])->assertRedirect()->headers->get('Location');
 
-        $page = $this->get($confirmation)->assertOk()->assertSee('View application status');
+        $this->get($confirmation)
+            ->assertOk()
+            ->assertSee('Your application was successfully submitted. We will get back to you soon.')
+            ->assertDontSee('View application status')
+            ->assertDontSee('Nimal Perera');
 
-        preg_match('/href="([^"]*applications\/[^"]+signature=[^"]+)"/', $page->getContent(), $match);
-        $this->assertNotEmpty($match, 'The confirmation page must contain the signed status link.');
+        $application = MembershipApplication::query()->firstOrFail();
 
-        $this->get(html_entity_decode($match[1]))
+        $this->get($application->statusUrl())
             ->assertOk()
             ->assertSee('Nimal Perera')
             ->assertSee('We are reviewing your application.');

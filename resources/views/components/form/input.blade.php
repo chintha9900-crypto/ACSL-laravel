@@ -9,6 +9,9 @@
 <div class="space-y-1.5">
     <label for="{{ $id }}" class="block text-sm font-medium leading-none">
         <span @if ($labelKey) data-label-for="{{ $labelKey }}" @endif>{{ $label }}</span>
+        @if ($required)
+            <span class="text-[#CC001F]" aria-hidden="true">*</span>
+        @endif
     </label>
 
     @if ($type === 'textarea')
