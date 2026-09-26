@@ -116,6 +116,7 @@ Status timeline built from `membership_status_history` (Submitted → More detai
 * `submitted` — "We're reviewing your application."
 * `more_details_required` → **B2**.
 * `rejected` — reason (if shared), link to Apply again (they may reapply at any time; no cooldown).
+* **Implemented in A2.2 (scope):** the page shows the reference, applicant name, category, submitted date, current status and a status message (plus the decision date once decided). Signed link via `MembershipApplication::statusUrl()`, lifetime `config('membership.applicant_link_days')` (30, not ACI-confirmed), throttled 60/min, `no-store` / `no-referrer` / `noindex`. Not yet shown: the status timeline (`membership_status_history`) and admin messages (the decision note is deliberately **not** shown — it may hold internal notes). `more_details_required` shows a "contact ACI" message only; the response form (B2) needs the deferred `membership_details_requests` table. `approved` says only that the application is approved and that approval and activation are separate steps. `rejected` shows an "Apply again" link.
 * `approved` — for **every** new member: approval is not yet activation. Until the membership is activated the page shows "Approved — your membership is being activated" (no payment is required; the first N months are free). Once activated: the membership number, "your first N months are free", and the account-setup notice (activation trigger open — DB OD-23). There is no payment state before activation.
 **Type:** Blade.
 

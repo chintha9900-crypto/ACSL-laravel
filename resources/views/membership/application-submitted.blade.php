@@ -33,6 +33,7 @@
             </ul>
 
             <div class="mt-6 flex flex-wrap justify-center gap-3">
+                <a href="{{ $application->statusUrl() }}" class="btn btn-lg border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground">View application status</a>
                 <a href="{{ url('/') }}" class="btn btn-lg btn-gradient">
                     Go home
                     <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>

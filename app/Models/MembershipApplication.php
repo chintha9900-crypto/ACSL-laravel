@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Database\Factories\MembershipApplicationFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\URL;
 
 /**
  * One application attempt for new membership (docs/database/04 §6).
@@ -24,6 +28,26 @@ class MembershipApplication extends Model
     public const STATUS_APPROVED = 'approved';
 
     public const STATUS_REJECTED = 'rejected';
+
+    /**
+     * The four approved statuses (docs/database/04 §6) and how admins see them.
+     * `rejected` is shown as "Declined"; the stored value never changes.
+     *
+     * @var array<string, string>
+     */
+    public const STATUS_LABELS = [
+        self::STATUS_SUBMITTED => 'Submitted',
+        self::STATUS_MORE_DETAILS_REQUIRED => 'More details required',
+        self::STATUS_APPROVED => 'Approved',
+        self::STATUS_REJECTED => 'Declined',
+    ];
+
+    public const STATUSES = [
+        self::STATUS_SUBMITTED,
+        self::STATUS_MORE_DETAILS_REQUIRED,
+        self::STATUS_APPROVED,
+        self::STATUS_REJECTED,
+    ];
 
     /**
      * Statuses of an application that is still open (undecided).
@@ -80,6 +104,29 @@ class MembershipApplication extends Model
     }
 
     /**
+     * A time-limited signed link to this application's status page. The signature
+     * (an HMAC of the URL under the app key) is the credential; nothing is stored.
+     */
+    public function statusUrl(): string
+    {
+        return $this->signedUrl('applications.show');
+    }
+
+    /**
+     * A signed link to one of this application's applicant routes. Pass the expiry of
+     * the link the applicant is already using to hand out sibling links (the response
+     * form, the redirect back) that never outlive it.
+     */
+    public function signedUrl(string $route, ?CarbonInterface $expiresAt = null): string
+    {
+        return URL::temporarySignedRoute(
+            $route,
+            $expiresAt ?? now()->addDays(config('membership.applicant_link_days')),
+            ['application' => $this],
+        );
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -93,6 +140,47 @@ class MembershipApplication extends Model
             'proof_reviewed_at' => 'datetime',
             'decided_at' => 'datetime',
         ];
+    }
+
+    public static function labelFor(string $status): string
+    {
+        return self::STATUS_LABELS[$status] ?? $status;
+    }
+
+    /**
+     * @return HasMany<Document, $this>
+     */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class, 'membership_application_id');
+    }
+
+    /**
+     * The member record created when this application was activated, if any.
+     *
+     * @return HasOne<Membership, $this>
+     */
+    public function membership(): HasOne
+    {
+        return $this->hasOne(Membership::class, 'membership_application_id');
+    }
+
+    /**
+     * "More details" requests for this application, oldest first.
+     *
+     * @return HasMany<MembershipDetailsRequest, $this>
+     */
+    public function detailsRequests(): HasMany
+    {
+        return $this->hasMany(MembershipDetailsRequest::class, 'membership_application_id')->orderBy('requested_at')->orderBy('id');
+    }
+
+    /**
+     * The request the applicant still has to answer, if any.
+     */
+    public function openDetailsRequest(): ?MembershipDetailsRequest
+    {
+        return $this->detailsRequests()->whereNull('responded_at')->latest('id')->first();
     }
 
     /**

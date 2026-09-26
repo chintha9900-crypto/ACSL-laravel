@@ -26,6 +26,7 @@ class Document extends Model
     protected $fillable = [
         'kind',
         'membership_application_id',
+        'membership_details_request_id',
         'uploaded_by_user_id',
         'disk',
         'storage_path',

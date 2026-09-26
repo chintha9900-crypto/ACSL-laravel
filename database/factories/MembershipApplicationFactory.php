@@ -32,6 +32,29 @@ class MembershipApplicationFactory extends Factory
     }
 
     /**
+     * Indicate that an admin has asked the applicant for more details.
+     */
+    public function moreDetailsRequired(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => MembershipApplication::STATUS_MORE_DETAILS_REQUIRED,
+        ]);
+    }
+
+    /**
+     * Indicate that the application was approved (a decision by an admin).
+     */
+    public function approved(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => MembershipApplication::STATUS_APPROVED,
+            'proof_reviewed_at' => now(),
+            'decided_at' => now(),
+            'decided_by_user_id' => User::factory()->active(),
+        ]);
+    }
+
+    /**
      * Indicate that the application was rejected (a decision by an admin).
      */
     public function rejected(): static

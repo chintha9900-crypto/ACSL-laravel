@@ -1,6 +1,13 @@
 <?php
 
+use App\Http\Controllers\Admin\DocumentController;
+use App\Http\Controllers\Admin\MembershipActivationController;
+use App\Http\Controllers\Admin\MembershipApplicationController as AdminMembershipApplicationController;
+use App\Http\Controllers\Admin\MembershipApplicationReviewController;
+use App\Http\Controllers\Admin\MembershipSetupLinkController;
+use App\Http\Controllers\Membership\ApplicationStatusController;
 use App\Http\Controllers\Membership\MembershipApplicationController;
+use App\Http\Controllers\Membership\MoreDetailsResponseController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -14,5 +21,28 @@ Route::controller(MembershipApplicationController::class)->group(function () {
         ->middleware('signed')
         ->name('membership.apply.submitted');
 });
+
+Route::get('applications/{application}', [ApplicationStatusController::class, 'show'])
+    ->middleware(['signed', 'throttle:60,1'])
+    ->name('applications.show');
+
+Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('membership-applications', [AdminMembershipApplicationController::class, 'index'])
+        ->name('membership-applications.index');
+    Route::get('membership-applications/{application}', [AdminMembershipApplicationController::class, 'show'])
+        ->name('membership-applications.show');
+    Route::post('membership-applications/{application}/review', [MembershipApplicationReviewController::class, 'store'])
+        ->name('membership-applications.review');
+    Route::post('membership-applications/{application}/activation', [MembershipActivationController::class, 'store'])
+        ->name('membership-applications.activate');
+    Route::post('membership-applications/{application}/setup-link', [MembershipSetupLinkController::class, 'store'])
+        ->middleware('throttle:setup-link')
+        ->name('membership-applications.setup-link');
+    Route::get('documents/{document}', [DocumentController::class, 'show'])->name('documents.show');
+});
+
+Route::post('applications/{application}/respond', [MoreDetailsResponseController::class, 'store'])
+    ->middleware(['signed', 'throttle:6,1'])
+    ->name('applications.respond');
 
 require __DIR__.'/auth.php';

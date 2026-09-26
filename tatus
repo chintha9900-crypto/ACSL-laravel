@@ -1,0 +1,10 @@
+ .../Membership/SubmitMembershipApplication.php     | 66 [32m+[m[31m---------------[m
+ app/Models/Document.php                            |  1 [32m+[m
+ app/Models/MembershipApplication.php               | 88 [32m++++++++++++++++++++++[m
+ app/Providers/AppServiceProvider.php               | 16 [32m++++[m
+ .../factories/MembershipApplicationFactory.php     | 23 [32m++++++[m
+ docs/frontend/03_PUBLIC_PAGES.md                   |  1 [32m+[m
+ docs/frontend/08_FRONTEND_OPEN_DECISIONS.md        |  2 [32m+[m[31m-[m
+ .../membership/application-submitted.blade.php     |  1 [32m+[m
+ routes/web.php                                     | 30 [32m++++++++[m
+ 9 files changed, 163 insertions(+), 65 deletions(-)

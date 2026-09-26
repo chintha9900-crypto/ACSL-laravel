@@ -11,17 +11,11 @@ use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
 use Throwable;
 
 class SubmitMembershipApplication
 {
-    /**
-     * Extensions a stored proof file may have, chosen from its detected content.
-     *
-     * @var list<string>
-     */
-    private const STORED_EXTENSIONS = ['pdf', 'jpg', 'png'];
+    public function __construct(private StoreProofDocument $storeProofDocument) {}
 
     /**
      * Create a `submitted` application and its aviation proof documents as one
@@ -45,7 +39,7 @@ class SubmitMembershipApplication
                 $application->save();
 
                 foreach ($proofFiles as $file) {
-                    $this->storeProofDocument($application, $file, $storedPaths);
+                    $this->storeProofDocument->handle($application, $file, $storedPaths);
                 }
 
                 $this->recordSubmission($application);
@@ -66,51 +60,6 @@ class SubmitMembershipApplication
 
             throw $exception;
         }
-    }
-
-    /**
-     * Write one proof file to the private disk under a server-generated path and
-     * record its metadata. The client's filename is kept for display only.
-     *
-     * @param  list<string>  $storedPaths
-     */
-    private function storeProofDocument(MembershipApplication $application, UploadedFile $file, array &$storedPaths): void
-    {
-        $extension = $file->guessExtension();
-        $extension = $extension === 'jpeg' ? 'jpg' : $extension;
-
-        if (! in_array($extension, self::STORED_EXTENSIONS, true)) {
-            throw new RuntimeException('Unsupported proof document type.');
-        }
-
-        $path = 'aviation-proof/'.$application->public_id.'/'.Str::lower((string) Str::ulid()).'.'.$extension;
-
-        $stream = fopen($file->getRealPath(), 'rb');
-
-        try {
-            $written = Storage::disk(Document::DISK_PRIVATE)->put($path, $stream, 'private');
-        } finally {
-            fclose($stream);
-        }
-
-        if ($written === false) {
-            throw new RuntimeException('The proof document could not be stored.');
-        }
-
-        $storedPaths[] = $path;
-
-        $document = new Document([
-            'kind' => Document::KIND_AVIATION_PROOF,
-            'membership_application_id' => $application->id,
-            'uploaded_by_user_id' => null,
-            'disk' => Document::DISK_PRIVATE,
-            'storage_path' => $path,
-            'original_filename' => $this->displayName($file),
-            'mime_type' => $file->getMimeType(),
-            'size_bytes' => $file->getSize(),
-            'checksum_sha256' => hash_file('sha256', $file->getRealPath()),
-        ]);
-        $document->save();
     }
 
     /**
@@ -137,16 +86,5 @@ class SubmitMembershipApplication
             'user_agent' => Str::limit((string) Request::userAgent(), 512, ''),
             'created_at' => now(),
         ]);
-    }
-
-    /**
-     * A safe display name: base name only, control characters removed, length limited.
-     */
-    private function displayName(UploadedFile $file): string
-    {
-        $name = basename(str_replace('\\', '/', $file->getClientOriginalName()));
-        $name = preg_replace('/[\x00-\x1F\x7F]/u', '', $name) ?? '';
-
-        return Str::limit(trim($name) !== '' ? $name : 'document', 255, '');
     }
 }

@@ -35,7 +35,7 @@ These five items were previously listed as CRITICAL. They are now approved and a
 
 ### C-05 — Pre-account applicant access — **APPROVED in principle**
 * Applicant pages (status, respond to a details request) use **secure signed, expiring links tied to the application**. *(Update after OD-10: there is no pre-activation payment, so "submit payment evidence" is no longer an applicant page; renewal payment is made by the signed-in member.)*
-* Final Laravel implementation and security details (expiry length, signing, throttling, link re-issue) will be documented during implementation.
+* Final Laravel implementation and security details (expiry length, signing, throttling, link re-issue) will be documented during implementation. **A2.2 status:** Laravel signed URLs (HMAC under the app key; nothing stored), default lifetime 30 days (`config/membership.php`, not ACI-confirmed), 60 requests/min. **Link re-issue is not built** (it needs email delivery); a signed link cannot be revoked before it expires.
 * **No public application access by guessing IDs** — the identifier alone never grants access.
 * **No applicant account is created merely to provide pre-activation access.**
 
