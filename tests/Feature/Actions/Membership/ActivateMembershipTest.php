@@ -87,7 +87,9 @@ class ActivateMembershipTest extends MysqlTestCase
         $this->assertSame(1, $membership->number_sequence);
         $this->assertSame('2026-09-21', $membership->activated_on->toDateString());
         $this->assertSame('2026-09-21 06:00:00', $membership->activated_at->utc()->toDateTimeString());
-        $this->assertNull(DB::table('memberships')->value('verification_token'));
+        // The digital card's QR verification token (docs/database/04 §8) is
+        // issued once, at activation, just like the membership number.
+        $this->assertSame(48, strlen((string) DB::table('memberships')->value('verification_token')));
         $this->assertSame('approved', $application->fresh()->status, 'Activation does not change the application status.');
         $this->assertSame(1, DB::table('memberships')->count());
         $this->assertSame(1, DB::table('membership_terms')->count());

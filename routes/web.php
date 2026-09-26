@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\MembershipSetupLinkController;
 use App\Http\Controllers\Admin\PaymentReviewController;
 use App\Http\Controllers\Member\DashboardController;
 use App\Http\Controllers\Member\DocumentController as MemberDocumentController;
+use App\Http\Controllers\Member\MembershipCardController;
 use App\Http\Controllers\Member\MembershipController as MemberMembershipController;
 use App\Http\Controllers\Member\NotificationController;
 use App\Http\Controllers\Member\ProfileController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Member\SecurityController;
 use App\Http\Controllers\Membership\ApplicationStatusController;
 use App\Http\Controllers\Membership\MembershipApplicationController;
 use App\Http\Controllers\Membership\MoreDetailsResponseController;
+use App\Http\Controllers\Membership\VerificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -59,6 +61,9 @@ Route::post('dashboard/membership/renewal', [RenewalController::class, 'store'])
 Route::post('dashboard/membership/renewal/evidence', [RenewalController::class, 'submitEvidence'])
     ->middleware(['auth', 'active'])
     ->name('member.membership.renewal.evidence');
+Route::get('dashboard/membership/card', [MembershipCardController::class, 'show'])
+    ->middleware(['auth', 'active'])
+    ->name('member.membership.card');
 
 Route::get('dashboard/documents/{document}', [MemberDocumentController::class, 'show'])
     ->middleware(['auth', 'active'])
@@ -105,5 +110,11 @@ Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(fu
 Route::post('applications/{application}/respond', [MoreDetailsResponseController::class, 'store'])
     ->middleware(['signed', 'throttle:6,1'])
     ->name('applications.respond');
+
+// Public QR/card verification — no account required, so it is rate-limited
+// like the other public, unauthenticated membership endpoints.
+Route::get('verify/{token}', [VerificationController::class, 'show'])
+    ->middleware('throttle:30,1')
+    ->name('verification.show');
 
 require __DIR__.'/auth.php';

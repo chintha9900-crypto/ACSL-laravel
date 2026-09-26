@@ -103,6 +103,12 @@ class ActivateMembership
             'number_sequence' => $sequence,
             'activated_at' => $now,
             'activated_on' => $startsOn->toDateString(),
+            // The digital card's QR verification token (docs/database/04 §8:
+            // reserved for this). It carries no personal data itself and is
+            // never a secret in the same sense as the setup token — scanning it
+            // is only ever meant to reveal the same name/number a physical card
+            // would — so it is stored directly (not hashed) for a simple lookup.
+            'verification_token' => Str::random(48),
         ]);
 
         $term = MembershipTerm::forceCreate([

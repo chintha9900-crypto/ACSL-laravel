@@ -21,6 +21,7 @@ Category: {{ $category }}
 <br>Your first {{ $months }} {{ Str::plural('month', $months) }} are free, valid from {{ $startsOn }} to {{ $expiresOn }}.
 @endif
 </p>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Your digital membership card, with a QR code you can use to verify your membership, is available on your membership page once you have signed in.</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Check your email for a separate message with a link to create your account password.</p>
 <p style="margin:24px 0 0;font-size:14px;line-height:1.5;">Aviation Club International</p>
 </td></tr>

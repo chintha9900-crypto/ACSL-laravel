@@ -46,4 +46,11 @@ return [
      */
     'renewal_grace_period_months' => 1,
 
+    /*
+     | Where a successful public QR/card verification sends the visitor after
+     | showing the confirmation. Configurable per environment; the value below
+     | is the approved production destination.
+     */
+    'verification_vendor_url' => env('MEMBERSHIP_VERIFICATION_VENDOR_URL', 'https://memberofaviation.com'),
+
 ];
