@@ -5,6 +5,7 @@ namespace Tests\Feature\Http\Controllers\Admin;
 use App\Actions\Auth\CompleteAccountSetup;
 use App\Models\User;
 use App\Notifications\Membership\AccountSetup;
+use App\Notifications\Membership\Welcome;
 use Carbon\Carbon;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\DB;
@@ -141,7 +142,7 @@ class MembershipActivationControllerTest extends MysqlTestCase
 
     // --- account setup email --------------------------------------------------
 
-    public function test_activation_sends_exactly_one_setup_email_to_the_new_member(): void
+    public function test_activation_sends_exactly_one_setup_email_and_one_welcome_email(): void
     {
         Notification::fake();
         $application = $this->application('approved', ['email' => 'nimal@example.test', 'full_name' => 'Nimal Perera']);
@@ -152,8 +153,9 @@ class MembershipActivationControllerTest extends MysqlTestCase
             ->assertSessionMissing('warning');
 
         $member = User::query()->where('email', 'nimal@example.test')->firstOrFail();
-        Notification::assertCount(1);
+        Notification::assertCount(2);
         Notification::assertSentToTimes($member, AccountSetup::class, 1);
+        Notification::assertSentToTimes($member, Welcome::class, 1);
     }
 
     public function test_the_email_carries_a_valid_link_built_from_the_one_and_only_issued_token(): void

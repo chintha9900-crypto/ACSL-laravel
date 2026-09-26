@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Actions\Membership\ActivateMembership;
 use App\Actions\Membership\DeliverAccountSetupLink;
+use App\Actions\Membership\DeliverWelcomeEmail;
 use App\Exceptions\MembershipCannotBeActivatedException;
 use App\Http\Controllers\Controller;
 use App\Models\MembershipApplication;
@@ -20,8 +21,13 @@ class MembershipActivationController extends Controller
      * The setup email is sent only after the activation has committed; if it cannot be
      * sent the membership stays activated and the admin is told to use "Resend".
      */
-    public function store(Request $request, MembershipApplication $application, ActivateMembership $activate, DeliverAccountSetupLink $deliver): RedirectResponse
-    {
+    public function store(
+        Request $request,
+        MembershipApplication $application,
+        ActivateMembership $activate,
+        DeliverAccountSetupLink $deliver,
+        DeliverWelcomeEmail $welcome,
+    ): RedirectResponse {
         Gate::authorize('activate', $application);
 
         $request->validate(['confirm' => ['accepted']], [
@@ -37,6 +43,9 @@ class MembershipActivationController extends Controller
         }
 
         $membership = $activated->membership;
+        // M8: best-effort alongside M9; its own outcome never changes the
+        // messages below, which are about the (blocking) account setup email.
+        $welcome->handle($membership);
         $sent = $deliver->handle($membership->user, $activated->setupToken);
 
         $redirect = redirect()->route('admin.membership-applications.show', $application);

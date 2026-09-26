@@ -30,6 +30,7 @@
                         <a href="{{ route('member.membership.show') }}" class="hover:text-secondary">Membership</a>
                         <a href="{{ route('member.profile.show') }}" class="hover:text-secondary">Profile</a>
                         <a href="{{ route('member.security.show') }}" class="hover:text-secondary">Security</a>
+                        <a href="{{ route('member.notifications.show') }}" class="hover:text-secondary">Notifications</a>
                     </nav>
                 </div>
 

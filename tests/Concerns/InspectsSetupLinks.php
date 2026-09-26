@@ -17,6 +17,10 @@ trait InspectsSetupLinks
     /**
      * Observe every AccountSetup notification on its way to a real (array) mailer.
      *
+     * AccountSetup also has a `database` channel (A5.5), which fires its own
+     * `NotificationSending` event with no setup link at all; this only observes
+     * the `mail` channel, since that is the one this helper is about.
+     *
      * @param  Closure(string $url): void|null  $onSending  Runs before delivery; may throw to simulate a mail failure.
      * @return object{urls: array<int, string>}
      */
@@ -25,7 +29,7 @@ trait InspectsSetupLinks
         $captured = (object) ['urls' => [], 'levels' => []];
 
         Event::listen(NotificationSending::class, function (NotificationSending $event) use ($captured, $onSending): void {
-            if (! $event->notification instanceof AccountSetup) {
+            if (! $event->notification instanceof AccountSetup || $event->channel !== 'mail') {
                 return;
             }
 

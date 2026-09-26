@@ -23,12 +23,23 @@ class AccountSetupTest extends MysqlTestCase
         return new AccountSetup(self::TOKEN, Carbon::parse('2026-09-24 12:00:00', 'UTC'));
     }
 
-    public function test_it_uses_the_mail_channel_only_and_is_not_queued(): void
+    public function test_it_uses_the_mail_and_database_channels_and_is_not_queued(): void
     {
         $notification = $this->notification();
 
-        $this->assertSame(['mail'], $notification->via(new User));
+        $this->assertSame(['mail', 'database'], $notification->via(new User));
         $this->assertNotInstanceOf(ShouldQueue::class, $notification, 'The token must never be serialised into the jobs table.');
+    }
+
+    public function test_the_database_row_carries_no_link_or_secret(): void
+    {
+        $data = $this->notification()->toDatabase(new User);
+
+        $this->assertSame('Set up your account', $data['title']);
+        $this->assertStringContainsString('Check your email', $data['message']);
+        $this->assertNull($data['action_url'], 'The one-time token must never reach the database channel.');
+        $this->assertNull($data['related_public_id']);
+        $this->assertStringNotContainsString(self::TOKEN, json_encode($data));
     }
 
     public function test_the_email_names_the_club_and_member_and_explains_the_one_time_link(): void

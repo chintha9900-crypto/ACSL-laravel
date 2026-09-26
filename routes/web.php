@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\MembershipApplicationReviewController;
 use App\Http\Controllers\Admin\MembershipSetupLinkController;
 use App\Http\Controllers\Member\DashboardController;
 use App\Http\Controllers\Member\MembershipController as MemberMembershipController;
+use App\Http\Controllers\Member\NotificationController;
 use App\Http\Controllers\Member\ProfileController;
 use App\Http\Controllers\Member\SecurityController;
 use App\Http\Controllers\Membership\ApplicationStatusController;
@@ -58,6 +59,16 @@ Route::get('dashboard/security', [SecurityController::class, 'show'])
 Route::patch('dashboard/security', [SecurityController::class, 'update'])
     ->middleware(['auth', 'active', 'throttle:6,1'])
     ->name('member.security.update');
+
+Route::get('dashboard/notifications', [NotificationController::class, 'show'])
+    ->middleware(['auth', 'active'])
+    ->name('member.notifications.show');
+Route::post('dashboard/notifications/read-all', [NotificationController::class, 'markAllRead'])
+    ->middleware(['auth', 'active'])
+    ->name('member.notifications.mark-all-read');
+Route::post('dashboard/notifications/{notification}/read', [NotificationController::class, 'markRead'])
+    ->middleware(['auth', 'active'])
+    ->name('member.notifications.mark-read');
 
 Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('membership-applications', [AdminMembershipApplicationController::class, 'index'])

@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Membership;
 
+use App\Actions\Membership\NotifyApplicant;
 use App\Actions\Membership\SubmitMembershipApplication;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Membership\StoreMembershipApplicationRequest;
 use App\Models\MembershipApplication;
 use App\Models\MembershipCategory;
+use App\Notifications\Membership\ApplicationSubmitted;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -40,9 +42,12 @@ class MembershipApplicationController extends Controller
     /**
      * Submit an application. No user account is created or required.
      */
-    public function store(StoreMembershipApplicationRequest $request, SubmitMembershipApplication $submit): RedirectResponse
+    public function store(StoreMembershipApplicationRequest $request, SubmitMembershipApplication $submit, NotifyApplicant $notify): RedirectResponse
     {
         $application = $submit->handle($request->applicationData(), $request->proofDocuments());
+
+        // M1: never allowed to affect the submission itself — see NotifyApplicant.
+        $notify->handle($application, new ApplicationSubmitted($application));
 
         return redirect()->to(URL::temporarySignedRoute(
             'membership.apply.submitted',
