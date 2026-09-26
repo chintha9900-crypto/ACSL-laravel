@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\MembershipApplicationController as AdminMembershi
 use App\Http\Controllers\Admin\MembershipApplicationReviewController;
 use App\Http\Controllers\Admin\MembershipSetupLinkController;
 use App\Http\Controllers\Admin\PaymentReviewController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\Member\DashboardController;
 use App\Http\Controllers\Member\DocumentController as MemberDocumentController;
 use App\Http\Controllers\Member\MembershipCardController;
@@ -43,6 +44,20 @@ Route::get('faq', function () {
         'introductoryMonths' => (int) MembershipSetting::current()->introductory_period_months,
     ]);
 })->name('faq');
+
+Route::controller(ContactController::class)->group(function () {
+    Route::get('contact', 'show')->name('contact');
+    Route::post('contact', 'store')->middleware('throttle:6,1')->name('contact.store');
+    Route::get('contact/submitted', 'submitted')->name('contact.submitted');
+});
+
+Route::get('privacy', function () {
+    return view('privacy');
+})->name('privacy');
+
+Route::get('terms', function () {
+    return view('terms');
+})->name('terms');
 
 Route::controller(MembershipApplicationController::class)->group(function () {
     Route::get('membership/apply', 'create')->name('membership.apply');

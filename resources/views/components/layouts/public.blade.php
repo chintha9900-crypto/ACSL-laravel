@@ -16,6 +16,14 @@
     ['route' => 'membership.benefits', 'label' => 'Membership'],
     ['route' => 'rules', 'label' => 'Rules'],
     ['route' => 'faq', 'label' => 'FAQ'],
+    ['route' => 'contact', 'label' => 'Contact'],
+])
+{{-- Privacy/Terms are legal boilerplate, conventionally footer-only links —
+     not repeated in the main nav (matches the reference footer's own
+     separate "Legal" column). --}}
+@php($legalLinks = [
+    ['route' => 'privacy', 'label' => 'Privacy Policy'],
+    ['route' => 'terms', 'label' => 'Terms & Conditions'],
 ])
 
 <!DOCTYPE html>
@@ -123,6 +131,15 @@
                         @endforeach
                         <li><a href="{{ route('membership.apply') }}" class="hover:text-white">Become a Member</a></li>
                         <li><a href="{{ route('login') }}" class="hover:text-white">Sign In</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="mb-4 font-display text-base font-semibold">Legal</h4>
+                    <ul class="space-y-2 text-sm text-primary-foreground/75">
+                        @foreach ($legalLinks as $link)
+                            <li><a href="{{ route($link['route']) }}" class="hover:text-white">{{ $link['label'] }}</a></li>
+                        @endforeach
                     </ul>
                 </div>
             </div>
