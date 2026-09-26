@@ -95,18 +95,72 @@
 }
 
 @utility gradient-hero {
-    background: linear-gradient(135deg, oklch(0.22 0.08 257) 0%, oklch(0.32 0.1 250) 50%, oklch(0.45 0.14 235) 100%);
+    background: linear-gradient(135deg, #4d4d4d 0%, #666666 100%);
 }
 
 @utility gradient-primary {
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-glow) 100%);
 }
 
+/*
+ * Public brand emphasis word. Previously an actual gradient; the approved
+ * palette and the "avoid excessive gradients" principle (docs/frontend/08,
+ * ACI brand review) call for a flat brand-red instead. Kept as a class (not
+ * inlined) because it's already referenced by the apply/status/submitted
+ * pages this way.
+ */
 @utility text-gradient {
-    background: linear-gradient(135deg, var(--primary-glow), oklch(0.78 0.12 220));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: #cc001f;
+}
+
+/*
+ * ACI's approved brand palette (Red #CC001F, Dark Gray #4D4D4D, Gray
+ * #666666, White), scoped to the public site only. Applied on <body> in
+ * layouts.public. Member and admin layouts never add this class, so their
+ * tokens (unchanged, above) — and every `bg-*`/`text-*`/`border-*` utility
+ * that reads them — are completely unaffected.
+ */
+.theme-public {
+    --background: #ffffff;
+    --foreground: #4d4d4d;
+
+    --primary: #4d4d4d;
+    --primary-foreground: #ffffff;
+    --primary-glow: #666666;
+
+    --secondary: #666666;
+    --secondary-foreground: #ffffff;
+
+    --muted: #f5f5f5;
+    --muted-foreground: #666666;
+
+    --accent: #f0f0f0;
+    --accent-foreground: #4d4d4d;
+
+    --destructive: #cc001f;
+    --destructive-foreground: #ffffff;
+
+    --border: #e0e0e0;
+    --input: #e0e0e0;
+    --ring: #666666;
+}
+
+/*
+ * The one deliberate brand-red action colour (docs: "Primary CTA should use
+ * #CC001F"). Kept separate from the `--secondary`/`--primary` token remap
+ * above (those feed many existing badges/icons whose meaning — e.g. a
+ * "success" checkmark — must not turn alarm-red) and from `.btn-gradient`
+ * (shared with member/admin, left untouched) so this only ever appears where
+ * a view explicitly opts in.
+ */
+.btn-brand {
+    background-color: #cc001f;
+    color: #ffffff;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.btn-brand:hover {
+    opacity: 0.9;
 }
 
 /* Reusable pieces matching the reference's shadcn Card, Input/Textarea and Button. */

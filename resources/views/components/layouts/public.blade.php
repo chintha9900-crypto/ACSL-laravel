@@ -20,29 +20,29 @@
             @vite(['resources/css/app.css', 'resources/js/app.js'])
         @endif
     </head>
-    <body class="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
+    <body class="theme-public flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
         <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[60] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm">
             Skip to content
         </a>
 
-        <header id="site-header" class="sticky top-0 z-50 w-full bg-background/60 backdrop-blur-sm transition-all data-[scrolled=true]:border-b data-[scrolled=true]:border-border data-[scrolled=true]:bg-background/85 data-[scrolled=true]:shadow-card data-[scrolled=true]:backdrop-blur-md">
-            <div class="container mx-auto flex h-16 items-center justify-between px-4 lg:px-8">
+        <header id="site-header" class="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-sm transition-shadow data-[scrolled=true]:shadow-card">
+            <div class="container mx-auto flex h-16 items-center justify-between px-4 lg:h-20 lg:px-8">
                 <a href="{{ url('/') }}" class="flex items-center gap-2">
                     @if ($hasLogo)
-                        <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club International" width="292" height="95" class="h-10 w-auto">
+                        <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club International" width="473" height="155" class="h-11 w-auto lg:h-14">
                     @else
                         <span class="font-display text-lg font-bold text-primary">Aviation Club International</span>
                     @endif
                 </a>
 
-                <nav class="hidden items-center gap-1 lg:flex" aria-label="Main">
-                    <a href="{{ url('/') }}" class="rounded-md px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-primary {{ request()->is('/') ? 'font-semibold text-primary' : '' }}">Home</a>
-                    <a href="{{ route('membership.apply') }}" @if ($onApply) aria-current="page" @endif class="rounded-md px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-primary {{ $onApply ? 'font-semibold text-primary' : '' }}">Become a Member</a>
+                <nav class="hidden items-center gap-2 lg:flex" aria-label="Main">
+                    <a href="{{ url('/') }}" class="rounded-md px-4 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-primary {{ request()->is('/') ? 'font-semibold text-primary' : '' }}">Home</a>
+                    <a href="{{ route('membership.apply') }}" @if ($onApply) aria-current="page" @endif class="rounded-md px-4 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-primary {{ $onApply ? 'font-semibold text-primary' : '' }}">Become a Member</a>
                 </nav>
 
-                <div class="hidden items-center gap-2 lg:flex">
+                <div class="hidden items-center gap-3 lg:flex">
                     <a href="{{ route('login') }}" class="btn btn-sm btn-ghost">Sign In</a>
-                    <a href="{{ route('membership.apply') }}" class="btn btn-sm btn-gradient">Join Now</a>
+                    <a href="{{ route('membership.apply') }}" class="btn btn-sm btn-brand">Join Now</a>
                 </div>
 
                 {{-- Mobile menu: a native disclosure, so it works without JavaScript. --}}
@@ -58,7 +58,7 @@
                             <a href="{{ route('membership.apply') }}" @if ($onApply) aria-current="page" @endif class="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted {{ $onApply ? 'bg-muted text-primary' : '' }}">Become a Member</a>
                             <div class="mt-2 flex gap-2 border-t border-border pt-2">
                                 <a href="{{ route('login') }}" class="btn btn-sm flex-1 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground">Sign In</a>
-                                <a href="{{ route('membership.apply') }}" class="btn btn-sm btn-gradient flex-1">Join Now</a>
+                                <a href="{{ route('membership.apply') }}" class="btn btn-sm btn-brand flex-1">Join Now</a>
                             </div>
                         </div>
                     </div>
@@ -70,14 +70,26 @@
             {{ $slot }}
         </main>
 
-        <footer class="mt-20 bg-primary text-primary-foreground">
+        {{-- Footer background is the approved brand red itself (not the `primary`
+             token, which is the dark-gray heading colour elsewhere on the site).
+             `primary-foreground` (white) is unaffected, so the existing
+             `text-primary-foreground/*` classes below still read correctly. --}}
+        <footer class="mt-20 bg-[#CC001F] text-primary-foreground">
             <div class="container mx-auto grid gap-10 px-4 py-14 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
                 <div class="lg:col-span-2">
-                    <a href="{{ url('/') }}" class="mb-4 flex items-center gap-2">
-                        <span class="grid h-9 w-9 place-items-center rounded-lg bg-secondary text-secondary-foreground">
-                            <svg class="h-5 w-5 -rotate-45" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
-                        </span>
-                        <span class="font-display text-lg font-bold">Aviation Club International</span>
+                    <a href="{{ url('/') }}" class="mb-4 inline-flex items-center gap-2">
+                        @if ($hasLogo)
+                            {{-- The logo's own text is dark, so it needs a light backing to
+                                 read on this dark footer; the asset itself is untouched. --}}
+                            <span class="inline-flex items-center rounded-md bg-white px-3 py-2">
+                                <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club International" width="473" height="155" class="h-8 w-auto">
+                            </span>
+                        @else
+                            <span class="grid h-9 w-9 place-items-center rounded-lg bg-secondary text-secondary-foreground">
+                                <svg class="h-5 w-5 -rotate-45" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+                            </span>
+                            <span class="font-display text-lg font-bold">Aviation Club International</span>
+                        @endif
                     </a>
                     <p class="text-sm leading-relaxed text-primary-foreground/70">
                         For people who work, study or take part in aviation.
@@ -86,10 +98,12 @@
 
                 <div>
                     <h4 class="mb-4 font-display text-base font-semibold">Explore</h4>
+                    {{-- `hover:text-white` (not `hover:text-secondary`, now a mid-gray) keeps
+                         the hover state legible against the brand-red background. --}}
                     <ul class="space-y-2 text-sm text-primary-foreground/75">
-                        <li><a href="{{ url('/') }}" class="hover:text-secondary">Home</a></li>
-                        <li><a href="{{ route('membership.apply') }}" class="hover:text-secondary">Become a Member</a></li>
-                        <li><a href="{{ route('login') }}" class="hover:text-secondary">Sign In</a></li>
+                        <li><a href="{{ url('/') }}" class="hover:text-white">Home</a></li>
+                        <li><a href="{{ route('membership.apply') }}" class="hover:text-white">Become a Member</a></li>
+                        <li><a href="{{ route('login') }}" class="hover:text-white">Sign In</a></li>
                     </ul>
                 </div>
             </div>
