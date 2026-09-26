@@ -38,4 +38,13 @@ return [
         'extensions' => ['jpg', 'jpeg', 'png'],
     ],
 
+    /*
+    | Renewal payment evidence (docs/architecture §0.9): "the same class of
+    | validation/authorization/audit controls as aviation proof". Same limits.
+    */
+    'payment_evidence' => [
+        'max_kb' => 5120,
+        'extensions' => ['pdf', 'jpg', 'jpeg', 'png'],
+    ],
+
 ];

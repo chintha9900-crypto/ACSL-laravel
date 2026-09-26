@@ -82,6 +82,96 @@
             </section>
         </div>
 
+        <section class="ui-card mt-6 p-6" aria-labelledby="renewal-heading">
+            <h2 id="renewal-heading" class="font-display text-lg font-bold text-primary">Renewal</h2>
+
+            @error('renewal')
+                <p class="mt-3 rounded-lg border border-destructive/50 px-3 py-2 text-xs text-destructive" role="alert">{{ $message }}</p>
+            @enderror
+            @error('evidence')
+                <p class="mt-3 rounded-lg border border-destructive/50 px-3 py-2 text-xs text-destructive" role="alert">{{ $message }}</p>
+            @enderror
+
+            @if ($pendingRenewal === null)
+                <p class="mt-2 text-sm text-muted-foreground">There is no automatic renewal — start one whenever you are ready. Renewal is normally 12 months and requires payment by bank transfer.</p>
+                <form method="POST" action="{{ route('member.membership.renewal.start') }}" class="mt-4">
+                    @csrf
+                    <button type="submit" class="btn btn-lg btn-gradient">Renew now</button>
+                </form>
+            @else
+                @php($payment = $pendingRenewal->payment)
+
+                <dl class="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                    <div>
+                        <dt class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Renewal fee</dt>
+                        <dd class="mt-1 font-semibold">{{ $payment->currency }} {{ number_format((float) $payment->amount, 2) }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Length</dt>
+                        <dd class="mt-1">{{ $pendingRenewal->duration_months }} {{ Str::plural('month', $pendingRenewal->duration_months) }}</dd>
+                    </div>
+                </dl>
+
+                @if ($payment->status === 'processing')
+                    <p class="mt-4 rounded-lg bg-secondary/10 px-3 py-2 text-sm text-primary">Payment evidence submitted — awaiting confirmation.</p>
+                    @if ($payment->transaction_reference)
+                        <p class="mt-2 text-sm text-muted-foreground">Reference: {{ $payment->transaction_reference }}</p>
+                    @endif
+                @else
+                    @if ($payment->status === 'failed' && $payment->rejection_reason)
+                        <p class="mt-4 rounded-lg border border-destructive/50 px-3 py-2 text-sm text-destructive">{{ $payment->rejection_reason }}</p>
+                    @endif
+
+                    <div class="mt-4 rounded-lg bg-muted p-4 text-sm">
+                        <p class="font-medium">Pay by bank transfer to:</p>
+                        @if ($payment->bankAccount)
+                            <p class="mt-2 whitespace-pre-line">{{ $payment->bankAccount->bank_name }}
+Account name: {{ $payment->bankAccount->account_name }}
+Account number: {{ $payment->bankAccount->account_number }}
+@if ($payment->bankAccount->branch)Branch: {{ $payment->bankAccount->branch }}
+@endif
+@if ($payment->bankAccount->sort_code)Sort code: {{ $payment->bankAccount->sort_code }}
+@endif
+@if ($payment->bankAccount->iban)IBAN: {{ $payment->bankAccount->iban }}
+@endif
+@if ($payment->bankAccount->swift_bic)SWIFT/BIC: {{ $payment->bankAccount->swift_bic }}
+@endif</p>
+                            @if ($payment->bankAccount->instructions)
+                                <p class="mt-2 text-muted-foreground">{{ $payment->bankAccount->instructions }}</p>
+                            @endif
+                        @endif
+                    </div>
+
+                    <form method="POST" action="{{ route('member.membership.renewal.evidence') }}" enctype="multipart/form-data" class="mt-4 space-y-4">
+                        @csrf
+
+                        <x-form.input name="reference" label="Payment reference" />
+
+                        <div class="space-y-1.5">
+                            <label for="evidence" class="block text-sm font-medium leading-none">Payment evidence</label>
+                            <input id="evidence" name="evidence" type="file" accept="application/pdf,image/jpeg,image/png" required class="field-control">
+                            @error('evidence')
+                                <p class="text-xs text-destructive">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <button type="submit" class="btn btn-lg btn-gradient">Submit payment confirmation</button>
+                    </form>
+                @endif
+
+                @if ($payment->evidence->isNotEmpty())
+                    <div class="mt-4">
+                        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Submitted evidence</p>
+                        <ul class="mt-2 space-y-1 text-sm">
+                            @foreach ($payment->evidence as $document)
+                                <li><a href="{{ route('member.documents.show', $document) }}" class="text-primary underline underline-offset-2 hover:text-secondary">{{ $document->original_filename }}</a></li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+            @endif
+        </section>
+
         <section class="ui-card mt-6 p-6" aria-labelledby="history-heading">
             <h2 id="history-heading" class="font-display text-lg font-bold text-primary">Term history</h2>
 

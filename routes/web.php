@@ -5,10 +5,13 @@ use App\Http\Controllers\Admin\MembershipActivationController;
 use App\Http\Controllers\Admin\MembershipApplicationController as AdminMembershipApplicationController;
 use App\Http\Controllers\Admin\MembershipApplicationReviewController;
 use App\Http\Controllers\Admin\MembershipSetupLinkController;
+use App\Http\Controllers\Admin\PaymentReviewController;
 use App\Http\Controllers\Member\DashboardController;
+use App\Http\Controllers\Member\DocumentController as MemberDocumentController;
 use App\Http\Controllers\Member\MembershipController as MemberMembershipController;
 use App\Http\Controllers\Member\NotificationController;
 use App\Http\Controllers\Member\ProfileController;
+use App\Http\Controllers\Member\RenewalController;
 use App\Http\Controllers\Member\SecurityController;
 use App\Http\Controllers\Membership\ApplicationStatusController;
 use App\Http\Controllers\Membership\MembershipApplicationController;
@@ -50,6 +53,16 @@ Route::patch('dashboard/profile', [ProfileController::class, 'update'])
 Route::get('dashboard/membership', [MemberMembershipController::class, 'show'])
     ->middleware(['auth', 'active'])
     ->name('member.membership.show');
+Route::post('dashboard/membership/renewal', [RenewalController::class, 'store'])
+    ->middleware(['auth', 'active'])
+    ->name('member.membership.renewal.start');
+Route::post('dashboard/membership/renewal/evidence', [RenewalController::class, 'submitEvidence'])
+    ->middleware(['auth', 'active'])
+    ->name('member.membership.renewal.evidence');
+
+Route::get('dashboard/documents/{document}', [MemberDocumentController::class, 'show'])
+    ->middleware(['auth', 'active'])
+    ->name('member.documents.show');
 
 Route::get('dashboard/security', [SecurityController::class, 'show'])
     ->middleware(['auth', 'active'])
@@ -83,6 +96,10 @@ Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(fu
         ->middleware('throttle:setup-link')
         ->name('membership-applications.setup-link');
     Route::get('documents/{document}', [DocumentController::class, 'show'])->name('documents.show');
+
+    Route::get('payments', [PaymentReviewController::class, 'index'])->name('payments.index');
+    Route::post('payments/{payment}/confirm', [PaymentReviewController::class, 'confirm'])->name('payments.confirm');
+    Route::post('payments/{payment}/reject', [PaymentReviewController::class, 'reject'])->name('payments.reject');
 });
 
 Route::post('applications/{application}/respond', [MoreDetailsResponseController::class, 'store'])

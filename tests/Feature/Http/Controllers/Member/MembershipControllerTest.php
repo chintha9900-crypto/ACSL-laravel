@@ -258,7 +258,11 @@ class MembershipControllerTest extends MysqlTestCase
         $this->assertIdNotExposed($membership->terms->first()->id, $response->getContent());
     }
 
-    public function test_no_renewal_or_payment_action_is_presented(): void
+    /**
+     * A "Renew now" bank-transfer action is now in scope (the renewal phase);
+     * a payment gateway, card payments and the digital membership card are not.
+     */
+    public function test_no_payment_gateway_or_digital_card_action_is_presented(): void
     {
         $membership = $this->activatedMember();
 
@@ -266,13 +270,13 @@ class MembershipControllerTest extends MysqlTestCase
             ->get(route('member.membership.show'))
             ->assertOk();
 
-        $response->assertDontSee('Renew now');
+        $response->assertSee('Renew now');
         $response->assertDontSee('Pay now');
-        $response->assertDontSee('Submit confirmation');
+        $response->assertDontSee('card number', false);
         $response->assertDontSee('digital card', false);
         $response->assertDontSee('QR', false);
+        // No pending renewal yet, so no bank-transfer/evidence form is shown either.
         $response->assertDontSee('evidence', false);
-        // The only <form> on the page is the shared layout's sign-out button.
-        $this->assertSame(1, substr_count($response->getContent(), '<form'), 'The page offers no membership action a member can submit.');
+        $this->assertSame(2, substr_count($response->getContent(), '<form'), 'Sign out, and the one "Renew now" action — nothing else.');
     }
 }

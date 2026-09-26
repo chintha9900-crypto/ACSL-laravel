@@ -16,7 +16,13 @@ class Document extends Model
 
     public const KIND_AVIATION_PROOF = 'aviation_proof';
 
+    public const KIND_PAYMENT_EVIDENCE = 'payment_evidence';
+
     public const DISK_PRIVATE = 'private';
+
+    public const VISIBILITY_OWNER_AND_ADMIN = 'owner_and_admin';
+
+    public const VISIBILITY_ADMIN_ONLY = 'admin_only';
 
     /**
      * Written only by server-side actions, never from request input.
@@ -27,6 +33,7 @@ class Document extends Model
         'kind',
         'membership_application_id',
         'membership_details_request_id',
+        'payment_id',
         'uploaded_by_user_id',
         'disk',
         'storage_path',
@@ -34,6 +41,7 @@ class Document extends Model
         'mime_type',
         'size_bytes',
         'checksum_sha256',
+        'visibility',
     ];
 
     /**
@@ -67,5 +75,13 @@ class Document extends Model
     public function application(): BelongsTo
     {
         return $this->belongsTo(MembershipApplication::class, 'membership_application_id');
+    }
+
+    /**
+     * @return BelongsTo<Payment, $this>
+     */
+    public function payment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class);
     }
 }

@@ -23,7 +23,7 @@ class MembershipController extends Controller
     {
         $membership = Membership::query()
             ->where('user_id', $request->user()->id)
-            ->with(['category:id,name,description', 'terms'])
+            ->with(['category:id,name,description', 'terms.payment.bankAccount', 'terms.payment.evidence'])
             ->first();
 
         if ($membership === null) {
@@ -50,11 +50,14 @@ class MembershipController extends Controller
         // page still has something meaningful to show — clearly not as "current".
         $displayTerm = $currentTerm ?? $membership->terms->sortByDesc('term_no')->first();
 
+        $pendingRenewal = $membership->terms->firstWhere('status', MembershipTerm::STATUS_PENDING_PAYMENT);
+
         return view('member.membership.show', [
             'membership' => $membership,
             'displayTerm' => $displayTerm,
             'isCurrentlyValid' => $currentTerm !== null,
             'terms' => $membership->terms,
+            'pendingRenewal' => $pendingRenewal,
         ]);
     }
 }

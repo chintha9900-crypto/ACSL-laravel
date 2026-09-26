@@ -25,8 +25,9 @@
             <div class="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 lg:px-8">
                 <div class="flex flex-wrap items-center gap-x-6 gap-y-1">
                     <span class="font-display text-lg font-bold">Aviation Club International <span class="font-normal text-primary-foreground/70">Admin</span></span>
-                    <nav aria-label="Admin">
+                    <nav aria-label="Admin" class="flex flex-wrap items-center gap-4">
                         <a href="{{ route('admin.membership-applications.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Membership applications</a>
+                        <a href="{{ route('admin.payments.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Payments</a>
                     </nav>
                 </div>
 

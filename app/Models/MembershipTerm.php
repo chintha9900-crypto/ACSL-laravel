@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * One validity term of a membership (docs/database/04 §9). This phase only creates
@@ -22,6 +23,14 @@ class MembershipTerm extends Model
     public const STATUS_EXPIRED = 'expired';
 
     public const PAYMENT_NOT_REQUIRED = 'payment_not_required';
+
+    public const PAYMENT_PENDING = 'payment_pending';
+
+    public const PAYMENT_CONFIRMATION_SUBMITTED = 'payment_confirmation_submitted';
+
+    public const PAYMENT_CONFIRMED = 'payment_confirmed';
+
+    public const PAYMENT_REJECTED = 'payment_rejected';
 
     /**
      * The three allowed term statuses (docs/database/04 §9) and how a member sees them.
@@ -55,5 +64,24 @@ class MembershipTerm extends Model
     public function membership(): BelongsTo
     {
         return $this->belongsTo(Membership::class);
+    }
+
+    /**
+     * @return BelongsTo<MembershipPlan, $this>
+     */
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(MembershipPlan::class, 'membership_plan_id');
+    }
+
+    /**
+     * The one payment for this term (renewal terms only — the introductory term
+     * never has one).
+     *
+     * @return HasOne<Payment, $this>
+     */
+    public function payment(): HasOne
+    {
+        return $this->hasOne(Payment::class);
     }
 }
