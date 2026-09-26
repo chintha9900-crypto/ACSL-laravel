@@ -5,10 +5,10 @@
 @php($hasLogo = file_exists(public_path('images/aci-logo.png')))
 {{--
     Every page these link to already exists as a real route — no nav entry
-    ever points at an unbuilt page (Blog/News/Jobs/Contact aren't linked
-    because they don't exist yet). "Become a Member" isn't repeated here: the
-    red "Join Now"/"Become a Member" button already covers it, so the text
-    nav doesn't duplicate it.
+    ever points at an unbuilt page (News/Jobs aren't linked because they
+    don't exist yet). "Become a Member" isn't repeated here: the red "Join
+    Now"/"Become a Member" button already covers it, so the text nav doesn't
+    duplicate it.
 --}}
 @php($navLinks = [
     ['route' => 'home', 'label' => 'Home'],
@@ -16,6 +16,7 @@
     ['route' => 'membership.benefits', 'label' => 'Membership'],
     ['route' => 'rules', 'label' => 'Rules'],
     ['route' => 'faq', 'label' => 'FAQ'],
+    ['route' => 'blog.index', 'label' => 'Blog'],
     ['route' => 'contact', 'label' => 'Contact'],
 ])
 {{-- Privacy/Terms are legal boilerplate, conventionally footer-only links —

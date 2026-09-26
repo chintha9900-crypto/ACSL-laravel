@@ -43,7 +43,6 @@ class HomePageTest extends TestCase
     {
         $response = $this->get(route('home'))->assertOk();
 
-        $response->assertDontSee('href="/blog"', false);
         $response->assertDontSee('href="/membership/benefits"', false);
         $response->assertDontSee('E-Shop');
     }
@@ -58,5 +57,23 @@ class HomePageTest extends TestCase
 
         $response->assertSee('href="'.route('login').'"', false);
         $response->assertSee('Sign In');
+    }
+
+    /**
+     * The shared public header and footer, on any public page — both must
+     * link "Blog" to the real `blog.index` route.
+     */
+    public function test_the_public_header_and_footer_link_to_the_blog(): void
+    {
+        $response = $this->get(route('home'))->assertOk();
+        $response->assertSee('Blog');
+
+        $blogHref = 'href="'.route('blog.index').'"';
+        $content = $response->getContent();
+        $headerHtml = substr($content, 0, strpos($content, '</header>'));
+        $footerHtml = substr($content, strpos($content, '<footer'));
+
+        $this->assertStringContainsString($blogHref, $headerHtml, 'The header nav must link to the blog.');
+        $this->assertStringContainsString($blogHref, $footerHtml, 'The footer must link to the blog.');
     }
 }
