@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\MembershipSetupLinkController;
 use App\Http\Controllers\Member\DashboardController;
 use App\Http\Controllers\Member\MembershipController as MemberMembershipController;
 use App\Http\Controllers\Member\ProfileController;
+use App\Http\Controllers\Member\SecurityController;
 use App\Http\Controllers\Membership\ApplicationStatusController;
 use App\Http\Controllers\Membership\MembershipApplicationController;
 use App\Http\Controllers\Membership\MoreDetailsResponseController;
@@ -48,6 +49,15 @@ Route::patch('dashboard/profile', [ProfileController::class, 'update'])
 Route::get('dashboard/membership', [MemberMembershipController::class, 'show'])
     ->middleware(['auth', 'active'])
     ->name('member.membership.show');
+
+Route::get('dashboard/security', [SecurityController::class, 'show'])
+    ->middleware(['auth', 'active'])
+    ->name('member.security.show');
+// Same throttle as forgot-password/reset-password: a sensitive action that takes
+// a password guess as input must not be brute-forceable.
+Route::patch('dashboard/security', [SecurityController::class, 'update'])
+    ->middleware(['auth', 'active', 'throttle:6,1'])
+    ->name('member.security.update');
 
 Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('membership-applications', [AdminMembershipApplicationController::class, 'index'])

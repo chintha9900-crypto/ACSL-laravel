@@ -6,6 +6,8 @@ use App\Actions\Membership\ActivateMembership;
 use App\Models\Membership;
 use App\Models\MembershipSetting;
 use App\Models\MembershipTerm;
+use DOMDocument;
+use DOMXPath;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\CreatesReviewableApplications;
@@ -14,6 +16,41 @@ use Tests\MysqlTestCase;
 class MembershipControllerTest extends MysqlTestCase
 {
     use CreatesReviewableApplications;
+
+    /**
+     * Prove a raw database id is not exposed as an HTML attribute value (an id=,
+     * data-*, value=, name=, href= or src=) or as the entire text of an element —
+     * i.e. rendered as an actual field/attribute — rather than merely absent as a
+     * substring, which a coincidental digit match inside a date, membership number
+     * or other unrelated text would falsely fail.
+     */
+    private function assertIdNotExposed(int $id, string $html): void
+    {
+        $needle = (string) $id;
+
+        $dom = new DOMDocument;
+        libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="utf-8"?>'.$html);
+        libxml_clear_errors();
+
+        $xpath = new DOMXPath($dom);
+
+        foreach ($xpath->query('//@*') as $attribute) {
+            $this->assertNotSame(
+                $needle,
+                trim((string) $attribute->nodeValue),
+                "The [{$attribute->nodeName}] attribute must not expose the raw id {$id}."
+            );
+        }
+
+        foreach ($xpath->query('//*[not(*)]') as $leaf) {
+            $this->assertNotSame(
+                $needle,
+                trim((string) $leaf->textContent),
+                "A <{$leaf->nodeName}> element must not render the raw id {$id} as a field value."
+            );
+        }
+    }
 
     /**
      * A real, fully activated membership (via the existing A4.1 action), with the
@@ -217,8 +254,8 @@ class MembershipControllerTest extends MysqlTestCase
         $response->assertDontSee('number_sequence');
         $response->assertDontSee('number_year');
         $response->assertDontSee('is_active');
-        $this->assertStringNotContainsString((string) $membership->id, $response->getContent());
-        $this->assertStringNotContainsString((string) $membership->terms->first()->id, $response->getContent());
+        $this->assertIdNotExposed($membership->id, $response->getContent());
+        $this->assertIdNotExposed($membership->terms->first()->id, $response->getContent());
     }
 
     public function test_no_renewal_or_payment_action_is_presented(): void
