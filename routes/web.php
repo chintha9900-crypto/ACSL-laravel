@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\MembershipSetupLinkController;
 use App\Http\Controllers\Admin\PaymentReviewController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\EventController;
 use App\Http\Controllers\Member\DashboardController;
 use App\Http\Controllers\Member\DocumentController as MemberDocumentController;
 use App\Http\Controllers\Member\MembershipCardController;
@@ -23,6 +24,8 @@ use App\Http\Controllers\Membership\MembershipApplicationController;
 use App\Http\Controllers\Membership\MembershipBenefitsController;
 use App\Http\Controllers\Membership\MoreDetailsResponseController;
 use App\Http\Controllers\Membership\VerificationController;
+use App\Http\Controllers\NewsController;
+use App\Http\Controllers\NewsEventsController;
 use App\Models\MembershipSetting;
 use Illuminate\Support\Facades\Route;
 
@@ -66,6 +69,21 @@ Route::controller(BlogController::class)->prefix('blog')->name('blog.')->group(f
     Route::get('/', 'index')->name('index');
     Route::get('{post:slug}', 'show')->name('show');
 });
+
+// News & Events Stage 1 — public pages only (docs/database/10 §6-7).
+Route::controller(NewsController::class)->prefix('news')->name('news.')->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('{news:slug}', 'show')->name('show');
+});
+
+Route::controller(EventController::class)->prefix('events')->name('events.')->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('{event:slug}', 'show')->name('show');
+});
+
+// A short combined preview of both, linking out to the full `news.index` /
+// `events.index` lists above — not a replacement for either.
+Route::get('news-events', [NewsEventsController::class, 'show'])->name('news-events');
 
 Route::controller(MembershipApplicationController::class)->group(function () {
     Route::get('membership/apply', 'create')->name('membership.apply');

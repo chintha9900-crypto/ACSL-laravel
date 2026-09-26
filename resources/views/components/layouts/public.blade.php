@@ -5,18 +5,37 @@
 @php($hasLogo = file_exists(public_path('images/aci-logo.png')))
 {{--
     Every page these link to already exists as a real route — no nav entry
-    ever points at an unbuilt page (News/Jobs aren't linked because they
-    don't exist yet). "Become a Member" isn't repeated here: the red "Join
-    Now"/"Become a Member" button already covers it, so the text nav doesn't
-    duplicate it.
+    ever points at an unbuilt page (Jobs isn't linked because it doesn't
+    exist yet). The red "Join Now" button still covers "Become a Member" as
+    a persistent call to action; it also now appears again inside the
+    Membership dropdown/submenu below, which is a deliberate, explicitly
+    requested exception to not repeating it in the flat nav.
+
+    An item with a `children` array (currently only "Membership") is a
+    dropdown/disclosure, not a direct link: the desktop nav renders it as a
+    click-to-open `<details>` panel, the mobile menu as a nested `<details>`
+    accordion — one shared source of navigation, not two. The footer is
+    deliberately different: it shows Membership as a single plain link
+    (`footerRoute`), not its four children, and News & Events is one
+    combined item everywhere (its own landing page, `news-events`) — the
+    separate full lists (`news.index`/`events.index`) are reachable only
+    from that landing page's own "View all" links, per the approved design.
 --}}
 @php($navLinks = [
     ['route' => 'home', 'label' => 'Home'],
     ['route' => 'about', 'label' => 'About'],
-    ['route' => 'membership.benefits', 'label' => 'Membership'],
-    ['route' => 'rules', 'label' => 'Rules'],
-    ['route' => 'faq', 'label' => 'FAQ'],
+    [
+        'label' => 'Membership',
+        'footerRoute' => 'membership.benefits',
+        'children' => [
+            ['route' => 'membership.benefits', 'label' => 'Membership Benefits'],
+            ['route' => 'rules', 'label' => 'Club Rules'],
+            ['route' => 'membership.apply', 'label' => 'Become a Member'],
+            ['route' => 'faq', 'label' => 'FAQ'],
+        ],
+    ],
     ['route' => 'blog.index', 'label' => 'Blog'],
+    ['route' => 'news-events', 'label' => 'News & Events'],
     ['route' => 'contact', 'label' => 'Contact'],
 ])
 {{-- Privacy/Terms are legal boilerplate, conventionally footer-only links —
@@ -59,8 +78,30 @@
 
                 <nav class="hidden items-center gap-1 lg:flex" aria-label="Main">
                     @foreach ($navLinks as $link)
-                        @php($isActive = request()->routeIs($link['route']))
-                        <a href="{{ route($link['route']) }}" @if ($isActive) aria-current="page" @endif class="rounded-md px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-primary {{ $isActive ? 'font-semibold text-primary' : '' }}">{{ $link['label'] }}</a>
+                        @if (isset($link['children']))
+                            @php($isActive = request()->routeIs(...array_column($link['children'], 'route')))
+                            {{-- Click-based dropdown via a native `<details>` — the same
+                                 mechanism the mobile menu already uses below, not hover:
+                                 hover-only dropdowns are unreliable (no keyboard
+                                 equivalent, no touch-device equivalent, closes if the
+                                 mouse crosses a gap). No JavaScript either way. --}}
+                            <details class="group relative">
+                                <summary aria-haspopup="true" class="flex list-none cursor-pointer items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-primary [&::-webkit-details-marker]:hidden {{ $isActive ? 'font-semibold text-primary' : '' }}">
+                                    {{ $link['label'] }}
+                                    <svg class="h-3.5 w-3.5 transition-transform group-open:rotate-180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                                </summary>
+
+                                <div role="menu" class="absolute left-0 top-full z-20 mt-1 min-w-[220px] rounded-md border border-border bg-background p-1.5 shadow-elegant">
+                                    @foreach ($link['children'] as $child)
+                                        @php($childActive = request()->routeIs($child['route']))
+                                        <a href="{{ route($child['route']) }}" @if ($childActive) aria-current="page" @endif role="menuitem" class="block rounded-md px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:bg-muted hover:text-primary {{ $childActive ? 'bg-muted text-primary' : '' }}">{{ $child['label'] }}</a>
+                                    @endforeach
+                                </div>
+                            </details>
+                        @else
+                            @php($isActive = request()->routeIs($link['route']))
+                            <a href="{{ route($link['route']) }}" @if ($isActive) aria-current="page" @endif class="rounded-md px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-primary {{ $isActive ? 'font-semibold text-primary' : '' }}">{{ $link['label'] }}</a>
+                        @endif
                     @endforeach
                 </nav>
 
@@ -79,8 +120,26 @@
                     <div class="absolute inset-x-0 top-16 border-t border-border bg-background">
                         <div class="container mx-auto flex flex-col gap-1 px-4 py-3">
                             @foreach ($navLinks as $link)
-                                @php($isActive = request()->routeIs($link['route']))
-                                <a href="{{ route($link['route']) }}" @if ($isActive) aria-current="page" @endif class="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted {{ $isActive ? 'bg-muted text-primary' : '' }}">{{ $link['label'] }}</a>
+                                @if (isset($link['children']))
+                                    @php($isActive = request()->routeIs(...array_column($link['children'], 'route')))
+                                    {{-- Same disclosure pattern as the outer mobile menu, nested
+                                         one level: tap to expand, no JavaScript. --}}
+                                    <details class="group/submenu">
+                                        <summary class="flex cursor-pointer list-none items-center justify-between rounded-md px-3 py-2 text-sm font-medium hover:bg-muted [&::-webkit-details-marker]:hidden {{ $isActive ? 'bg-muted text-primary' : '' }}">
+                                            {{ $link['label'] }}
+                                            <svg class="h-4 w-4 transition-transform group-open/submenu:rotate-180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                                        </summary>
+                                        <div class="ml-3 flex flex-col gap-1 border-l border-border py-1 pl-3">
+                                            @foreach ($link['children'] as $child)
+                                                @php($childActive = request()->routeIs($child['route']))
+                                                <a href="{{ route($child['route']) }}" @if ($childActive) aria-current="page" @endif class="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted {{ $childActive ? 'bg-muted text-primary' : '' }}">{{ $child['label'] }}</a>
+                                            @endforeach
+                                        </div>
+                                    </details>
+                                @else
+                                    @php($isActive = request()->routeIs($link['route']))
+                                    <a href="{{ route($link['route']) }}" @if ($isActive) aria-current="page" @endif class="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted {{ $isActive ? 'bg-muted text-primary' : '' }}">{{ $link['label'] }}</a>
+                                @endif
                             @endforeach
                             <div class="mt-2 flex gap-2 border-t border-border pt-2">
                                 <a href="{{ route('login') }}" class="btn btn-sm flex-1 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground">Sign In</a>
@@ -101,7 +160,7 @@
              `primary-foreground` (white) is unaffected, so the existing
              `text-primary-foreground/*` classes below still read correctly. --}}
         <footer class="mt-20 bg-[#CC001F] text-primary-foreground">
-            <div class="container mx-auto grid gap-10 px-4 py-14 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
+            <div class="container mx-auto grid gap-10 px-4 py-14 md:grid-cols-2 lg:grid-cols-5 lg:px-8">
                 <div class="lg:col-span-2">
                     <a href="{{ url('/') }}" class="mb-4 inline-flex items-center gap-2">
                         @if ($hasLogo)
@@ -125,12 +184,16 @@
                 <div>
                     <h4 class="mb-4 font-display text-base font-semibold">Explore</h4>
                     {{-- `hover:text-white` (not `hover:text-secondary`, now a mid-gray) keeps
-                         the hover state legible against the brand-red background. --}}
+                         the hover state legible against the brand-red background. "Home" is
+                         left out here only — the logo above already links there, matching
+                         the approved reference footer's own layout. --}}
                     <ul class="space-y-2 text-sm text-primary-foreground/75">
                         @foreach ($navLinks as $link)
-                            <li><a href="{{ route($link['route']) }}" class="hover:text-white">{{ $link['label'] }}</a></li>
+                            @continue(($link['route'] ?? null) === 'home')
+                            {{-- The footer has no dropdown affordance: Membership shows as
+                                 one normal link (`footerRoute`), not its four children. --}}
+                            <li><a href="{{ route($link['footerRoute'] ?? $link['route']) }}" class="hover:text-white">{{ $link['label'] }}</a></li>
                         @endforeach
-                        <li><a href="{{ route('membership.apply') }}" class="hover:text-white">Become a Member</a></li>
                         <li><a href="{{ route('login') }}" class="hover:text-white">Sign In</a></li>
                     </ul>
                 </div>
@@ -141,6 +204,17 @@
                         @foreach ($legalLinks as $link)
                             <li><a href="{{ route($link['route']) }}" class="hover:text-white">{{ $link['label'] }}</a></li>
                         @endforeach
+                    </ul>
+                </div>
+
+                {{-- No real ACI email/phone/address exists anywhere in this project
+                     (contact.blade.php's own contact-details cards are the same
+                     confirmed placeholder state) — this column links to the real
+                     contact form rather than inventing any of those details. --}}
+                <div>
+                    <h4 class="mb-4 font-display text-base font-semibold">Get in Touch</h4>
+                    <ul class="space-y-2 text-sm text-primary-foreground/75">
+                        <li><a href="{{ route('contact') }}" class="hover:text-white">Contact Us</a></li>
                     </ul>
                 </div>
             </div>
