@@ -70,9 +70,10 @@ None of these blocks generating migrations.
 * **Why:** `currency` appears on renewal plans, renewal terms (`fee_currency`), payments, refunds, bank accounts, orders; no DB default. The reference used LKR; the business brief uses £.
 * **Schema change:** none (`CHAR(3)`, `DECIMAL(12,2)` fit GBP/LKR/USD). **Recommended:** one system currency in config, stated on every money row. **Resolve:** before seeding plans/bank accounts (not before migrations).
 
-### OD-02 — Category names, **renewal** fees and durations
-* **Why:** `membership_plans` now holds the paid renewal terms only (fee + normally 12 months). Fee values are data ACI must supply; nothing here fixes them. Exactly three categories, one active plan each (Professional stays one plan; frontend C-04 approved).
-* **Schema change:** none. **Recommended:** one active plan per category. **Resolve:** before seeding.
+### OD-02 — Category names, **renewal** fees and durations — RESOLVED
+* **Why:** `membership_plans` now holds the paid renewal terms only (fee + normally 12 months). Fee values are data ACI must supply; nothing here fixes them.
+* **Resolved:** ACI confirmed five categories (Student, Professional, Veteran, Aviation Enthusiast, Corporate), one active plan each (Professional stays one plan; frontend C-04 approved). Aviation Enthusiast: LKR 2,000/12 months. Corporate: LKR 30,000/12 months (one company = one membership, one plan — no per-seat pricing). Applied via `2026_09_29_000001_widen_membership_categories_code_check` and `2026_09_29_000003_add_enthusiast_and_corporate_reference_data`.
+* **Schema change:** none beyond the CHECK-constraint widening above. One active plan per category, as before.
 
 ### OD-03 — Sequence restarts each year — confirmed in principle
 The business brief specifies a category/year sequence (`SSSS`), matching the (category, year) counter. Cap 9,999 per category-year (overflow = explicit error). No further schema effect.

@@ -77,13 +77,19 @@ trait CreatesRenewals
     }
 
     /**
-     * A membership with an active plan and bank account configured, ready to renew.
+     * A membership with an active plan and bank account configured, ready to
+     * renew. The bank account currency always matches the plan actually in
+     * use — for a category with no active plan yet, `activePlan()` falls
+     * back to creating a USD one, so this stays USD exactly as before; for a
+     * category with a real, pre-existing plan (Aviation Enthusiast LKR 2,000,
+     * Corporate LKR 30,000 — docs/database/04 §4), `StartRenewal` looks up
+     * the bank account by the plan's own currency, so the two must agree.
      */
     protected function renewableMembership(array $applicationAttributes = [], string $categoryCode = 'P'): Membership
     {
         $membership = $this->activatedMembership($applicationAttributes, $categoryCode);
-        $this->activePlan($membership);
-        $this->activeBankAccount('USD');
+        $plan = $this->activePlan($membership);
+        $this->activeBankAccount($plan->currency);
 
         return $membership;
     }

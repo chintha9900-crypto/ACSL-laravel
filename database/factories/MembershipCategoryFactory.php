@@ -53,6 +53,24 @@ class MembershipCategoryFactory extends Factory
         ]);
     }
 
+    public function enthusiast(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'code' => MembershipCategory::CODE_ENTHUSIAST,
+            'name' => 'Aviation Enthusiast',
+            'display_order' => 4,
+        ]);
+    }
+
+    public function corporate(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'code' => MembershipCategory::CODE_CORPORATE,
+            'name' => 'Corporate',
+            'display_order' => 5,
+        ]);
+    }
+
     /**
      * Indicate that the category no longer accepts new applications.
      */

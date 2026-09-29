@@ -22,6 +22,10 @@ class MembershipCategory extends Model
 
     public const CODE_VETERAN = 'V';
 
+    public const CODE_ENTHUSIAST = 'E';
+
+    public const CODE_CORPORATE = 'C';
+
     /**
      * URL slugs accepted by `?category=` (docs/frontend/03 A7) and their codes.
      *
@@ -31,6 +35,8 @@ class MembershipCategory extends Model
         'student' => self::CODE_STUDENT,
         'professional' => self::CODE_PROFESSIONAL,
         'veteran' => self::CODE_VETERAN,
+        'enthusiast' => self::CODE_ENTHUSIAST,
+        'corporate' => self::CODE_CORPORATE,
     ];
 
     /**

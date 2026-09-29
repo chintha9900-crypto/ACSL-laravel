@@ -140,20 +140,20 @@ class ActivateMembershipTest extends MysqlTestCase
         $this->assertSame('introductory', $term->term_kind);
         $this->assertSame('active', $term->status);
         $this->assertSame('payment_not_required', $term->payment_status);
-        $this->assertSame(6, $term->duration_months, 'The default introductory period is 6 months.');
+        $this->assertSame(3, $term->duration_months, 'The default introductory period is 3 months.');
         $this->assertSame('2026-10-15', $term->starts_on);
-        $this->assertSame('2027-04-14', $term->expires_on);
+        $this->assertSame('2027-01-14', $term->expires_on);
         $this->assertNull($term->membership_plan_id);
         $this->assertNull($term->fee_amount);
         $this->assertNull($term->fee_currency);
         $this->assertNotNull($term->activated_at);
 
         MembershipSetting::current();
-        DB::table('membership_settings')->where('id', 1)->update(['introductory_period_months' => 3]);
+        DB::table('membership_settings')->where('id', 1)->update(['introductory_period_months' => 6]);
         $second = $this->activate($this->approved());
-        $this->assertSame(3, DB::table('membership_terms')->where('membership_id', $second->id)->value('duration_months'));
-        $this->assertSame('2027-01-14', DB::table('membership_terms')->where('membership_id', $second->id)->value('expires_on'));
-        $this->assertSame(6, $term->duration_months, 'An existing term keeps its own snapshot.');
+        $this->assertSame(6, DB::table('membership_terms')->where('membership_id', $second->id)->value('duration_months'));
+        $this->assertSame('2027-04-14', DB::table('membership_terms')->where('membership_id', $second->id)->value('expires_on'));
+        $this->assertSame(3, $term->duration_months, 'An existing term keeps its own snapshot.');
     }
 
     /**
@@ -184,12 +184,17 @@ class ActivateMembershipTest extends MysqlTestCase
 
     public function test_activation_creates_no_payment_plan_bank_account_or_notification(): void
     {
+        // Deltas, not absolute zero: the Enthusiast/Corporate categories'
+        // own baseline renewal plans (docs/database/04 §4) already exist
+        // regardless of any activation.
+        $before = $this->counts();
+
         $this->activate($this->approved());
 
-        $this->assertSame(0, DB::table('payments')->count());
-        $this->assertSame(0, DB::table('membership_plans')->count());
-        $this->assertSame(0, DB::table('payment_bank_accounts')->count());
-        $this->assertSame(0, DB::table('notifications')->count());
+        $this->assertSame($before['payments'], DB::table('payments')->count());
+        $this->assertSame($before['membership_plans'], DB::table('membership_plans')->count());
+        $this->assertSame($before['payment_bank_accounts'], DB::table('payment_bank_accounts')->count());
+        $this->assertSame($before['notifications'], DB::table('notifications')->count());
     }
 
     // --- eligibility ----------------------------------------------------------
@@ -219,17 +224,30 @@ class ActivateMembershipTest extends MysqlTestCase
 
     // --- the membership number ------------------------------------------------
 
+    /**
+     * Step 5 cross-category regression: all five categories (S/P/V and the
+     * new E/C) go through the exact same `ActivateMembership` mechanism —
+     * same number format, same one-user/one-membership outcome, same 3-month
+     * introductory term. No parallel activation path for the new categories.
+     */
     public function test_the_number_has_the_documented_format_for_every_category(): void
     {
         $this->at('2026-09-21 06:00:00');
 
-        foreach (['S', 'P', 'V'] as $code) {
-            $membership = $this->activate($this->approved(category: $code));
+        foreach (['S', 'P', 'V', 'E', 'C'] as $code) {
+            $application = $this->approved(category: $code);
+            $before = $this->counts();
+
+            $membership = $this->activate($application);
 
             $this->assertMatchesRegularExpression('/^'.$code.'26[0-9]{2}0001$/', $membership->membership_number);
             $this->assertSame($code, substr($membership->membership_number, 0, 1));
             $this->assertSame('26', substr($membership->membership_number, 1, 2));
             $this->assertSame('0001', substr($membership->membership_number, 5, 4));
+            $this->assertSame($before['users'] + 1, DB::table('users')->count(), "Category {$code}: exactly one new user.");
+            $this->assertSame($before['memberships'] + 1, DB::table('memberships')->count(), "Category {$code}: exactly one new membership.");
+            $this->assertSame(3, DB::table('membership_terms')->where('membership_id', $membership->id)->value('duration_months'), "Category {$code}: the introductory term is 3 months.");
+            $this->assertNull(DB::table('membership_terms')->where('membership_id', $membership->id)->value('fee_amount'), "Category {$code}: no payment is required for the introductory term.");
         }
     }
 
@@ -429,7 +447,7 @@ class ActivateMembershipTest extends MysqlTestCase
         $this->assertSame($membership->membership_number, $history[1]->note);
         $this->assertSame(DB::table('membership_terms')->value('id'), $history[2]->membership_term_id);
         $this->assertSame('active', $history[2]->to_status);
-        $this->assertSame('2026-09-21 to 2027-03-20', $history[2]->note);
+        $this->assertSame('2026-09-21 to 2026-12-20', $history[2]->note);
     }
 
     public function test_one_audit_row_records_the_activation_without_any_secret(): void

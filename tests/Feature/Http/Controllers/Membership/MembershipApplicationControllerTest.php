@@ -6,6 +6,8 @@ use App\Models\Document;
 use App\Models\MembershipApplication;
 use App\Models\MembershipCategory;
 use App\Models\User;
+use DOMDocument;
+use DOMXPath;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -30,6 +32,24 @@ class MembershipApplicationControllerTest extends MysqlTestCase
     private function professional(): MembershipCategory
     {
         return MembershipCategory::factory()->professional()->create();
+    }
+
+    /**
+     * Enthusiast/Corporate are always-present baseline categories
+     * (docs/database/04 §3) — reuse the migration-seeded row instead of
+     * creating a second one, which would collide with `code`'s UNIQUE
+     * constraint.
+     */
+    private function enthusiast(): MembershipCategory
+    {
+        return MembershipCategory::query()->where('code', MembershipCategory::CODE_ENTHUSIAST)->first()
+            ?? MembershipCategory::factory()->enthusiast()->create();
+    }
+
+    private function corporate(): MembershipCategory
+    {
+        return MembershipCategory::query()->where('code', MembershipCategory::CODE_CORPORATE)->first()
+            ?? MembershipCategory::factory()->corporate()->create();
     }
 
     private function pdf(string $name = 'employment-letter.pdf'): UploadedFile
@@ -59,6 +79,58 @@ class MembershipApplicationControllerTest extends MysqlTestCase
         ];
     }
 
+    /**
+     * A valid Aviation Enthusiast application payload — deliberately no
+     * `proof_documents` key at all, matching what the stripped-down
+     * Enthusiast form actually submits (no file input rendered).
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function enthusiastPayload(array $overrides = []): array
+    {
+        return [
+            'category' => MembershipCategory::CODE_ENTHUSIAST,
+            'full_name' => 'Kasun Silva',
+            'email' => 'kasun.silva@example.test',
+            'mobile' => '+94 77 987 6543',
+            'address' => '45 Galle Road, Colombo',
+            'aviation_role' => 'Aviation Enthusiast',
+            'aviation_organisation' => 'N/A',
+            'declaration' => '1',
+            ...$overrides,
+        ];
+    }
+
+    /**
+     * A valid Corporate application payload: company details, representative
+     * details (reusing `full_name`/`email`/`mobile`/`aviation_role`/
+     * `aviation_organisation`/`address`), and the company request letter
+     * (reusing the existing `proof_documents` mechanism).
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function corporatePayload(array $overrides = []): array
+    {
+        return [
+            'category' => MembershipCategory::CODE_CORPORATE,
+            'full_name' => 'Priya Fernando',
+            'email' => 'priya.fernando@example-airline.test',
+            'mobile' => '+94 77 555 1234',
+            'address' => '1 Airport Way, Katunayake',
+            'aviation_role' => 'Airline',
+            'aviation_organisation' => 'Head of HR',
+            'company_name' => 'Example Airline (Pvt) Ltd',
+            'company_email' => 'info@example-airline.test',
+            'company_phone' => '+94 11 234 5678',
+            'company_website' => 'https://example-airline.test',
+            'proof_documents' => [$this->pdf('company-request-letter.pdf')],
+            'declaration' => '1',
+            ...$overrides,
+        ];
+    }
+
     private function submit(array $payload): TestResponse
     {
         return $this->post(route('membership.apply.store'), $payload);
@@ -67,6 +139,21 @@ class MembershipApplicationControllerTest extends MysqlTestCase
     private function tableCount(string $table): int
     {
         return DB::table($table)->count();
+    }
+
+    /**
+     * Parses a response body for precise structural queries — used to
+     * distinguish which `data-category-section`/`data-category-section-
+     * hide-for` a field lives inside, which a plain substring search cannot.
+     */
+    private function xpath(string $html): DOMXPath
+    {
+        $dom = new DOMDocument;
+        libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="utf-8"?>'.$html);
+        libxml_clear_errors();
+
+        return new DOMXPath($dom);
     }
 
     /**
@@ -217,6 +304,11 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
     public function test_page_says_applications_are_closed_when_no_category_is_active(): void
     {
+        // Enthusiast/Corporate are always-present baseline categories
+        // (docs/database/04 §3) — "no category active" must be constructed
+        // explicitly now, not assumed from an empty table.
+        MembershipCategory::query()->update(['is_active' => false]);
+
         $this->get('/membership/apply')->assertOk()->assertSee('Applications are not open');
     }
 
@@ -675,5 +767,259 @@ class MembershipApplicationControllerTest extends MysqlTestCase
         $this->get('/membership/apply?category=professional')
             ->assertDontSee('type="password"', false)
             ->assertDontSee('name="password"', false);
+    }
+
+    // --- Aviation Enthusiast (E) -----------------------------------------------
+
+    public function test_enthusiast_can_submit_without_proof_documents(): void
+    {
+        $this->enthusiast();
+
+        $this->submit($this->enthusiastPayload())->assertRedirect();
+
+        $this->assertSame(1, $this->tableCount('membership_applications'));
+        $this->assertSame(0, $this->tableCount('documents'));
+    }
+
+    public function test_enthusiast_does_not_require_aviation_eligibility_fields(): void
+    {
+        $this->enthusiast();
+
+        $this->submit($this->enthusiastPayload())
+            ->assertRedirect()
+            ->assertSessionDoesntHaveErrors([
+                'study_start_date', 'expected_completion_date',
+                'years_experience', 'previous_employers',
+                'proof_documents',
+            ]);
+    }
+
+    public function test_submitted_enthusiast_data_has_no_unwanted_aviation_or_document_fields(): void
+    {
+        $this->enthusiast();
+
+        $this->submit($this->enthusiastPayload())->assertRedirect();
+
+        $application = MembershipApplication::query()->firstOrFail();
+        $this->assertNull($application->study_start_date);
+        $this->assertNull($application->expected_completion_date);
+        $this->assertNull($application->years_experience);
+        $this->assertNull($application->previous_employers);
+        $this->assertNull($application->company_name);
+        $this->assertNull($application->company_email);
+        $this->assertNull($application->company_phone);
+        $this->assertNull($application->company_website);
+        $this->assertSame(0, Document::query()->where('membership_application_id', $application->id)->count());
+    }
+
+    // --- Corporate (C) ----------------------------------------------------------
+
+    public function test_corporate_requires_company_and_representative_fields_and_the_request_letter(): void
+    {
+        $this->corporate();
+
+        $this->submit(['category' => MembershipCategory::CODE_CORPORATE, 'declaration' => '1'])
+            ->assertSessionHasErrors([
+                'company_name', 'company_email', 'company_phone',
+                'full_name', 'email', 'mobile', 'address',
+                'aviation_role', 'aviation_organisation',
+                'proof_documents',
+            ]);
+
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+    }
+
+    public function test_corporate_company_website_is_optional(): void
+    {
+        $this->corporate();
+
+        $payload = $this->corporatePayload();
+        unset($payload['company_website']);
+
+        $this->submit($payload)->assertRedirect()->assertSessionDoesntHaveErrors('company_website');
+
+        $this->assertNull(MembershipApplication::query()->firstOrFail()->company_website);
+    }
+
+    public function test_submitted_corporate_data_is_persisted_correctly(): void
+    {
+        $this->corporate();
+
+        $this->submit($this->corporatePayload())->assertRedirect();
+
+        $application = MembershipApplication::query()->firstOrFail();
+        $this->assertSame('Priya Fernando', $application->full_name);
+        $this->assertSame('priya.fernando@example-airline.test', $application->email);
+        $this->assertSame('+94 77 555 1234', $application->mobile);
+        $this->assertSame('1 Airport Way, Katunayake', $application->address);
+        $this->assertSame('Airline', $application->aviation_role);
+        $this->assertSame('Head of HR', $application->aviation_organisation);
+        $this->assertSame('Example Airline (Pvt) Ltd', $application->company_name);
+        $this->assertSame('info@example-airline.test', $application->company_email);
+        $this->assertSame('+94 11 234 5678', $application->company_phone);
+        $this->assertSame('https://example-airline.test', $application->company_website);
+
+        $document = Document::query()->where('membership_application_id', $application->id)->firstOrFail();
+        Storage::disk('private')->assertExists($document->storage_path);
+    }
+
+    // --- existing categories unaffected ----------------------------------------
+
+    public function test_existing_student_professional_veteran_validation_is_unchanged(): void
+    {
+        $this->professional();
+        $this->submit($this->payload(['email' => 'professional@example.test']))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        MembershipCategory::factory()->student()->create();
+        $this->submit($this->payload([
+            'category' => MembershipCategory::CODE_STUDENT,
+            'email' => 'student@example.test',
+            'study_start_date' => '2026-01-01',
+            'expected_completion_date' => '2026-06-01',
+        ]))->assertRedirect()->assertSessionHasNoErrors();
+
+        MembershipCategory::factory()->veteran()->create();
+        $this->submit($this->payload([
+            'category' => MembershipCategory::CODE_VETERAN,
+            'email' => 'veteran@example.test',
+            'years_experience' => 10,
+            'previous_employers' => 'Example Airlines',
+        ]))->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame(3, $this->tableCount('membership_applications'));
+        $this->assertSame(3, $this->tableCount('documents'));
+    }
+
+    // --- Step 3: form rendering per category ------------------------------------
+
+    public function test_all_five_categories_render_as_radio_choices(): void
+    {
+        MembershipCategory::factory()->student()->create();
+        $this->professional();
+        MembershipCategory::factory()->veteran()->create();
+        $this->enthusiast();
+        $this->corporate();
+
+        $this->get('/membership/apply')
+            ->assertOk()
+            ->assertSeeHtml('value="S"')
+            ->assertSeeHtml('value="P"')
+            ->assertSeeHtml('value="V"')
+            ->assertSeeHtml('value="E"')
+            ->assertSeeHtml('value="C"')
+            ->assertSee('Aviation Enthusiast')
+            ->assertSee('Corporate');
+    }
+
+    public function test_enthusiast_form_hides_aviation_eligibility_and_proof_fields(): void
+    {
+        $this->enthusiast();
+        $html = $this->get('/membership/apply?category=enthusiast')->assertOk()->getContent();
+        $xpath = $this->xpath($html);
+
+        // The proof upload lives inside a section explicitly marked to hide
+        // for Enthusiast (and Corporate) — what the page's JS reads to
+        // actually hide and disable it once Enthusiast is selected.
+        $proofSection = $xpath->query('//*[@id="proof_documents"]/ancestor::div[@data-category-section-hide-for][1]')->item(0);
+        $this->assertNotNull($proofSection, 'The proof upload must live inside a hide-for section.');
+        $this->assertStringContainsString('E', $proofSection->getAttribute('data-category-section-hide-for'));
+
+        // Never statically `required` — only conditionally, via JS — so a
+        // hidden Enthusiast form can never block submission.
+        $proofInput = $xpath->query('//*[@id="proof_documents"]')->item(0);
+        $this->assertNotNull($proofInput);
+        $this->assertFalse($proofInput->hasAttribute('required'));
+    }
+
+    public function test_corporate_form_shows_company_details_section(): void
+    {
+        $this->corporate();
+        $html = $this->get('/membership/apply?category=corporate')->assertOk()->getContent();
+        $xpath = $this->xpath($html);
+
+        $heading = $xpath->query('//h2[contains(., "Company Details")]')->item(0);
+        $this->assertNotNull($heading, 'The Corporate form must have a Company Details heading.');
+
+        $section = $xpath->query('ancestor::div[@data-category-section="C"][1]', $heading)->item(0);
+        $this->assertNotNull($section, 'Company Details must be its own Corporate-only section.');
+
+        foreach (['company_name', 'aviation_role', 'company_email', 'company_phone', 'address', 'company_website'] as $field) {
+            $this->assertSame(1, $xpath->query('.//*[@name="'.$field.'"]', $section)->length, "Company Details must contain a {$field} field.");
+        }
+    }
+
+    public function test_corporate_form_shows_representative_details_section(): void
+    {
+        $this->corporate();
+        $html = $this->get('/membership/apply?category=corporate')->assertOk()->getContent();
+        $xpath = $this->xpath($html);
+
+        $heading = $xpath->query('//h2[contains(., "Representative Details")]')->item(0);
+        $this->assertNotNull($heading, 'The Corporate form must have a Representative Details heading.');
+
+        $section = $xpath->query('ancestor::div[@data-category-section="C"][1]', $heading)->item(0);
+        $this->assertNotNull($section);
+
+        foreach (['full_name', 'email', 'aviation_organisation'] as $field) {
+            $this->assertSame(1, $xpath->query('.//*[@name="'.$field.'"]', $section)->length, "Representative Details must contain a {$field} field.");
+        }
+
+        // The representative phone reuses the same country-code widget as
+        // "Your details" — its combined field only gets name="mobile" via JS.
+        $this->assertSame(1, $xpath->query('.//*[@data-mobile-widget]', $section)->length);
+    }
+
+    public function test_corporate_form_shows_the_company_request_letter_upload(): void
+    {
+        $this->corporate();
+        $html = $this->get('/membership/apply?category=corporate')->assertOk()->getContent();
+        $xpath = $this->xpath($html);
+
+        $heading = $xpath->query('//h2[contains(., "Supporting Document")]')->item(0);
+        $this->assertNotNull($heading, 'The Corporate form must have a Supporting Document heading.');
+        $this->assertStringContainsString('Company Membership / Request Letter', $html);
+
+        $upload = $xpath->query('//*[@id="proof_documents_corporate"]')->item(0);
+        $this->assertNotNull($upload, 'The Corporate form must have its own request-letter upload input.');
+        $this->assertSame('proof_documents[]', $upload->getAttribute('name'));
+    }
+
+    public function test_corporate_form_does_not_show_student_or_veteran_specific_fields(): void
+    {
+        $this->corporate();
+        $html = $this->get('/membership/apply?category=corporate')->assertOk()->getContent();
+        $xpath = $this->xpath($html);
+
+        foreach (['study_start_date', 'expected_completion_date', 'years_experience', 'previous_employers'] as $field) {
+            $input = $xpath->query('//*[@name="'.$field.'"]')->item(0);
+            $this->assertNotNull($input, "{$field} must still exist for Student/Veteran progressive enhancement.");
+
+            $hideForSection = $xpath->query('ancestor::div[@data-category-section-hide-for]', $input)->item(0);
+            $this->assertNotNull($hideForSection, "{$field} must live inside a section hidden for Corporate.");
+            $this->assertStringContainsString('C', $hideForSection->getAttribute('data-category-section-hide-for'));
+        }
+    }
+
+    public function test_professional_form_rendering_is_unchanged(): void
+    {
+        $this->professional();
+        $html = $this->get('/membership/apply?category=professional')->assertOk()->getContent();
+
+        $this->assertStringContainsString('2. Your details', $html);
+        $this->assertStringContainsString('3. Aviation details', $html);
+        $this->assertStringContainsString('4. Aviation eligibility proof', $html);
+        $this->assertStringContainsString('Course Name / Occupation / Position Held', $html);
+        $this->assertStringContainsString('Training Institute / Employer / Organisation', $html);
+    }
+
+    public function test_enthusiast_and_corporate_category_preselection_works(): void
+    {
+        $this->enthusiast();
+        $this->corporate();
+
+        $this->assertCheckedCategories(['E'], $this->get('/membership/apply?category=enthusiast')->getContent());
+        $this->assertCheckedCategories(['C'], $this->get('/membership/apply?category=corporate')->getContent());
     }
 }

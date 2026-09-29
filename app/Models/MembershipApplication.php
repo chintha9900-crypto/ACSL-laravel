@@ -86,6 +86,10 @@ class MembershipApplication extends Model
         'expected_completion_date',
         'years_experience',
         'previous_employers',
+        'company_name',
+        'company_email',
+        'company_phone',
+        'company_website',
     ];
 
     /**

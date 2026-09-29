@@ -49,19 +49,21 @@ if the renewal is never paid → the membership eventually becomes DEACTIVATED (
 
 **The confirmed workflow for every new member is Application → Admin approval → Payment/Free decision → Activation** (approval is not immediate activation). The decision is deterministic — the first 6 months are a standard introductory rule, so payment is not required — and is recorded as a history event; activation then creates the member, issues the number and starts term 1. An application that is `approved` with **no** `memberships` row is the normal **"approved, awaiting activation"** state (reconciliation Q13 in `15` monitors how long rows stay there rather than expecting zero). No new application status is added: the four ACI-confirmed statuses are unchanged. Whether the decision and activation steps run automatically after approval or on an explicit admin action is not specified by ACI (OD-23); the schema supports both.
 
-## 3. `membership_categories` — CONFIRMED (exactly three)
+## 3. `membership_categories` — CONFIRMED (exactly five)
 
 | Column | Type | Null | Default | Notes |
 |---|---|---|---|---|
 | `id` | BIGINT UNSIGNED AI | N | — | PK |
-| `code` | CHAR(1) `ascii_bin` | N | — | **UNIQUE**. `CHECK (code IN ('S','P','V'))`. Immutable — embedded in issued membership numbers. |
-| `name` | VARCHAR(100) | N | — | Display name (Student / Professional / Veteran; final commercial names are data) |
+| `code` | CHAR(1) `ascii_bin` | N | — | **UNIQUE**. `CHECK (code IN ('S','P','V','E','C'))`. Immutable — embedded in issued membership numbers. |
+| `name` | VARCHAR(100) | N | — | Display name (Student / Professional / Veteran / Aviation Enthusiast / Corporate; final commercial names are data) |
 | `description` | TEXT | Y | NULL | |
 | `is_active` | TINYINT(1) | N | 1 | Whether the category accepts new applications |
 | `display_order` | SMALLINT UNSIGNED | N | 0 | |
 | `created_at`, `updated_at` | TIMESTAMP | Y | NULL | |
 
-"Exactly three" = `UNIQUE(code)` + `CHECK`. Never deleted. Soft delete: **NO**.
+"Exactly five" = `UNIQUE(code)` + `CHECK`. Widened from the original three (S/P/V) to add Aviation Enthusiast (E) and Corporate (C) — approved Architecture/Database Design change (`2026_09_29_000001_widen_membership_categories_code_check`). Never deleted. Soft delete: **NO**.
+
+Corporate is one membership per company — the same 1 application → 1 membership → 1 user → 1 number → 1 term/renewal cycle → 1 card shape as every other category, with no seats, no additional user accounts and no join table. The activated user is the company's one representative/admin account.
 
 ## 4. `membership_plans` — renewal pricing (REWORK)
 
@@ -89,7 +91,7 @@ Typed singleton for membership-workflow tunables. **Not** a key/value table.
 | Column | Type | Null | Default | Notes |
 |---|---|---|---|---|
 | `id` | TINYINT UNSIGNED | N | 1 | PK, `CHECK (id = 1)` |
-| `introductory_period_months` | SMALLINT UNSIGNED | N | **6** | Length of the free introductory term granted to **every** approved new member. `CHECK (introductory_period_months > 0)`. Confirmed default; configurable data, never hard-coded in code or views. Changing it affects **only future** activations (each term snapshots its own length). |
+| `introductory_period_months` | SMALLINT UNSIGNED | N | **3** | Length of the free introductory term granted to **every** approved new member, across all five categories. `CHECK (introductory_period_months > 0)`. Confirmed default (changed from the original 6 to 3 — approved Architecture/Database Design change, `2026_09_29_000004_update_membership_settings_introductory_period_default`); configurable data, never hard-coded in code or views. Changing it affects **only future** activations (each term snapshots its own length) — the singleton row's current value was backfilled to 3 by that migration, but no existing `membership_terms` row was touched. |
 | `reapplication_cooldown_days` | SMALLINT UNSIGNED | N | 30 | **UNUSED / DEPRECATED.** ACI's decision is that there is **no** rejection cooldown (WORKFLOWS §0.14). The column exists from an earlier design and is retained unchanged; no rule reads or writes it, and the application must not use it. A future migration may drop it. |
 | `account_setup_token_ttl_hours` | SMALLINT UNSIGNED | N | 72 | Placeholder within the 24–72 h range; data, not a rule |
 | `updated_by_user_id` | BIGINT UNSIGNED | Y | NULL | FK → `users` RESTRICT |
@@ -108,12 +110,16 @@ One row per application attempt for **new** membership. **Never overwritten, nev
 | `user_id` | BIGINT UNSIGNED | Y | NULL | FK. NULL for the public applicant (accounts are provisioned at activation, so there is normally no user yet). Set only in the OD-06 collision case. |
 | `membership_category_id` | BIGINT UNSIGNED | N | — | FK. Exactly one category. |
 | `status` | VARCHAR(30) | N | `'submitted'` | `CHECK (status IN ('submitted','more_details_required','approved','rejected'))` |
-| `full_name` | VARCHAR(160) | N | — | Snapshot of the reviewed name; copied verbatim to `users.name` at activation (no splitting) |
-| `email` | VARCHAR(255) | N | — | Stored lower-cased; the duplicate key (`open_email_key`) |
-| `mobile` | VARCHAR(40) | N | — | Contact number; no uniqueness or matching rule applies |
-| `address` | VARCHAR(400) | N | — | |
-| `aviation_role` | VARCHAR(160) | N | — | Student → course name; Professional → occupation; Veteran → position held |
-| `aviation_organisation` | VARCHAR(200) | N | — | Student → training institute; Professional → employer; Veteran → most recent aviation employer |
+| `full_name` | VARCHAR(160) | N | — | Snapshot of the reviewed name; copied verbatim to `users.name` at activation (no splitting). Corporate → the representative's own name (the representative is who gets the one account, same as every other category). |
+| `company_name` | VARCHAR(160) | Y | NULL | **Corporate only.** The company's own name. |
+| `email` | VARCHAR(255) | N | — | Stored lower-cased; the duplicate key (`open_email_key`). Corporate → the representative's own email (also the login/notification address). |
+| `company_email` | VARCHAR(255) | Y | NULL | **Corporate only.** The company's own contact email. |
+| `mobile` | VARCHAR(40) | N | — | Contact number; no uniqueness or matching rule applies. Corporate → the representative's own phone. |
+| `company_phone` | VARCHAR(40) | Y | NULL | **Corporate only.** The company's own contact phone. |
+| `address` | VARCHAR(400) | N | — | Corporate → the company's address. |
+| `company_website` | VARCHAR(255) | Y | NULL | **Corporate only**, and optional even then. |
+| `aviation_role` | VARCHAR(160) | N | — | Student → course name; Professional → occupation; Veteran → position held; Aviation Enthusiast → occupation; Corporate → company type |
+| `aviation_organisation` | VARCHAR(200) | N | — | Student → training institute; Professional → employer; Veteran → most recent aviation employer; Aviation Enthusiast → employer or organisation; Corporate → representative's position/designation |
 | `study_start_date` | DATE | Y | NULL | Student only |
 | `expected_completion_date` | DATE | Y | NULL | Student only |
 | `years_experience` | TINYINT UNSIGNED | Y | NULL | Veteran only |
@@ -127,7 +133,7 @@ One row per application attempt for **new** membership. **Never overwritten, nev
 | `open_email_key` | VARCHAR(255) | Y | generated | `VIRTUAL` = `IF(status IN ('submitted','more_details_required'), email, NULL)`; **UNIQUE** ⇒ one *open* application per email. |
 | `created_at`, `updated_at` | TIMESTAMP | Y | NULL | |
 
-**Why category-specific fields are columns, not JSON/EAV:** the small, stable set for three categories is simplest as explicit nullable columns; "required for which category" is a Form Request rule. The eligibility field set beyond the legacy-evidenced minimum is not confirmed (OD-20); additions are additive migrations.
+**Why category-specific fields are columns, not JSON/EAV:** the small, stable set for five categories is simplest as explicit nullable columns; "required for which category" is a Form Request rule. The eligibility field set beyond the legacy-evidenced minimum is not confirmed (OD-20); additions are additive migrations — Corporate's `company_name`/`company_email`/`company_phone`/`company_website` are the latest example.
 
 **CHECK constraints**
 

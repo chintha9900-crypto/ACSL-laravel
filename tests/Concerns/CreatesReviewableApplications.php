@@ -33,6 +33,8 @@ trait CreatesReviewableApplications
             ?? MembershipCategory::factory()->{match ($categoryCode) {
                 'S' => 'student',
                 'V' => 'veteran',
+                'E' => 'enthusiast',
+                'C' => 'corporate',
                 default => 'professional',
             }}()->create();
 

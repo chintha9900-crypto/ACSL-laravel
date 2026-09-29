@@ -42,6 +42,13 @@ class StoreMembershipApplicationRequest extends FormRequest
     {
         $student = 'exclude_unless:category,'.MembershipCategory::CODE_STUDENT;
         $veteran = 'exclude_unless:category,'.MembershipCategory::CODE_VETERAN;
+        $corporate = 'exclude_unless:category,'.MembershipCategory::CODE_CORPORATE;
+        // Aviation Enthusiast is the one category with no eligibility to
+        // prove — every other case (including a missing/invalid category,
+        // which must still be reported as its own error) keeps requiring
+        // the proof/company-letter upload, so this excludes on Enthusiast
+        // specifically rather than requiring on an enumerated allow-list.
+        $needsProof = 'exclude_if:category,'.MembershipCategory::CODE_ENTHUSIAST;
         $proof = config('uploads.aviation_proof');
 
         return [
@@ -60,8 +67,13 @@ class StoreMembershipApplicationRequest extends FormRequest
             'expected_completion_date' => [$student, 'required', 'date', 'after_or_equal:study_start_date'],
             'years_experience' => [$veteran, 'required', 'integer', 'between:0,80'],
             'previous_employers' => [$veteran, 'required', 'string', 'max:2000'],
-            'proof_documents' => ['required', 'array', 'min:1', 'max:'.$proof['max_files']],
+            'company_name' => [$corporate, 'required', 'string', 'max:160'],
+            'company_email' => [$corporate, 'required', 'string', 'email', 'max:255'],
+            'company_phone' => [$corporate, 'required', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s().-]{5,38}[0-9]$/'],
+            'company_website' => [$corporate, 'nullable', 'string', 'url', 'max:255'],
+            'proof_documents' => [$needsProof, 'required', 'array', 'min:1', 'max:'.$proof['max_files']],
             'proof_documents.*' => [
+                $needsProof,
                 'required',
                 File::types($proof['extensions'])->max($proof['max_kb']),
             ],
@@ -82,6 +94,7 @@ class StoreMembershipApplicationRequest extends FormRequest
         return [
             'category.exists' => 'Please choose one of the available membership categories.',
             'mobile.regex' => 'Enter a valid mobile number, including the country code if outside Sri Lanka.',
+            'company_phone.regex' => 'Enter a valid company phone number, including the country code if outside Sri Lanka.',
             'proof_documents.required' => 'Aviation eligibility proof is required. Please upload at least one document.',
             'proof_documents.min' => 'Aviation eligibility proof is required. Please upload at least one document.',
             'proof_documents.max' => 'You can upload at most '.$proof['max_files'].' documents.',
@@ -105,7 +118,13 @@ class StoreMembershipApplicationRequest extends FormRequest
             'expected_completion_date' => 'expected completion date',
             'years_experience' => 'years of experience',
             'previous_employers' => 'previous employers',
-            'proof_documents' => 'aviation proof',
+            'company_name' => 'company name',
+            'company_email' => 'company email',
+            'company_phone' => 'company phone',
+            'company_website' => 'company website',
+            'proof_documents' => $this->input('category') === MembershipCategory::CODE_CORPORATE
+                ? 'company membership/request letter'
+                : 'aviation proof',
         ];
     }
 
@@ -161,6 +180,10 @@ class StoreMembershipApplicationRequest extends FormRequest
                 'expected_completion_date',
                 'years_experience',
                 'previous_employers',
+                'company_name',
+                'company_email',
+                'company_phone',
+                'company_website',
             ]),
             'membership_category_id' => $category->id,
         ];
@@ -192,6 +215,7 @@ class StoreMembershipApplicationRequest extends FormRequest
         return match ($this->input('category')) {
             MembershipCategory::CODE_STUDENT => 'course name',
             MembershipCategory::CODE_VETERAN => 'position held',
+            MembershipCategory::CODE_CORPORATE => 'company type',
             default => 'occupation',
         };
     }
@@ -201,6 +225,7 @@ class StoreMembershipApplicationRequest extends FormRequest
         return match ($this->input('category')) {
             MembershipCategory::CODE_STUDENT => 'training institute',
             MembershipCategory::CODE_VETERAN => 'most recent aviation employer',
+            MembershipCategory::CODE_CORPORATE => 'representative position/designation',
             default => 'employer or organisation',
         };
     }

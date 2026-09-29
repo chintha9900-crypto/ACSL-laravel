@@ -16,14 +16,14 @@ class StartRenewalTest extends MysqlTestCase
     use CreatesRenewals;
     use CreatesReviewableApplications;
 
-    public function test_every_new_registration_gets_the_first_six_months_free(): void
+    public function test_every_new_registration_gets_the_first_three_months_free(): void
     {
         $membership = $this->activatedMembership();
         $introductory = $membership->terms->first();
 
         $this->assertSame(1, $introductory->term_no);
         $this->assertSame(MembershipTerm::KIND_INTRODUCTORY, $introductory->term_kind);
-        $this->assertSame(6, $introductory->duration_months, 'The confirmed default introductory length is 6 months.');
+        $this->assertSame(3, $introductory->duration_months, 'The confirmed default introductory length is 3 months.');
         $this->assertSame(MembershipTerm::PAYMENT_NOT_REQUIRED, $introductory->payment_status);
     }
 

@@ -56,8 +56,8 @@ class MembershipActivationControllerTest extends MysqlTestCase
             ->assertOk()
             ->assertSee($membership->membership_number)
             ->assertSee('21 September 2026')
-            ->assertSee('6 months, free')
-            ->assertSee('20 Mar 2027')
+            ->assertSee('3 months, free')
+            ->assertSee('20 Dec 2026')
             ->assertDontSee('Activate membership');
 
         $this->assertSame($admin->id, DB::table('audit_logs')->where('event', 'membership.activated')->value('user_id'));

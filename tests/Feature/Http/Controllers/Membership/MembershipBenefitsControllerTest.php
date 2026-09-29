@@ -9,6 +9,24 @@ use Tests\MysqlTestCase;
 
 class MembershipBenefitsControllerTest extends MysqlTestCase
 {
+    /**
+     * Enthusiast/Corporate are always-present baseline categories
+     * (docs/database/04 §3) — reuse the migration-seeded row instead of
+     * creating a second one, which would collide with `code`'s UNIQUE
+     * constraint.
+     */
+    private function enthusiast(): MembershipCategory
+    {
+        return MembershipCategory::query()->where('code', MembershipCategory::CODE_ENTHUSIAST)->first()
+            ?? MembershipCategory::factory()->enthusiast()->create();
+    }
+
+    private function corporate(): MembershipCategory
+    {
+        return MembershipCategory::query()->where('code', MembershipCategory::CODE_CORPORATE)->first()
+            ?? MembershipCategory::factory()->corporate()->create();
+    }
+
     public function test_it_lists_the_active_categories_from_the_database(): void
     {
         MembershipCategory::factory()->student()->create();
@@ -17,7 +35,9 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
         $response = $this->get(route('membership.benefits'))->assertOk();
 
-        $response->assertSeeInOrder(['Student', 'Professional', 'Veteran']);
+        // Fixed card order (approved layout): Enthusiast, Student, Veteran,
+        // Professional, Corporate — never the database's own row order.
+        $response->assertSeeInOrder(['Student', 'Veteran', 'Professional']);
     }
 
     public function test_inactive_categories_are_not_shown(): void
@@ -31,6 +51,11 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_it_shows_no_categories_gracefully_when_none_are_published(): void
     {
+        // Enthusiast/Corporate are always-present baseline categories
+        // (docs/database/04 §3) — "none published" must be constructed
+        // explicitly now, not assumed from an empty table.
+        MembershipCategory::query()->update(['is_active' => false]);
+
         $response = $this->get(route('membership.benefits'))->assertOk();
 
         $response->assertSee('Membership categories are not published yet.');
@@ -85,14 +110,21 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
         $response->assertDontSee('USD');
     }
 
-    public function test_the_launching_offer_banner_is_static_and_not_read_from_settings(): void
+    /**
+     * Reversed from an earlier explicit instruction ("static, never read
+     * from settings") by a later, more specific one (Step 4: "Remove/fix
+     * any hard-coded 'First 6 Months FREE' text... use the existing 3-month
+     * introductory-period value dynamically wherever possible").
+     */
+    public function test_the_launching_offer_banner_reflects_the_live_introductory_period(): void
     {
-        MembershipSetting::current()->forceFill(['introductory_period_months' => 3])->save();
         MembershipCategory::factory()->student()->create();
+        MembershipSetting::current()->forceFill(['introductory_period_months' => 5])->save();
 
         $response = $this->get(route('membership.benefits'))->assertOk();
 
-        $response->assertSee('Launching Offer — First 6 Months FREE');
+        $response->assertSee('Launching Offer — First 5 Months FREE');
+        $response->assertDontSee('First 6 Months FREE');
     }
 
     public function test_the_professional_card_shows_all_three_tiers(): void
@@ -209,5 +241,149 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
         // the brand-red token that was previously used for them.
         $this->assertGreaterThan(0, substr_count($html, 'shrink-0 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"'));
         $this->assertStringNotContainsString('shrink-0 text-[#CC001F]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"', $html);
+    }
+
+    // --- Step 4: Individual Memberships / Corporate Membership sections --------
+
+    public function test_individual_memberships_section_contains_student_professional_veteran_and_enthusiast(): void
+    {
+        MembershipCategory::factory()->student()->create();
+        MembershipCategory::factory()->professional()->create();
+        MembershipCategory::factory()->veteran()->create();
+        $this->enthusiast();
+
+        $html = $this->get(route('membership.benefits'))->assertOk()->getContent();
+
+        $individualStart = strpos($html, 'Individual Memberships');
+        $this->assertNotFalse($individualStart, 'The page must have an "Individual Memberships" heading.');
+
+        $corporateStart = strpos($html, 'Corporate Membership');
+        $individualSection = $corporateStart !== false
+            ? substr($html, $individualStart, $corporateStart - $individualStart)
+            : substr($html, $individualStart);
+
+        $this->assertStringContainsString('Aviation Student Membership', $individualSection);
+        $this->assertStringContainsString('Aviation Professional Membership', $individualSection);
+        $this->assertStringContainsString('Veteran Aviation Professional', $individualSection);
+        $this->assertStringContainsString('Aviation Enthusiast', $individualSection);
+    }
+
+    public function test_corporate_membership_section_contains_corporate(): void
+    {
+        $this->corporate();
+
+        $html = $this->get(route('membership.benefits'))->assertOk()->getContent();
+        $corporateStart = strpos($html, 'Corporate Membership');
+        $this->assertNotFalse($corporateStart, 'The page must have a "Corporate Membership" heading.');
+
+        $corporateSection = substr($html, $corporateStart);
+        $this->assertStringContainsString('LKR 30,000', $corporateSection);
+    }
+
+    public function test_enthusiast_price_and_benefits_render(): void
+    {
+        $this->enthusiast();
+
+        $response = $this->get(route('membership.benefits'))->assertOk();
+
+        $response->assertSee('Aviation Enthusiast');
+        $response->assertSee('LKR 2,000');
+        $response->assertSee('Membership card');
+        $response->assertSee('Member/vendor discounts');
+        $response->assertSee('Aviation news and updates');
+        $response->assertSee('Access to aviation blogs/content');
+        $response->assertSee('Participation in aviation events');
+        $response->assertSee('Networking opportunities');
+    }
+
+    public function test_corporate_price_and_benefits_render(): void
+    {
+        $this->corporate();
+
+        $response = $this->get(route('membership.benefits'))->assertOk();
+
+        $response->assertSee('LKR 30,000');
+        $response->assertSee('One company membership');
+        $response->assertSee('One company-admin account');
+        $response->assertSee('One digital membership card');
+        $response->assertSee('Networking events');
+        $response->assertSee('Free advertising through Aviation Club channels');
+        $response->assertSee('Corporate networking and industry connections');
+        $response->assertSee('Promotional opportunities');
+        $response->assertSee('Participation in selected club activities/events');
+        $response->assertSee('Opportunities to connect with students and aviation professionals');
+        $response->assertDontSee('10 seats');
+        $response->assertDontSee('10 separate members');
+    }
+
+    public function test_enthusiast_and_corporate_cards_show_the_three_month_introductory_offer(): void
+    {
+        $this->enthusiast();
+        $this->corporate();
+
+        $html = $this->get(route('membership.benefits'))->assertOk()->getContent();
+
+        $this->assertSame(2, substr_count($html, 'Launching Offer — First 3 Months FREE'), 'Both the Enthusiast and Corporate cards must show the offer.');
+    }
+
+    public function test_enthusiast_has_no_eligibility_questionnaire(): void
+    {
+        $this->enthusiast();
+
+        $html = $this->get(route('membership.benefits'))->assertOk()->getContent();
+        // Scoped to before the shared eligibility <script> at the bottom of
+        // the page, which always mentions the `[data-eligibility]` selector
+        // literally regardless of which categories exist.
+        $cardsHtml = substr($html, 0, strpos($html, '<script>'));
+
+        $this->assertStringNotContainsString('data-eligibility', $cardsHtml);
+        $this->assertStringNotContainsString('Check Eligibility', $cardsHtml);
+        $this->assertStringNotContainsString('Check Your Eligibility', $cardsHtml);
+    }
+
+    public function test_corporate_has_no_eligibility_questionnaire(): void
+    {
+        $this->corporate();
+
+        $html = $this->get(route('membership.benefits'))->assertOk()->getContent();
+        $cardsHtml = substr($html, 0, strpos($html, '<script>'));
+
+        $this->assertStringNotContainsString('data-eligibility', $cardsHtml);
+    }
+
+    public function test_enthusiast_apply_now_preselects_category(): void
+    {
+        $this->enthusiast();
+
+        $response = $this->get(route('membership.benefits'))->assertOk();
+
+        $response->assertSee('href="'.route('membership.apply', ['category' => 'enthusiast']).'"', false);
+    }
+
+    public function test_corporate_apply_now_preselects_category(): void
+    {
+        $this->corporate();
+
+        $response = $this->get(route('membership.benefits'))->assertOk();
+
+        $response->assertSee('href="'.route('membership.apply', ['category' => 'corporate']).'"', false);
+    }
+
+    public function test_existing_student_professional_veteran_content_remains_present(): void
+    {
+        MembershipCategory::factory()->student()->create();
+        MembershipCategory::factory()->professional()->create();
+        MembershipCategory::factory()->veteran()->create();
+
+        $response = $this->get(route('membership.benefits'))->assertOk();
+
+        $response->assertSee('Aviation Student Membership');
+        $response->assertSee('LKR 3,500');
+        $response->assertSee('Aviation Professional Membership');
+        $response->assertSeeInOrder(['Core Package', 'LKR 5,000', 'Premier Package', 'LKR 10,000', 'Inner-Circle (Prestige)', 'LKR 25,000']);
+        $response->assertSee('Veteran Aviation Professional');
+        $response->assertSee('LKR 3,000');
+        $response->assertSee('Check Eligibility');
+        $response->assertSee('Check Your Eligibility');
     }
 }
