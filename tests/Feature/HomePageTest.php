@@ -46,7 +46,6 @@ class HomePageTest extends TestCase
         $response = $this->get(route('home'))->assertOk();
 
         $response->assertDontSee('href="/membership/benefits"', false);
-        $response->assertDontSee('E-Shop');
     }
 
     /**
@@ -179,14 +178,18 @@ class HomePageTest extends TestCase
     /**
      * The desktop Membership dropdown panel contains exactly the four
      * requested submenu items, each linking to its real, existing route.
+     * Scoped to the Membership trigger's own panel (not every dropdown
+     * panel in the nav) now that "E-Shop" (Step 10.2) is a second one.
      */
     public function test_the_desktop_membership_dropdown_has_the_four_submenu_items(): void
     {
         $response = $this->get(route('home'))->assertOk();
         $xpath = $this->xpath($response->getContent());
 
+        $trigger = $xpath->query('//nav[@aria-label="Main"]/details[contains(@class, "group")]/summary[contains(., "Membership")]')->item(0);
+
         $items = [];
-        foreach ($xpath->query('//nav[@aria-label="Main"]//div[@role="menu"]/a') as $link) {
+        foreach ($xpath->query('./following-sibling::div[@role="menu"][1]/a', $trigger) as $link) {
             $items[trim($link->textContent)] = $link->getAttribute('href');
         }
 
@@ -201,7 +204,9 @@ class HomePageTest extends TestCase
     /**
      * The mobile menu: "Membership" is its own nested accordion
      * (`<details>`), using the same disclosure pattern as the outer mobile
-     * menu, containing the same four submenu items.
+     * menu, containing the same four submenu items. Scoped to the
+     * Membership accordion's own panel (not every `group/submenu` accordion
+     * in the page) now that "E-Shop" (Step 10.2) is a second one.
      */
     public function test_the_mobile_menu_has_a_membership_accordion_with_the_four_submenu_items(): void
     {
@@ -212,7 +217,7 @@ class HomePageTest extends TestCase
         $this->assertSame(1, $accordions->length, 'The mobile menu must have exactly one Membership accordion.');
 
         $items = [];
-        foreach ($xpath->query('//details[contains(@class, "group/submenu")]//a') as $link) {
+        foreach ($xpath->query('./following-sibling::div[1]/a', $accordions->item(0)) as $link) {
             $items[trim($link->textContent)] = $link->getAttribute('href');
         }
 
@@ -222,6 +227,97 @@ class HomePageTest extends TestCase
             'Become a Member' => route('membership.apply'),
             'FAQ' => route('faq'),
         ], $items);
+    }
+
+    /**
+     * E-Shop Step 10.2 — desktop nav: "E-Shop" (renamed from "Shop") is a
+     * native click-to-open `<details>` dropdown like Membership, but unlike
+     * Membership its own trigger label is still a real link to
+     * `eshop.index` — not merely a toggle.
+     */
+    public function test_eshop_is_a_desktop_dropdown_whose_own_label_still_links_to_eshop_index(): void
+    {
+        $response = $this->get(route('home'))->assertOk();
+        $xpath = $this->xpath($response->getContent());
+
+        $triggers = $xpath->query('//nav[@aria-label="Main"]/details[contains(@class, "group")]/summary[contains(., "E-Shop")]');
+        $this->assertSame(1, $triggers->length, 'E-Shop must be exactly one native <details> dropdown trigger in the desktop nav.');
+
+        $triggerLink = $xpath->query('.//a[contains(., "E-Shop")]', $triggers->item(0));
+        $this->assertSame(1, $triggerLink->length, 'The E-Shop trigger\'s own label must still be a real link, not just a dropdown toggle.');
+        $this->assertSame(route('eshop.index'), $triggerLink->item(0)->getAttribute('href'));
+
+        $this->assertStringNotContainsString('>Shop<', $response->getContent(), 'The old "Shop" label must be fully renamed to "E-Shop", not left alongside it.');
+    }
+
+    /**
+     * The desktop E-Shop dropdown panel contains exactly one item, Cart,
+     * linking to the existing `cart.show` route — not a second, separate
+     * top-level nav entry.
+     */
+    public function test_the_desktop_eshop_dropdown_contains_only_cart_linking_to_cart_show(): void
+    {
+        $response = $this->get(route('home'))->assertOk();
+        $xpath = $this->xpath($response->getContent());
+
+        $trigger = $xpath->query('//nav[@aria-label="Main"]/details[contains(@class, "group")]/summary[contains(., "E-Shop")]')->item(0);
+        $this->assertNotNull($trigger, 'The E-Shop desktop dropdown trigger must exist.');
+
+        $items = [];
+        foreach ($xpath->query('./following-sibling::div[@role="menu"][1]/a', $trigger) as $link) {
+            $items[trim($link->textContent)] = $link->getAttribute('href');
+        }
+
+        $this->assertSame(['Cart' => route('cart.show')], $items, 'The E-Shop dropdown must contain exactly one item, Cart, linking to cart.show.');
+    }
+
+    /**
+     * The mobile menu: "E-Shop" is its own nested accordion, same pattern
+     * as Membership, with its own label still linking to `eshop.index` and
+     * exactly one child, Cart, linking to `cart.show`.
+     */
+    public function test_the_mobile_menu_has_an_eshop_accordion_linking_to_eshop_index_with_cart_as_its_only_child(): void
+    {
+        $response = $this->get(route('home'))->assertOk();
+        $xpath = $this->xpath($response->getContent());
+
+        $accordions = $xpath->query('//details[contains(@class, "group/submenu")]/summary[contains(., "E-Shop")]');
+        $this->assertSame(1, $accordions->length, 'The mobile menu must have exactly one E-Shop accordion.');
+
+        $triggerLink = $xpath->query('.//a[contains(., "E-Shop")]', $accordions->item(0));
+        $this->assertSame(1, $triggerLink->length, 'The E-Shop accordion trigger\'s own label must still be a real link.');
+        $this->assertSame(route('eshop.index'), $triggerLink->item(0)->getAttribute('href'));
+
+        $items = [];
+        foreach ($xpath->query('./following-sibling::div[1]/a', $accordions->item(0)) as $link) {
+            $items[trim($link->textContent)] = $link->getAttribute('href');
+        }
+
+        $this->assertSame(['Cart' => route('cart.show')], $items, 'The mobile E-Shop accordion must contain exactly one item, Cart, linking to cart.show.');
+    }
+
+    /**
+     * "Cart" must never appear as its own standalone top-level nav link in
+     * either the desktop nav or the mobile menu — only nested once, inside
+     * the E-Shop dropdown/accordion in each.
+     */
+    public function test_cart_is_not_duplicated_as_a_separate_top_level_nav_item(): void
+    {
+        $response = $this->get(route('home'))->assertOk();
+        $content = $response->getContent();
+        $xpath = $this->xpath($content);
+
+        $topLevelHrefs = [];
+        foreach ($xpath->query('//nav[@aria-label="Main"]/a') as $link) {
+            $topLevelHrefs[] = $link->getAttribute('href');
+        }
+        $this->assertNotContains(route('cart.show'), $topLevelHrefs, 'Cart must not be a standalone top-level desktop nav link.');
+
+        [$desktopNavHtml, $mobileNavHtml] = $this->navSections($content);
+        $cartHref = 'href="'.route('cart.show').'"';
+
+        $this->assertSame(1, substr_count($desktopNavHtml, $cartHref), 'Cart must appear exactly once in the desktop nav (inside the E-Shop dropdown).');
+        $this->assertSame(1, substr_count($mobileNavHtml, $cartHref), 'Cart must appear exactly once in the mobile menu (inside the E-Shop accordion).');
     }
 
     /**

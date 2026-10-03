@@ -27,6 +27,8 @@ class Payment extends Model
 
     public const STATUS_FAILED = 'failed';
 
+    public const STATUS_CANCELLED = 'cancelled';
+
     /**
      * @return array<string, string>
      */
@@ -71,6 +73,17 @@ class Payment extends Model
     public function membershipTerm(): BelongsTo
     {
         return $this->belongsTo(MembershipTerm::class);
+    }
+
+    /**
+     * The e-shop counterpart of `membershipTerm()` — exactly one of the two
+     * is ever set (`payments_exactly_one_purpose` CHECK).
+     *
+     * @return BelongsTo<Order, $this>
+     */
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 
     /**

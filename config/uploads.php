@@ -58,4 +58,13 @@ return [
         'extensions' => ['jpg', 'jpeg', 'png'],
     ],
 
+    /*
+    | E-Shop product image (E-Shop Step 2). Stored on the public disk, same
+    | convention as the blog featured image.
+    */
+    'product_image' => [
+        'max_kb' => 3072,
+        'extensions' => ['jpg', 'jpeg', 'png'],
+    ],
+
 ];

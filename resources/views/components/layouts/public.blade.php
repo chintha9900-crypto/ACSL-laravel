@@ -11,15 +11,24 @@
     Membership dropdown/submenu below, which is a deliberate, explicitly
     requested exception to not repeating it in the flat nav.
 
-    An item with a `children` array (currently only "Membership") is a
-    dropdown/disclosure, not a direct link: the desktop nav renders it as a
-    click-to-open `<details>` panel, the mobile menu as a nested `<details>`
-    accordion — one shared source of navigation, not two. The footer is
-    deliberately different: it shows Membership as a single plain link
-    (`footerRoute`), not its four children, and News & Events is one
+    An item with a `children` array (currently "Membership" and "E-Shop") is
+    a dropdown/disclosure, not a direct link only: the desktop nav renders it
+    as a click-to-open `<details>` panel, the mobile menu as a nested
+    `<details>` accordion — one shared source of navigation, not two. The
+    footer is deliberately different: it shows Membership as a single plain
+    link (`footerRoute`), not its four children, and News & Events is one
     combined item everywhere (its own landing page, `news-events`) — the
     separate full lists (`news.index`/`events.index`) are reachable only
     from that landing page's own "View all" links, per the approved design.
+
+    E-Shop Step 10.2 — "E-Shop" is the one dropdown item that is *also* a
+    direct link (`route` set alongside `children`): unlike Membership's
+    trigger, its own label still navigates to `eshop.index`, with "Cart" as
+    its one child (`cart.show`) rather than a second, separate top-level nav
+    entry. The footer needs no `footerRoute` override here: with `route`
+    already set, `route($link['footerRoute'] ?? $link['route'])` already
+    resolves to `eshop.index`, the same single-plain-link behaviour
+    Membership gets via its own `footerRoute`.
 --}}
 @php($navLinks = [
     ['route' => 'home', 'label' => 'Home'],
@@ -32,6 +41,13 @@
             ['route' => 'rules', 'label' => 'Club Rules'],
             ['route' => 'membership.apply', 'label' => 'Become a Member'],
             ['route' => 'faq', 'label' => 'FAQ'],
+        ],
+    ],
+    [
+        'route' => 'eshop.index',
+        'label' => 'E-Shop',
+        'children' => [
+            ['route' => 'cart.show', 'label' => 'Cart'],
         ],
     ],
     ['route' => 'blog.index', 'label' => 'Blog'],
@@ -80,15 +96,24 @@
                 <nav class="hidden items-center gap-1 lg:flex" aria-label="Main">
                     @foreach ($navLinks as $link)
                         @if (isset($link['children']))
-                            @php($isActive = request()->routeIs(...array_column($link['children'], 'route')))
+                            @php($isActive = request()->routeIs(...array_filter([$link['route'] ?? null, ...array_column($link['children'], 'route')])))
                             {{-- Click-based dropdown via a native `<details>` — the same
                                  mechanism the mobile menu already uses below, not hover:
                                  hover-only dropdowns are unreliable (no keyboard
                                  equivalent, no touch-device equivalent, closes if the
-                                 mouse crosses a gap). No JavaScript either way. --}}
+                                 mouse crosses a gap). No JavaScript either way.
+
+                                 When the item also has its own `route` (E-Shop), the
+                                 label itself is a real `<a>` so clicking the text still
+                                 navigates there; only Membership (no `route`) renders as
+                                 plain, unclickable summary text. --}}
                             <details class="group relative">
                                 <summary aria-haspopup="true" class="flex list-none cursor-pointer items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-primary [&::-webkit-details-marker]:hidden {{ $isActive ? 'font-semibold text-primary' : '' }}">
-                                    {{ $link['label'] }}
+                                    @if (isset($link['route']))
+                                        <a href="{{ route($link['route']) }}" @if (request()->routeIs($link['route'])) aria-current="page" @endif>{{ $link['label'] }}</a>
+                                    @else
+                                        {{ $link['label'] }}
+                                    @endif
                                     <svg class="h-3.5 w-3.5 transition-transform group-open:rotate-180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                                 </summary>
 
@@ -122,12 +147,18 @@
                         <div class="container mx-auto flex flex-col gap-1 px-4 py-3">
                             @foreach ($navLinks as $link)
                                 @if (isset($link['children']))
-                                    @php($isActive = request()->routeIs(...array_column($link['children'], 'route')))
+                                    @php($isActive = request()->routeIs(...array_filter([$link['route'] ?? null, ...array_column($link['children'], 'route')])))
                                     {{-- Same disclosure pattern as the outer mobile menu, nested
-                                         one level: tap to expand, no JavaScript. --}}
+                                         one level: tap to expand, no JavaScript. When the item
+                                         also has its own `route` (E-Shop), the label is a real
+                                         `<a>` so tapping the text still navigates there. --}}
                                     <details class="group/submenu">
                                         <summary class="flex cursor-pointer list-none items-center justify-between rounded-md px-3 py-2 text-sm font-medium hover:bg-muted [&::-webkit-details-marker]:hidden {{ $isActive ? 'bg-muted text-primary' : '' }}">
-                                            {{ $link['label'] }}
+                                            @if (isset($link['route']))
+                                                <a href="{{ route($link['route']) }}" @if (request()->routeIs($link['route'])) aria-current="page" @endif>{{ $link['label'] }}</a>
+                                            @else
+                                                {{ $link['label'] }}
+                                            @endif
                                             <svg class="h-4 w-4 transition-transform group-open/submenu:rotate-180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                                         </summary>
                                         <div class="ml-3 flex flex-col gap-1 border-l border-border py-1 pl-3">

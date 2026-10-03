@@ -3,20 +3,28 @@
 use App\Http\Controllers\Admin\BlogCategoryController;
 use App\Http\Controllers\Admin\BlogPostController as AdminBlogPostController;
 use App\Http\Controllers\Admin\DocumentController;
+use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\MembershipActivationController;
 use App\Http\Controllers\Admin\MembershipApplicationController as AdminMembershipApplicationController;
 use App\Http\Controllers\Admin\MembershipApplicationReviewController;
 use App\Http\Controllers\Admin\MembershipSetupLinkController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PaymentReviewController;
+use App\Http\Controllers\Admin\ProductCategoryController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\BlogController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CsrController;
+use App\Http\Controllers\EshopController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\Member\DashboardController;
 use App\Http\Controllers\Member\DocumentController as MemberDocumentController;
 use App\Http\Controllers\Member\MembershipCardController;
 use App\Http\Controllers\Member\MembershipController as MemberMembershipController;
 use App\Http\Controllers\Member\NotificationController;
+use App\Http\Controllers\Member\OrderController as MemberOrderController;
 use App\Http\Controllers\Member\ProfileController;
 use App\Http\Controllers\Member\RenewalController;
 use App\Http\Controllers\Member\SecurityController;
@@ -27,6 +35,9 @@ use App\Http\Controllers\Membership\MoreDetailsResponseController;
 use App\Http\Controllers\Membership\VerificationController;
 use App\Http\Controllers\NewsController;
 use App\Http\Controllers\NewsEventsController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ReceiptController;
 use App\Models\MembershipSetting;
 use Illuminate\Support\Facades\Route;
 
@@ -91,6 +102,56 @@ Route::controller(CsrController::class)->prefix('csr')->name('csr.')->group(func
     Route::get('{project:slug}', 'show')->name('show');
 });
 
+// Public storefront (E-Shop Step 4) — product browsing only; no auth
+// middleware, since guests may view/purchase PUBLIC products. Access to
+// MEMBER_ONLY products is enforced inside EshopController itself, not here.
+Route::controller(EshopController::class)->prefix('eshop')->name('eshop.')->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('{product}', 'show')->name('show');
+});
+
+// E-Shop Step 5 — cart only. No auth middleware: guests may have and use a
+// cart, identified by a guest-token cookie rather than a session login.
+Route::controller(CartController::class)->prefix('cart')->name('cart.')->group(function () {
+    Route::get('/', 'show')->name('show');
+    Route::post('items', 'store')->name('items.store');
+    Route::patch('items/{item}', 'update')->name('items.update');
+    Route::delete('items/{item}', 'destroy')->name('items.destroy');
+    Route::delete('/', 'clear')->name('clear');
+});
+
+// E-Shop Step 6 — checkout and order creation only (no real payment
+// gateway/webhooks/receipts yet). No auth middleware: guests may check out
+// PUBLIC products. `orders.show` needs no blanket `signed` middleware the
+// way the membership-application status pages do, because an authenticated
+// owner must also be able to reach it unsigned — the signature requirement
+// for a guest order is enforced inside OrderController::show() itself.
+Route::controller(CheckoutController::class)->prefix('checkout')->name('checkout.')->group(function () {
+    Route::get('/', 'show')->name('show');
+    Route::post('/', 'store')->name('store');
+});
+
+Route::get('orders/{order}', [OrderController::class, 'show'])
+    ->middleware('throttle:60,1')
+    ->name('orders.show');
+
+Route::get('orders/{order}/receipt', [ReceiptController::class, 'show'])
+    ->middleware('throttle:60,1')
+    ->name('orders.receipt');
+
+// E-Shop Step 7 — payment structure and confirmation only (no real
+// gateway/webhooks/receipts-by-email yet). confirm/fail/cancel stand in for
+// what a real gateway's signed webhook would otherwise call
+// (`PaymentGatewayContract`, bound to `ManualPaymentGateway` in
+// AppServiceProvider) — reachable only by whoever can already view the
+// order (`AuthorizesOrderAccess`), same as `orders.show`.
+Route::controller(PaymentController::class)->prefix('payment')->name('payment.')->group(function () {
+    Route::get('{order}', 'show')->middleware('throttle:60,1')->name('show');
+    Route::post('{order}/confirm', 'confirm')->name('confirm');
+    Route::post('{order}/fail', 'fail')->name('fail');
+    Route::post('{order}/cancel', 'cancel')->name('cancel');
+});
+
 Route::controller(MembershipApplicationController::class)->group(function () {
     Route::get('membership/apply', 'create')->name('membership.apply');
     Route::post('membership/apply', 'store')->middleware('throttle:6,1')->name('membership.apply.store');
@@ -145,6 +206,10 @@ Route::patch('dashboard/security', [SecurityController::class, 'update'])
     ->middleware(['auth', 'active', 'throttle:6,1'])
     ->name('member.security.update');
 
+Route::get('dashboard/orders', [MemberOrderController::class, 'index'])
+    ->middleware(['auth', 'active'])
+    ->name('member.orders.index');
+
 Route::get('dashboard/notifications', [NotificationController::class, 'show'])
     ->middleware(['auth', 'active'])
     ->name('member.notifications.show');
@@ -189,6 +254,40 @@ Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(fu
         Route::post('/', 'store')->name('store');
         Route::patch('{category}', 'update')->name('update');
         Route::delete('{category}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(AdminProductController::class)->prefix('products')->name('products.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('{product}', 'show')->name('show');
+        Route::get('{product}/edit', 'edit')->name('edit');
+        Route::patch('{product}', 'update')->name('update');
+        Route::delete('{product}', 'destroy')->name('destroy');
+        Route::post('{product}/activate', 'activate')->name('activate');
+        Route::post('{product}/deactivate', 'deactivate')->name('deactivate');
+    });
+
+    Route::controller(ProductCategoryController::class)->prefix('product-categories')->name('product-categories.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::patch('{category}', 'update')->name('update');
+        Route::delete('{category}', 'destroy')->name('destroy');
+        Route::post('{category}/activate', 'activate')->name('activate');
+        Route::post('{category}/deactivate', 'deactivate')->name('deactivate');
+    });
+
+    Route::controller(InventoryController::class)->prefix('inventory')->name('inventory.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::patch('{inventory}/threshold', 'updateThreshold')->name('update-threshold');
+        Route::post('{inventory}/add', 'addStock')->name('add-stock');
+        Route::post('{inventory}/remove', 'removeStock')->name('remove-stock');
+    });
+
+    Route::controller(AdminOrderController::class)->prefix('orders')->name('orders.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('{order}', 'show')->name('show');
+        Route::patch('{order}/status', 'updateStatus')->name('update-status');
     });
 });
 

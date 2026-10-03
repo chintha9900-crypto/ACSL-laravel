@@ -28,6 +28,7 @@
                     <nav aria-label="Member" class="flex items-center gap-4 text-sm font-medium text-primary-foreground/85">
                         <a href="{{ route('member.dashboard') }}" class="hover:text-secondary">Dashboard</a>
                         <a href="{{ route('member.membership.show') }}" class="hover:text-secondary">Membership</a>
+                        <a href="{{ route('member.orders.index') }}" class="hover:text-secondary">Orders</a>
                         <a href="{{ route('member.profile.show') }}" class="hover:text-secondary">Profile</a>
                         <a href="{{ route('member.security.show') }}" class="hover:text-secondary">Security</a>
                         <a href="{{ route('member.notifications.show') }}" class="hover:text-secondary">Notifications</a>
