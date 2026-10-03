@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\MembershipSetupLinkController;
 use App\Http\Controllers\Admin\PaymentReviewController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\CsrController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\Member\DashboardController;
 use App\Http\Controllers\Member\DocumentController as MemberDocumentController;
@@ -84,6 +85,11 @@ Route::controller(EventController::class)->prefix('events')->name('events.')->gr
 // A short combined preview of both, linking out to the full `news.index` /
 // `events.index` lists above — not a replacement for either.
 Route::get('news-events', [NewsEventsController::class, 'show'])->name('news-events');
+
+Route::controller(CsrController::class)->prefix('csr')->name('csr.')->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('{project:slug}', 'show')->name('show');
+});
 
 Route::controller(MembershipApplicationController::class)->group(function () {
     Route::get('membership/apply', 'create')->name('membership.apply');

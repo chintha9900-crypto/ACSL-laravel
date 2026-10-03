@@ -36,6 +36,7 @@
     ],
     ['route' => 'blog.index', 'label' => 'Blog'],
     ['route' => 'news-events', 'label' => 'News & Events'],
+    ['route' => 'csr.index', 'label' => 'CSR'],
     ['route' => 'contact', 'label' => 'Contact'],
 ])
 {{-- Privacy/Terms are legal boilerplate, conventionally footer-only links —
