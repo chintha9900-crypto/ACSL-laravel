@@ -30,6 +30,9 @@
                         <a href="{{ route('admin.payments.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Payments</a>
                         <a href="{{ route('admin.blog.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Blog posts</a>
                         <a href="{{ route('admin.blog-categories.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Blog categories</a>
+                        <a href="{{ route('admin.news.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">News</a>
+                        <a href="{{ route('admin.events.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Events</a>
+                        <a href="{{ route('admin.csr.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">CSR projects</a>
                         <a href="{{ route('admin.products.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Products</a>
                         <a href="{{ route('admin.product-categories.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Product categories</a>
                         <a href="{{ route('admin.inventory.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Inventory</a>

@@ -2,12 +2,15 @@
 
 use App\Http\Controllers\Admin\BlogCategoryController;
 use App\Http\Controllers\Admin\BlogPostController as AdminBlogPostController;
+use App\Http\Controllers\Admin\CsrController as AdminCsrController;
 use App\Http\Controllers\Admin\DocumentController;
+use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\MembershipActivationController;
 use App\Http\Controllers\Admin\MembershipApplicationController as AdminMembershipApplicationController;
 use App\Http\Controllers\Admin\MembershipApplicationReviewController;
 use App\Http\Controllers\Admin\MembershipSetupLinkController;
+use App\Http\Controllers\Admin\NewsController as AdminNewsController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PaymentReviewController;
 use App\Http\Controllers\Admin\ProductCategoryController;
@@ -260,6 +263,42 @@ Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(fu
         Route::post('/', 'store')->name('store');
         Route::patch('{category}', 'update')->name('update');
         Route::delete('{category}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(AdminNewsController::class)->prefix('news')->name('news.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('{news}/edit', 'edit')->name('edit');
+        Route::get('{news}', 'show')->name('show');
+        Route::patch('{news}', 'update')->name('update');
+        Route::delete('{news}', 'destroy')->name('destroy');
+        Route::post('{news}/publish', 'publish')->name('publish');
+        Route::post('{news}/unpublish', 'unpublish')->name('unpublish');
+    });
+
+    Route::controller(AdminEventController::class)->prefix('events')->name('events.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('{event}/edit', 'edit')->name('edit');
+        Route::get('{event}', 'show')->name('show');
+        Route::patch('{event}', 'update')->name('update');
+        Route::delete('{event}', 'destroy')->name('destroy');
+        Route::post('{event}/publish', 'publish')->name('publish');
+        Route::post('{event}/unpublish', 'unpublish')->name('unpublish');
+    });
+
+    Route::controller(AdminCsrController::class)->prefix('csr')->name('csr.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('{project}/edit', 'edit')->name('edit');
+        Route::get('{project}', 'show')->name('show');
+        Route::patch('{project}', 'update')->name('update');
+        Route::delete('{project}', 'destroy')->name('destroy');
+        Route::post('{project}/publish', 'publish')->name('publish');
+        Route::post('{project}/unpublish', 'unpublish')->name('unpublish');
     });
 
     Route::controller(AdminProductController::class)->prefix('products')->name('products.')->group(function () {

@@ -67,4 +67,31 @@ return [
         'extensions' => ['jpg', 'jpeg', 'png'],
     ],
 
+    /*
+    | News item image (Admin News CRUD). Stored on the public disk, same
+    | convention as the blog featured image.
+    */
+    'news_image' => [
+        'max_kb' => 3072,
+        'extensions' => ['jpg', 'jpeg', 'png'],
+    ],
+
+    /*
+    | Event listing image (Admin Events CRUD). Stored on the public disk,
+    | same convention as the blog featured image.
+    */
+    'event_image' => [
+        'max_kb' => 3072,
+        'extensions' => ['jpg', 'jpeg', 'png'],
+    ],
+
+    /*
+    | CSR project image (Admin CSR CRUD). Stored on the public disk, same
+    | convention as the blog featured image.
+    */
+    'csr_image' => [
+        'max_kb' => 3072,
+        'extensions' => ['jpg', 'jpeg', 'png'],
+    ],
+
 ];
