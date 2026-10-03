@@ -94,4 +94,13 @@ return [
         'extensions' => ['jpg', 'jpeg', 'png'],
     ],
 
+    /*
+    | Commercial partner logo (Admin Commercial Partners CRUD). Stored on
+    | the public disk, same convention as the blog featured image.
+    */
+    'commercial_partner_logo' => [
+        'max_kb' => 3072,
+        'extensions' => ['jpg', 'jpeg', 'png'],
+    ],
+
 ];

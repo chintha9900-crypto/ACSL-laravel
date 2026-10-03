@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\BlogCategoryController;
 use App\Http\Controllers\Admin\BlogPostController as AdminBlogPostController;
+use App\Http\Controllers\Admin\CommercialPartnerController as AdminCommercialPartnerController;
 use App\Http\Controllers\Admin\CsrController as AdminCsrController;
 use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CommercialPartnerController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CsrController;
 use App\Http\Controllers\EshopController;
@@ -54,11 +56,9 @@ Route::get('about', function () {
 
 Route::get('membership/benefits', [MembershipBenefitsController::class, 'show'])->name('membership.benefits');
 
-// Main-site nav update — a clean, content-free template for future partner
-// information (no real partner names/logos/claims exist anywhere yet).
-Route::get('commercial-partners', function () {
-    return view('commercial-partners');
-})->name('commercial-partners');
+// Phase 1.4C — real listing of active commercial partners, same route
+// name/URL as the original placeholder.
+Route::get('commercial-partners', [CommercialPartnerController::class, 'show'])->name('commercial-partners');
 
 Route::get('rules', function () {
     return view('rules');
@@ -299,6 +299,18 @@ Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(fu
         Route::delete('{project}', 'destroy')->name('destroy');
         Route::post('{project}/publish', 'publish')->name('publish');
         Route::post('{project}/unpublish', 'unpublish')->name('unpublish');
+    });
+
+    Route::controller(AdminCommercialPartnerController::class)->prefix('commercial-partners')->name('commercial-partners.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('{partner}/edit', 'edit')->name('edit');
+        Route::get('{partner}', 'show')->name('show');
+        Route::patch('{partner}', 'update')->name('update');
+        Route::delete('{partner}', 'destroy')->name('destroy');
+        Route::post('{partner}/activate', 'activate')->name('activate');
+        Route::post('{partner}/deactivate', 'deactivate')->name('deactivate');
     });
 
     Route::controller(AdminProductController::class)->prefix('products')->name('products.')->group(function () {
