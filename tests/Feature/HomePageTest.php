@@ -149,11 +149,12 @@ class HomePageTest extends TestCase
 
     /**
      * The desktop nav: "Membership" is a native, click-to-open `<details>`
-     * dropdown (not a hover-only panel), Rules and FAQ are no longer
-     * standalone top-level links, and the other items are unchanged, direct
+     * dropdown (not a hover-only panel), Rules, FAQ, About and CSR are no
+     * longer standalone top-level links (About/CSR moved under "Contact" —
+     * main-site nav update), and the other items are unchanged, direct
      * `<a>` children of `<nav>`.
      */
-    public function test_membership_is_a_desktop_click_dropdown_and_rules_and_faq_are_no_longer_top_level(): void
+    public function test_membership_is_a_desktop_click_dropdown_and_rules_faq_about_csr_are_no_longer_top_level(): void
     {
         $response = $this->get(route('home'))->assertOk();
         $xpath = $this->xpath($response->getContent());
@@ -168,20 +169,22 @@ class HomePageTest extends TestCase
 
         $this->assertNotContains(route('rules'), $topLevelHrefs, 'Rules must not be a standalone top-level desktop nav link.');
         $this->assertNotContains(route('faq'), $topLevelHrefs, 'FAQ must not be a standalone top-level desktop nav link.');
+        $this->assertNotContains(route('about'), $topLevelHrefs, 'About must not be a standalone top-level desktop nav link — it is now a Contact dropdown child.');
+        $this->assertNotContains(route('csr.index'), $topLevelHrefs, 'CSR must not be a standalone top-level desktop nav link — it is now a Contact dropdown child.');
         $this->assertContains(route('home'), $topLevelHrefs);
-        $this->assertContains(route('about'), $topLevelHrefs);
         $this->assertContains(route('blog.index'), $topLevelHrefs);
         $this->assertContains(route('news-events'), $topLevelHrefs);
-        $this->assertContains(route('contact'), $topLevelHrefs);
     }
 
     /**
-     * The desktop Membership dropdown panel contains exactly the four
-     * requested submenu items, each linking to its real, existing route.
+     * The desktop Membership dropdown panel contains exactly the five
+     * requested submenu items, each linking to its real, existing route —
+     * "Membership Benefits" relabelled "Membership Types" (same route) and
+     * "Commercial Partners" added, both main-site nav update changes.
      * Scoped to the Membership trigger's own panel (not every dropdown
-     * panel in the nav) now that "E-Shop" (Step 10.2) is a second one.
+     * panel in the nav) now that "E-Shop" and "Contact" are others.
      */
-    public function test_the_desktop_membership_dropdown_has_the_four_submenu_items(): void
+    public function test_the_desktop_membership_dropdown_has_the_five_submenu_items(): void
     {
         $response = $this->get(route('home'))->assertOk();
         $xpath = $this->xpath($response->getContent());
@@ -194,21 +197,22 @@ class HomePageTest extends TestCase
         }
 
         $this->assertSame([
-            'Membership Benefits' => route('membership.benefits'),
+            'Membership Types' => route('membership.benefits'),
             'Club Rules' => route('rules'),
             'Become a Member' => route('membership.apply'),
             'FAQ' => route('faq'),
+            'Commercial Partners' => route('commercial-partners'),
         ], $items);
     }
 
     /**
      * The mobile menu: "Membership" is its own nested accordion
      * (`<details>`), using the same disclosure pattern as the outer mobile
-     * menu, containing the same four submenu items. Scoped to the
+     * menu, containing the same five submenu items. Scoped to the
      * Membership accordion's own panel (not every `group/submenu` accordion
-     * in the page) now that "E-Shop" (Step 10.2) is a second one.
+     * in the page) now that "E-Shop" and "Contact" are others.
      */
-    public function test_the_mobile_menu_has_a_membership_accordion_with_the_four_submenu_items(): void
+    public function test_the_mobile_menu_has_a_membership_accordion_with_the_five_submenu_items(): void
     {
         $response = $this->get(route('home'))->assertOk();
         $xpath = $this->xpath($response->getContent());
@@ -222,10 +226,11 @@ class HomePageTest extends TestCase
         }
 
         $this->assertSame([
-            'Membership Benefits' => route('membership.benefits'),
+            'Membership Types' => route('membership.benefits'),
             'Club Rules' => route('rules'),
             'Become a Member' => route('membership.apply'),
             'FAQ' => route('faq'),
+            'Commercial Partners' => route('commercial-partners'),
         ], $items);
     }
 
@@ -321,6 +326,89 @@ class HomePageTest extends TestCase
     }
 
     /**
+     * Main-site nav update — desktop nav: "Contact" is a native
+     * click-to-open `<details>` dropdown, same pattern as "E-Shop", and its
+     * own trigger label is still a real link to `contact`.
+     */
+    public function test_contact_is_a_desktop_dropdown_whose_own_label_still_links_to_contact(): void
+    {
+        $response = $this->get(route('home'))->assertOk();
+        $xpath = $this->xpath($response->getContent());
+
+        $triggers = $xpath->query('//nav[@aria-label="Main"]/details[contains(@class, "group")]/summary[contains(., "Contact")]');
+        $this->assertSame(1, $triggers->length, 'Contact must be exactly one native <details> dropdown trigger in the desktop nav.');
+
+        $triggerLink = $xpath->query('.//a[contains(., "Contact")]', $triggers->item(0));
+        $this->assertSame(1, $triggerLink->length, 'The Contact trigger\'s own label must still be a real link, not just a dropdown toggle.');
+        $this->assertSame(route('contact'), $triggerLink->item(0)->getAttribute('href'));
+    }
+
+    /**
+     * The desktop Contact dropdown panel contains exactly "About" and
+     * "CSR", each linking to its existing, unchanged route.
+     */
+    public function test_the_desktop_contact_dropdown_contains_about_and_csr(): void
+    {
+        $response = $this->get(route('home'))->assertOk();
+        $xpath = $this->xpath($response->getContent());
+
+        $trigger = $xpath->query('//nav[@aria-label="Main"]/details[contains(@class, "group")]/summary[contains(., "Contact")]')->item(0);
+        $this->assertNotNull($trigger, 'The Contact desktop dropdown trigger must exist.');
+
+        $items = [];
+        foreach ($xpath->query('./following-sibling::div[@role="menu"][1]/a', $trigger) as $link) {
+            $items[trim($link->textContent)] = $link->getAttribute('href');
+        }
+
+        $this->assertSame(['About' => route('about'), 'CSR' => route('csr.index')], $items, 'The Contact dropdown must contain exactly About and CSR, linking to their existing routes.');
+    }
+
+    /**
+     * The mobile menu: "Contact" is its own nested accordion, same pattern
+     * as "E-Shop", with its own label still linking to `contact` and
+     * exactly two children, About and CSR.
+     */
+    public function test_the_mobile_menu_has_a_contact_accordion_linking_to_contact_with_about_and_csr_as_children(): void
+    {
+        $response = $this->get(route('home'))->assertOk();
+        $xpath = $this->xpath($response->getContent());
+
+        $accordions = $xpath->query('//details[contains(@class, "group/submenu")]/summary[contains(., "Contact")]');
+        $this->assertSame(1, $accordions->length, 'The mobile menu must have exactly one Contact accordion.');
+
+        $triggerLink = $xpath->query('.//a[contains(., "Contact")]', $accordions->item(0));
+        $this->assertSame(1, $triggerLink->length, 'The Contact accordion trigger\'s own label must still be a real link.');
+        $this->assertSame(route('contact'), $triggerLink->item(0)->getAttribute('href'));
+
+        $items = [];
+        foreach ($xpath->query('./following-sibling::div[1]/a', $accordions->item(0)) as $link) {
+            $items[trim($link->textContent)] = $link->getAttribute('href');
+        }
+
+        $this->assertSame(['About' => route('about'), 'CSR' => route('csr.index')], $items, 'The mobile Contact accordion must contain exactly About and CSR.');
+    }
+
+    /**
+     * "About" and "CSR" must never appear as their own standalone top-level
+     * nav links in either the desktop nav or the mobile menu — only nested
+     * once each, inside the Contact dropdown/accordion.
+     */
+    public function test_about_and_csr_are_not_duplicated_as_separate_top_level_nav_items(): void
+    {
+        $response = $this->get(route('home'))->assertOk();
+        $content = $response->getContent();
+
+        [$desktopNavHtml, $mobileNavHtml] = $this->navSections($content);
+        $aboutHref = 'href="'.route('about').'"';
+        $csrHref = 'href="'.route('csr.index').'"';
+
+        $this->assertSame(1, substr_count($desktopNavHtml, $aboutHref), 'About must appear exactly once in the desktop nav (inside the Contact dropdown).');
+        $this->assertSame(1, substr_count($mobileNavHtml, $aboutHref), 'About must appear exactly once in the mobile menu (inside the Contact accordion).');
+        $this->assertSame(1, substr_count($desktopNavHtml, $csrHref), 'CSR must appear exactly once in the desktop nav (inside the Contact dropdown).');
+        $this->assertSame(1, substr_count($mobileNavHtml, $csrHref), 'CSR must appear exactly once in the mobile menu (inside the Contact accordion).');
+    }
+
+    /**
      * The footer's "Explore" column: Membership shows as one normal link
      * (to `membership.benefits`, not a dropdown and not its four children),
      * and News & Events shows as its one combined item — never the two
@@ -340,14 +428,19 @@ class HomePageTest extends TestCase
         }
 
         $this->assertSame(route('membership.benefits'), $items['Membership'] ?? null, 'Footer "Membership" must be one plain link, not its dropdown children.');
-        $this->assertArrayNotHasKey('Membership Benefits', $items, 'The footer must not list Membership\'s children separately.');
+        $this->assertArrayNotHasKey('Membership Types', $items, 'The footer must not list Membership\'s children separately.');
         $this->assertArrayNotHasKey('Club Rules', $items);
         $this->assertArrayNotHasKey('Become a Member', $items);
         $this->assertArrayNotHasKey('FAQ', $items);
+        $this->assertArrayNotHasKey('Commercial Partners', $items);
 
         $this->assertSame(route('news-events'), $items['News & Events'] ?? null, 'Footer must link "News & Events" to the combined landing page.');
         $this->assertArrayNotHasKey('News', $items);
         $this->assertArrayNotHasKey('Events', $items);
+
+        $this->assertSame(route('contact'), $items['Contact'] ?? null, 'Footer "Contact" must be one plain link, not its dropdown children.');
+        $this->assertArrayNotHasKey('About', $items, 'The footer must not list Contact\'s children separately.');
+        $this->assertArrayNotHasKey('CSR', $items);
     }
 
     /**

@@ -11,36 +11,45 @@
     Membership dropdown/submenu below, which is a deliberate, explicitly
     requested exception to not repeating it in the flat nav.
 
-    An item with a `children` array (currently "Membership" and "E-Shop") is
-    a dropdown/disclosure, not a direct link only: the desktop nav renders it
-    as a click-to-open `<details>` panel, the mobile menu as a nested
-    `<details>` accordion — one shared source of navigation, not two. The
-    footer is deliberately different: it shows Membership as a single plain
-    link (`footerRoute`), not its four children, and News & Events is one
+    An item with a `children` array (currently "Membership", "E-Shop" and
+    "Contact") is a dropdown/disclosure, not a direct link only: the desktop
+    nav renders it as a click-to-open `<details>` panel, the mobile menu as a
+    nested `<details>` accordion — one shared source of navigation, not two.
+    The footer is deliberately different: it shows Membership as a single
+    plain link (`footerRoute`), not its children, and News & Events is one
     combined item everywhere (its own landing page, `news-events`) — the
     separate full lists (`news.index`/`events.index`) are reachable only
     from that landing page's own "View all" links, per the approved design.
 
-    E-Shop Step 10.2 — "E-Shop" is the one dropdown item that is *also* a
-    direct link (`route` set alongside `children`): unlike Membership's
-    trigger, its own label still navigates to `eshop.index`, with "Cart" as
-    its one child (`cart.show`) rather than a second, separate top-level nav
-    entry. The footer needs no `footerRoute` override here: with `route`
-    already set, `route($link['footerRoute'] ?? $link['route'])` already
-    resolves to `eshop.index`, the same single-plain-link behaviour
-    Membership gets via its own `footerRoute`.
+    E-Shop Step 10.2 — "E-Shop" is a dropdown item that is *also* a direct
+    link (`route` set alongside `children`): unlike Membership's trigger,
+    its own label still navigates to `eshop.index`, with "Cart" as its one
+    child (`cart.show`) rather than a second, separate top-level nav entry.
+    The footer needs no `footerRoute` override here: with `route` already
+    set, `route($link['footerRoute'] ?? $link['route'])` already resolves to
+    `eshop.index`, the same single-plain-link behaviour Membership gets via
+    its own `footerRoute`.
+
+    Main-site nav update — "Contact" uses the exact same "route + children"
+    shape as "E-Shop": its own label still navigates to `contact`, with
+    "About" and "CSR" as children, moved here (no longer separate top-level
+    items) so they are never duplicated elsewhere in the nav. "Membership
+    Benefits" is relabelled "Membership Types" (same `membership.benefits`
+    route — only the displayed text changed), and "Commercial Partners" (a
+    new, content-free template page — `commercial-partners`) joins it as a
+    fifth Membership child.
 --}}
 @php($navLinks = [
     ['route' => 'home', 'label' => 'Home'],
-    ['route' => 'about', 'label' => 'About'],
     [
         'label' => 'Membership',
         'footerRoute' => 'membership.benefits',
         'children' => [
-            ['route' => 'membership.benefits', 'label' => 'Membership Benefits'],
+            ['route' => 'membership.benefits', 'label' => 'Membership Types'],
             ['route' => 'rules', 'label' => 'Club Rules'],
             ['route' => 'membership.apply', 'label' => 'Become a Member'],
             ['route' => 'faq', 'label' => 'FAQ'],
+            ['route' => 'commercial-partners', 'label' => 'Commercial Partners'],
         ],
     ],
     [
@@ -52,8 +61,14 @@
     ],
     ['route' => 'blog.index', 'label' => 'Blog'],
     ['route' => 'news-events', 'label' => 'News & Events'],
-    ['route' => 'csr.index', 'label' => 'CSR'],
-    ['route' => 'contact', 'label' => 'Contact'],
+    [
+        'route' => 'contact',
+        'label' => 'Contact',
+        'children' => [
+            ['route' => 'about', 'label' => 'About'],
+            ['route' => 'csr.index', 'label' => 'CSR'],
+        ],
+    ],
 ])
 {{-- Privacy/Terms are legal boilerplate, conventionally footer-only links —
      not repeated in the main nav (matches the reference footer's own

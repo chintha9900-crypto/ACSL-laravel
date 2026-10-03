@@ -25,7 +25,7 @@
     no blue/yellow/green from the reference.
 --}}
 @use('Illuminate\Support\Str')
-<x-layouts.public title="Membership Benefits">
+<x-layouts.public title="Membership Types">
     <x-public.hero>
         <x-slot:badge>Membership Categories</x-slot:badge>
         <x-slot:lead>

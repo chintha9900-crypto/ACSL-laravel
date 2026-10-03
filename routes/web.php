@@ -51,6 +51,12 @@ Route::get('about', function () {
 
 Route::get('membership/benefits', [MembershipBenefitsController::class, 'show'])->name('membership.benefits');
 
+// Main-site nav update — a clean, content-free template for future partner
+// information (no real partner names/logos/claims exist anywhere yet).
+Route::get('commercial-partners', function () {
+    return view('commercial-partners');
+})->name('commercial-partners');
+
 Route::get('rules', function () {
     return view('rules');
 })->name('rules');
