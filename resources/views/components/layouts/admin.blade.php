@@ -25,19 +25,45 @@
             <div class="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 lg:px-8">
                 <div class="flex flex-wrap items-center gap-x-6 gap-y-1">
                     <span class="font-display text-lg font-bold">Aviation Club International <span class="font-normal text-primary-foreground/70">Admin</span></span>
+                    {{--
+                        RBAC foundation: every link is wrapped in the same `@can`
+                        check its own page already enforces — hiding a link a role
+                        has no permission for is UX only, never the real gate.
+                    --}}
                     <nav aria-label="Admin" class="flex flex-wrap items-center gap-4">
-                        <a href="{{ route('admin.membership-applications.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Membership applications</a>
-                        <a href="{{ route('admin.payments.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Payments</a>
-                        <a href="{{ route('admin.blog.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Blog posts</a>
-                        <a href="{{ route('admin.blog-categories.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Blog categories</a>
-                        <a href="{{ route('admin.news.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">News</a>
-                        <a href="{{ route('admin.events.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Events</a>
-                        <a href="{{ route('admin.csr.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">CSR projects</a>
-                        <a href="{{ route('admin.commercial-partners.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Commercial partners</a>
-                        <a href="{{ route('admin.products.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Products</a>
-                        <a href="{{ route('admin.product-categories.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Product categories</a>
-                        <a href="{{ route('admin.inventory.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Inventory</a>
-                        <a href="{{ route('admin.orders.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Orders</a>
+                        <a href="{{ route('admin.dashboard') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Dashboard</a>
+                        @can('viewAny', \App\Models\MembershipApplication::class)
+                            <a href="{{ route('admin.membership-applications.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Membership applications</a>
+                        @endcan
+                        @can('viewAny', \App\Models\Payment::class)
+                            <a href="{{ route('admin.payments.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Payments</a>
+                        @endcan
+                        @can('viewAny', \App\Models\BlogPost::class)
+                            <a href="{{ route('admin.blog.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Blog posts</a>
+                            <a href="{{ route('admin.blog-categories.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Blog categories</a>
+                        @endcan
+                        @can('viewAny', \App\Models\NewsItem::class)
+                            <a href="{{ route('admin.news.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">News</a>
+                        @endcan
+                        @can('viewAny', \App\Models\EventListing::class)
+                            <a href="{{ route('admin.events.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Events</a>
+                        @endcan
+                        @can('viewAny', \App\Models\CsrProject::class)
+                            <a href="{{ route('admin.csr.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">CSR projects</a>
+                        @endcan
+                        @can('viewAny', \App\Models\CommercialPartner::class)
+                            <a href="{{ route('admin.commercial-partners.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Commercial partners</a>
+                        @endcan
+                        @can('viewAny', \App\Models\Product::class)
+                            <a href="{{ route('admin.products.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Products</a>
+                            <a href="{{ route('admin.product-categories.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Product categories</a>
+                        @endcan
+                        @can('viewAny', \App\Models\Inventory::class)
+                            <a href="{{ route('admin.inventory.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Inventory</a>
+                        @endcan
+                        @can('viewAny', \App\Models\Order::class)
+                            <a href="{{ route('admin.orders.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Orders</a>
+                        @endcan
                     </nav>
                 </div>
 

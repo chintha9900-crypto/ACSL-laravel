@@ -233,7 +233,7 @@ class MembershipControllerTest extends MysqlTestCase
 
     public function test_a_member_with_no_membership_sees_the_empty_state(): void
     {
-        $this->actingAs($this->admin())
+        $this->actingAs($this->member())
             ->get(route('member.membership.show'))
             ->assertOk()
             ->assertSee('You are not a member yet')

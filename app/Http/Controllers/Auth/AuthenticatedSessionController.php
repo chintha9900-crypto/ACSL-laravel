@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Support\Authorization\RoleRedirect;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,13 @@ class AuthenticatedSessionController extends Controller
     /**
      * Sign a user in. The failure message is deliberately identical for an
      * unknown email, a wrong password, a pending or suspended account.
+     *
+     * The post-login landing page is decided purely from `Auth::user()->role`,
+     * read fresh from the database row behind the new session — never from
+     * anything in `$request`'s own input (a `role` field in the submitted
+     * form, a query parameter, a cookie, etc. has no effect either way).
+     * `intended()` still takes priority when the visitor was redirected here
+     * from a specific protected page.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
@@ -34,7 +42,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended('/');
+        return redirect()->intended(RoleRedirect::homeRouteFor(Auth::user()));
     }
 
     /**

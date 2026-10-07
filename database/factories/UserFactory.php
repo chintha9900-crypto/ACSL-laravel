@@ -30,6 +30,12 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            // Explicit, not left to the column's own default: the database
+            // default is only ever applied to the row, never backfilled onto
+            // this in-memory model after `create()`, so a test that reads
+            // `$user->role` immediately afterwards (e.g. RBAC route tests)
+            // would otherwise see `null` rather than `member`.
+            'role' => 'member',
         ];
     }
 
@@ -63,6 +69,36 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'suspended',
+        ]);
+    }
+
+    /**
+     * RBAC foundation — the admin role.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'admin',
+        ]);
+    }
+
+    /**
+     * RBAC foundation — the editor role.
+     */
+    public function editor(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'editor',
+        ]);
+    }
+
+    /**
+     * RBAC foundation — the dev role.
+     */
+    public function dev(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'dev',
         ]);
     }
 

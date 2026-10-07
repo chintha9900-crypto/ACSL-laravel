@@ -50,15 +50,16 @@ class AuthenticatedSessionControllerTest extends MysqlTestCase
     /**
      * The exact behaviour behind "/login doesn't show the form when I visit
      * it directly": the `guest` middleware redirects an already-authenticated
-     * visitor away (to `/`, bootstrap/app.php's `redirectUsersTo`), by design
-     * — it is not shown a second sign-in form. This is not a bug; logging
-     * out (or clearing the session cookie) restores the guest experience.
+     * visitor away (to their role's own landing page, bootstrap/app.php's
+     * `redirectUsersTo`) — it is not shown a second sign-in form. This is not
+     * a bug; logging out (or clearing the session cookie) restores the guest
+     * experience.
      */
     public function test_an_already_authenticated_user_is_redirected_away_from_login(): void
     {
         $user = User::factory()->active()->create();
 
-        $this->actingAs($user)->get('/login')->assertRedirect('/');
+        $this->actingAs($user)->get('/login')->assertRedirect(route('member.dashboard'));
     }
 
     public function test_guest_is_redirected_to_login_from_a_protected_route(): void
@@ -74,7 +75,7 @@ class AuthenticatedSessionControllerTest extends MysqlTestCase
         $user = User::factory()->active()->create();
 
         $this->post('/login', ['email' => $user->email, 'password' => 'password'])
-            ->assertRedirect('/');
+            ->assertRedirect(route('member.dashboard'));
 
         $this->assertAuthenticatedAs($user);
         $this->get('/_protected')->assertOk()->assertSee('members only');
@@ -171,7 +172,7 @@ class AuthenticatedSessionControllerTest extends MysqlTestCase
     {
         $this->actingAs(User::factory()->active()->create())
             ->get('/login')
-            ->assertRedirect('/');
+            ->assertRedirect(route('member.dashboard'));
     }
 
     public function test_logout_ends_the_session_and_protected_routes_are_locked_again(): void
@@ -199,7 +200,7 @@ class AuthenticatedSessionControllerTest extends MysqlTestCase
         $this->assertNotSame('a-Plain-Text-Secret-1', $stored);
         $this->assertTrue(Hash::check('a-Plain-Text-Secret-1', $stored));
 
-        $this->post('/login', ['email' => $user->email, 'password' => 'a-Plain-Text-Secret-1'])->assertRedirect('/');
+        $this->post('/login', ['email' => $user->email, 'password' => 'a-Plain-Text-Secret-1'])->assertRedirect(route('member.dashboard'));
 
         $this->assertNotSame('a-Plain-Text-Secret-1', User::query()->whereKey($user->id)->value('password'));
     }

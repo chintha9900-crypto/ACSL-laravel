@@ -16,12 +16,28 @@ trait CreatesReviewableApplications
 {
     protected function admin(): User
     {
-        return User::factory()->active()->create(['role' => 'admin']);
+        return User::factory()->active()->admin()->create();
     }
 
     protected function member(): User
     {
         return User::factory()->active()->create();
+    }
+
+    /**
+     * RBAC foundation.
+     */
+    protected function editor(): User
+    {
+        return User::factory()->active()->editor()->create();
+    }
+
+    /**
+     * RBAC foundation.
+     */
+    protected function dev(): User
+    {
+        return User::factory()->active()->dev()->create();
     }
 
     /**

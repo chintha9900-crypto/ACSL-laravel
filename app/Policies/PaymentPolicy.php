@@ -4,30 +4,27 @@ namespace App\Policies;
 
 use App\Models\Payment;
 use App\Models\User;
+use App\Support\Authorization\Ability;
 
 /**
- * A payment is visible to the member it belongs to, or to an active admin.
- * Only an active admin may confirm or reject one.
+ * A payment is visible to the member it belongs to, or to whoever holds the
+ * `payments.review` permission (RBAC foundation) — `admin` and `editor`.
+ * Only a holder of that permission may confirm or reject one.
  */
 class PaymentPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $this->isActiveAdmin($user);
+        return $user->hasPermission(Ability::ReviewPayments);
     }
 
     public function view(User $user, Payment $payment): bool
     {
-        return $this->isActiveAdmin($user) || $payment->user_id === $user->id;
+        return $user->hasPermission(Ability::ReviewPayments) || $payment->user_id === $user->id;
     }
 
     public function review(User $user, Payment $payment): bool
     {
-        return $this->isActiveAdmin($user);
-    }
-
-    private function isActiveAdmin(User $user): bool
-    {
-        return $user->role === 'admin' && $user->status === 'active';
+        return $user->hasPermission(Ability::ReviewPayments);
     }
 }

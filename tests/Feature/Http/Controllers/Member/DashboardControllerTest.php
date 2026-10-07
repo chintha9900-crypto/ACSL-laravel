@@ -167,6 +167,6 @@ class DashboardControllerTest extends MysqlTestCase
 
     public function test_a_user_with_no_membership_gets_a_not_found_response(): void
     {
-        $this->actingAs($this->admin())->get(route('member.dashboard'))->assertNotFound();
+        $this->actingAs($this->member())->get(route('member.dashboard'))->assertNotFound();
     }
 }

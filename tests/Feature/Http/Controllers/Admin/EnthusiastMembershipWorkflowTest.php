@@ -163,7 +163,7 @@ class EnthusiastMembershipWorkflowTest extends MysqlTestCase
         // login attempt away without processing it.
         auth()->logout();
         $this->post('/login', ['email' => 'kasun.silva@example.test', 'password' => 'a-Strong-pass-phrase-1'])
-            ->assertRedirect('/');
+            ->assertRedirect(route('member.dashboard'));
         $this->assertAuthenticatedAs($member);
     }
 

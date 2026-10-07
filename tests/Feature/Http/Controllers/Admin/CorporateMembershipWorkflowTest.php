@@ -193,7 +193,7 @@ class CorporateMembershipWorkflowTest extends MysqlTestCase
 
         auth()->logout();
         $this->post('/login', ['email' => 'priya.fernando@example-airline.test', 'password' => 'a-Strong-pass-phrase-1'])
-            ->assertRedirect('/');
+            ->assertRedirect(route('member.dashboard'));
         $this->assertAuthenticatedAs($member);
     }
 

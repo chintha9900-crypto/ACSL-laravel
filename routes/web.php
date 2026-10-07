@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\BlogCategoryController;
 use App\Http\Controllers\Admin\BlogPostController as AdminBlogPostController;
 use App\Http\Controllers\Admin\CommercialPartnerController as AdminCommercialPartnerController;
 use App\Http\Controllers\Admin\CsrController as AdminCsrController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\InventoryController;
@@ -176,60 +177,63 @@ Route::get('applications/{application}', [ApplicationStatusController::class, 's
 // Named "member.dashboard", not "dashboard": Laravel's guest middleware treats a
 // route literally named "dashboard" as its default post-login redirect target,
 // which would silently change the existing sign-in redirect for every user.
-Route::get('dashboard', [DashboardController::class, 'show'])
-    ->middleware(['auth', 'active'])
-    ->name('member.dashboard');
+//
+// RBAC foundation — member-only, same as the admin group's own `role:` gate:
+// an admin/editor/dev may land on *their* admin dashboard, never this one.
+// `role:member` is coarse, route-level defence in depth; the ownership
+// checks each action already performs (resolving only the signed-in user's
+// own membership/orders/documents/etc., backed by Policies) are unchanged.
+Route::middleware(['auth', 'active', 'role:member'])->group(function () {
+    Route::get('dashboard', [DashboardController::class, 'show'])
+        ->name('member.dashboard');
 
-// "dashboard/profile" does not collide with the "dashboard" auto-redirect (that
-// check matches the exact URI "dashboard", not a prefix) — see the note above.
-Route::get('dashboard/profile', [ProfileController::class, 'show'])
-    ->middleware(['auth', 'active'])
-    ->name('member.profile.show');
-Route::patch('dashboard/profile', [ProfileController::class, 'update'])
-    ->middleware(['auth', 'active'])
-    ->name('member.profile.update');
+    // "dashboard/profile" does not collide with the "dashboard" auto-redirect
+    // (that check matches the exact URI "dashboard", not a prefix) — see the
+    // note above.
+    Route::get('dashboard/profile', [ProfileController::class, 'show'])
+        ->name('member.profile.show');
+    Route::patch('dashboard/profile', [ProfileController::class, 'update'])
+        ->name('member.profile.update');
 
-Route::get('dashboard/membership', [MemberMembershipController::class, 'show'])
-    ->middleware(['auth', 'active'])
-    ->name('member.membership.show');
-Route::post('dashboard/membership/renewal', [RenewalController::class, 'store'])
-    ->middleware(['auth', 'active'])
-    ->name('member.membership.renewal.start');
-Route::post('dashboard/membership/renewal/evidence', [RenewalController::class, 'submitEvidence'])
-    ->middleware(['auth', 'active'])
-    ->name('member.membership.renewal.evidence');
-Route::get('dashboard/membership/card', [MembershipCardController::class, 'show'])
-    ->middleware(['auth', 'active'])
-    ->name('member.membership.card');
+    Route::get('dashboard/membership', [MemberMembershipController::class, 'show'])
+        ->name('member.membership.show');
+    Route::post('dashboard/membership/renewal', [RenewalController::class, 'store'])
+        ->name('member.membership.renewal.start');
+    Route::post('dashboard/membership/renewal/evidence', [RenewalController::class, 'submitEvidence'])
+        ->name('member.membership.renewal.evidence');
+    Route::get('dashboard/membership/card', [MembershipCardController::class, 'show'])
+        ->name('member.membership.card');
 
-Route::get('dashboard/documents/{document}', [MemberDocumentController::class, 'show'])
-    ->middleware(['auth', 'active'])
-    ->name('member.documents.show');
+    Route::get('dashboard/documents/{document}', [MemberDocumentController::class, 'show'])
+        ->name('member.documents.show');
 
-Route::get('dashboard/security', [SecurityController::class, 'show'])
-    ->middleware(['auth', 'active'])
-    ->name('member.security.show');
-// Same throttle as forgot-password/reset-password: a sensitive action that takes
-// a password guess as input must not be brute-forceable.
-Route::patch('dashboard/security', [SecurityController::class, 'update'])
-    ->middleware(['auth', 'active', 'throttle:6,1'])
-    ->name('member.security.update');
+    Route::get('dashboard/security', [SecurityController::class, 'show'])
+        ->name('member.security.show');
+    // Same throttle as forgot-password/reset-password: a sensitive action that
+    // takes a password guess as input must not be brute-forceable.
+    Route::patch('dashboard/security', [SecurityController::class, 'update'])
+        ->middleware('throttle:6,1')
+        ->name('member.security.update');
 
-Route::get('dashboard/orders', [MemberOrderController::class, 'index'])
-    ->middleware(['auth', 'active'])
-    ->name('member.orders.index');
+    Route::get('dashboard/orders', [MemberOrderController::class, 'index'])
+        ->name('member.orders.index');
 
-Route::get('dashboard/notifications', [NotificationController::class, 'show'])
-    ->middleware(['auth', 'active'])
-    ->name('member.notifications.show');
-Route::post('dashboard/notifications/read-all', [NotificationController::class, 'markAllRead'])
-    ->middleware(['auth', 'active'])
-    ->name('member.notifications.mark-all-read');
-Route::post('dashboard/notifications/{notification}/read', [NotificationController::class, 'markRead'])
-    ->middleware(['auth', 'active'])
-    ->name('member.notifications.mark-read');
+    Route::get('dashboard/notifications', [NotificationController::class, 'show'])
+        ->name('member.notifications.show');
+    Route::post('dashboard/notifications/read-all', [NotificationController::class, 'markAllRead'])
+        ->name('member.notifications.mark-all-read');
+    Route::post('dashboard/notifications/{notification}/read', [NotificationController::class, 'markRead'])
+        ->name('member.notifications.mark-read');
+});
 
-Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(function () {
+// RBAC foundation — admin/editor/dev all sign in through the one public
+// login page and land here; `role` is coarse, route-level defence in depth
+// (member and any unrecognised role never reach a single admin controller),
+// not a replacement for each action's own Policy check below, which is what
+// actually distinguishes what admin/editor/dev may each do here.
+Route::middleware(['auth', 'active', 'role:admin,editor,dev'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [AdminDashboardController::class, 'show'])->name('dashboard');
+
     Route::get('membership-applications', [AdminMembershipApplicationController::class, 'index'])
         ->name('membership-applications.index');
     Route::get('membership-applications/{application}', [AdminMembershipApplicationController::class, 'show'])
