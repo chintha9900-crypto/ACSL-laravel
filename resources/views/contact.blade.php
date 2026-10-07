@@ -73,7 +73,7 @@
                     <form method="POST" action="{{ route('contact.store') }}" class="mt-6 space-y-5">
                         @csrf
 
-                        <x-form.input name="name" label="Name" autocomplete="name" maxlength="160" />
+                        <x-form.input name="name" label="Name" autocomplete="name" maxlength="150" />
 
                         <div class="grid gap-4 md:grid-cols-2">
                             <x-form.input name="email" label="Email" type="email" autocomplete="email" maxlength="255" />
@@ -83,6 +83,14 @@
                         <x-form.input name="subject" label="Subject" maxlength="200" />
 
                         <x-form.input name="message" label="Message" type="textarea" rows="5" maxlength="5000" />
+
+                        @if (config('services.recaptcha.site_key'))
+                            <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                            <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}"></div>
+                        @endif
+                        @error('g-recaptcha-response')
+                            <p class="text-xs text-[#CC001F]" role="alert">{{ $message }}</p>
+                        @enderror
 
                         <div class="flex flex-col gap-3 sm:flex-row">
                             <button type="submit" class="btn btn-lg btn-brand flex-1">Submit</button>

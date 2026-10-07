@@ -5,11 +5,15 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * The General Inquiry form on the public Contact page. Phone reuses the same
- * validated format as the membership application's mobile field; it is
- * optional here (no confirmed requirement that it be mandatory). Message's
- * 5000-character limit matches the one already documented for this form
- * (docs/frontend/03_PUBLIC_PAGES.md §A14), not an invented figure.
+ * The General Inquiry form on the public Contact page. Phone is optional
+ * (confirmed decision); subject is required (confirmed decision). The name
+ * limit matches the documented `contact_enquiries.name` column (VARCHAR(150)).
+ * Message's 5000-character limit matches the one already documented for this
+ * form (docs/frontend/03_PUBLIC_PAGES.md §A14).
+ *
+ * The reCAPTCHA token is not validated here: it is verified server-side by
+ * `Actions\Contact\VerifyRecaptchaToken` in the controller, so that
+ * environment-dependent behaviour lives in one place.
  */
 class StoreContactEnquiryRequest extends FormRequest
 {
@@ -24,7 +28,7 @@ class StoreContactEnquiryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:160'],
+            'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'string', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s().-]{5,38}[0-9]$/'],
             'subject' => ['required', 'string', 'max:200'],

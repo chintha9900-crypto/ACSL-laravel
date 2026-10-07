@@ -177,7 +177,7 @@ Index: `UNIQUE(email)`. The legacy lacked a public self-unsubscribe path; a sign
 | `name` | VARCHAR(150) | N | — | |
 | `email` | VARCHAR(255) | N | — | |
 | `phone` | VARCHAR(40) | Y | NULL | |
-| `subject` | VARCHAR(255) | Y | NULL | |
+| `subject` | VARCHAR(255) | N | — | Required on the form (confirmed business decision). |
 | `message` | TEXT | N | — | length via Form Request (legacy ≤ 5000) |
 | `status` | VARCHAR(20) | N | `'new'` | `new`, `replied`, `closed` (enum only) |
 | `handled_by_user_id` | BIGINT UNSIGNED | Y | NULL | FK → `users` RESTRICT — admin who last set the status |
