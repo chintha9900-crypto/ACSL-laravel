@@ -2,6 +2,7 @@
 
 namespace App\Actions\Membership;
 
+use App\Http\Requests\Membership\StoreMembershipApplicationRequest;
 use App\Models\Document;
 use App\Models\MembershipApplication;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -54,7 +55,7 @@ class SubmitMembershipApplication
             if ($exception instanceof UniqueConstraintViolationException
                 && str_contains($exception->getMessage(), 'open_email_key')) {
                 throw ValidationException::withMessages([
-                    'email' => 'An application or membership already exists for this email address. If you need help, please contact ACI.',
+                    'email' => StoreMembershipApplicationRequest::EMAIL_UNAVAILABLE_MESSAGE,
                 ]);
             }
 

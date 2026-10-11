@@ -2,17 +2,27 @@
 
 namespace Tests\Feature\Http\Controllers\Membership;
 
+use App\Actions\Membership\StoreProofDocument;
+use App\Actions\Membership\SubmitMembershipApplication;
+use App\Http\Controllers\Membership\MembershipApplicationController;
+use App\Http\Requests\Membership\StoreMembershipApplicationRequest;
 use App\Models\Document;
 use App\Models\MembershipApplication;
 use App\Models\MembershipCategory;
 use App\Models\User;
+use App\Notifications\Membership\ApplicationSubmitted;
 use DOMDocument;
 use DOMXPath;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
+use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use Tests\Concerns\CreatesMembershipRecords;
 use Tests\Concerns\CreatesUploads;
 use Tests\MysqlTestCase;
@@ -243,11 +253,11 @@ class MembershipApplicationControllerTest extends MysqlTestCase
     {
         $this->professional();
 
-        // This is exactly what the page's JS produces before submitting —
-        // the `mobile` field/validation/storage are otherwise untouched.
+        // This is exactly what the page's JS produces before submitting; it is
+        // stored standardised to E.164.
         $this->submit($this->payload(['mobile' => '+94 77 123 4567']))->assertSessionHasNoErrors();
 
-        $this->assertSame('+94 77 123 4567', MembershipApplication::query()->firstOrFail()->mobile);
+        $this->assertSame('+94771234567', MembershipApplication::query()->firstOrFail()->mobile);
     }
 
     public function test_page_is_one_form_offering_every_active_category_as_a_radio_choice(): void
@@ -657,10 +667,11 @@ class MembershipApplicationControllerTest extends MysqlTestCase
     // --- confirmation page ----------------------------------------------------
 
     /**
-     * The confirmation page shows only the plain success message now
-     * (explicit instruction) — no reference, category note or buttons.
+     * The confirmation page shows the success message, the review/notification
+     * explanation and the application reference — and nothing else about the
+     * application (no status link, no applicant details, no buttons).
      */
-    public function test_submission_redirects_to_a_signed_confirmation_showing_only_the_success_message(): void
+    public function test_submission_redirects_to_a_signed_confirmation_showing_the_success_message_and_reference(): void
     {
         $this->professional();
 
@@ -673,8 +684,16 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
         $this->get($location)
             ->assertOk()
-            ->assertSee('Your application was successfully submitted. We will get back to you soon.')
-            ->assertDontSee($application->public_id)
+            ->assertSee('Your application for Professional membership has been successfully submitted. The Aviation Club team will get back to you soon.')
+            ->assertSee('awaiting review')
+            ->assertSee('We will notify you by email of the outcome')
+            ->assertSee('Application reference')
+            ->assertSee($application->public_id)
+            ->assertDontSee('Nimal Perera')
+            ->assertDontSee('nimal.perera@example.test')
+            ->assertDontSee('+94771234567')
+            ->assertDontSee('12 Airport Road')
+            ->assertDontSee('employment-letter.pdf')
             ->assertDontSee('does not create a member account')
             ->assertDontSee('View application status')
             ->assertDontSee('Submit another application');
@@ -850,13 +869,13 @@ class MembershipApplicationControllerTest extends MysqlTestCase
         $application = MembershipApplication::query()->firstOrFail();
         $this->assertSame('Priya Fernando', $application->full_name);
         $this->assertSame('priya.fernando@example-airline.test', $application->email);
-        $this->assertSame('+94 77 555 1234', $application->mobile);
+        $this->assertSame('+94775551234', $application->mobile);
         $this->assertSame('1 Airport Way, Katunayake', $application->address);
         $this->assertSame('Airline', $application->aviation_role);
         $this->assertSame('Head of HR', $application->aviation_organisation);
         $this->assertSame('Example Airline (Pvt) Ltd', $application->company_name);
         $this->assertSame('info@example-airline.test', $application->company_email);
-        $this->assertSame('+94 11 234 5678', $application->company_phone);
+        $this->assertSame('+94112345678', $application->company_phone);
         $this->assertSame('https://example-airline.test', $application->company_website);
 
         $document = Document::query()->where('membership_application_id', $application->id)->firstOrFail();
@@ -1021,5 +1040,774 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
         $this->assertCheckedCategories(['E'], $this->get('/membership/apply?category=enthusiast')->getContent());
         $this->assertCheckedCategories(['C'], $this->get('/membership/apply?category=corporate')->getContent());
+    }
+
+    // --- submission hardening: email ------------------------------------------
+
+    /**
+     * A valid Student application payload.
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function studentPayload(array $overrides = []): array
+    {
+        return $this->payload([
+            'category' => MembershipCategory::CODE_STUDENT,
+            'aviation_role' => 'Commercial Pilot Licence',
+            'aviation_organisation' => 'Example Flight Academy',
+            'study_start_date' => '2026-01-10',
+            'expected_completion_date' => '2027-06-30',
+            ...$overrides,
+        ]);
+    }
+
+    public function test_valid_student_application_is_saved_and_redirects_to_the_confirmation(): void
+    {
+        Notification::fake();
+        $category = MembershipCategory::factory()->student()->create();
+
+        $response = $this->submit($this->studentPayload());
+
+        $application = MembershipApplication::query()->firstOrFail();
+        $response->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertStringContainsString('/membership/apply/submitted/'.$application->public_id, $response->headers->get('Location'));
+        $this->assertSame($category->id, $application->membership_category_id);
+        $this->assertSame('submitted', $application->status);
+        $this->assertSame('nimal.perera@example.test', $application->email);
+        $this->assertSame('+94771234567', $application->mobile);
+        $this->assertSame('2026-01-10', $application->study_start_date->toDateString());
+        $this->assertSame(1, $this->tableCount('documents'));
+        $this->assertSame(0, $this->tableCount('users'));
+        $this->assertSame(0, $this->tableCount('memberships'));
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function malformedEmails(): array
+    {
+        return [
+            'no domain dot' => ['john@gmail'],
+            'single label' => ['a@b'],
+            'double at' => ['john@@example.com'],
+            'no at' => ['john.example.com'],
+            'spaces' => ['john smith@example.com'],
+        ];
+    }
+
+    #[DataProvider('malformedEmails')]
+    public function test_malformed_email_is_rejected_with_a_clear_message(string $email): void
+    {
+        $this->professional();
+
+        $this->submit($this->payload(['email' => $email]))
+            ->assertSessionHasErrors(['email' => 'Enter a valid email address, for example name@example.com.']);
+
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function accountRoles(): array
+    {
+        return [
+            'member' => ['active'],
+            'admin' => ['admin'],
+            'editor' => ['editor'],
+            'dev' => ['dev'],
+        ];
+    }
+
+    /**
+     * Activation never reuses an existing account, so an application for such
+     * an email would be accepted only to fail at activation. It is refused at
+     * submission instead, whatever the account's role.
+     */
+    #[DataProvider('accountRoles')]
+    public function test_email_of_an_existing_account_without_a_membership_cannot_apply(string $state): void
+    {
+        Notification::fake();
+        $this->professional();
+        User::factory()->{$state}()->create(['email' => 'nimal.perera@example.test']);
+
+        $this->submit($this->payload(['email' => 'NIMAL.Perera@Example.TEST']))
+            ->assertSessionHasErrors(['email' => StoreMembershipApplicationRequest::EMAIL_UNAVAILABLE_MESSAGE]);
+
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+        $this->assertSame(0, $this->tableCount('documents'));
+        $this->assertSame(1, $this->tableCount('users'));
+        $this->assertSame([], Storage::disk('private')->allFiles());
+        Notification::assertNothingSent();
+    }
+
+    public function test_existing_account_check_applies_to_enthusiast_and_corporate_too(): void
+    {
+        $this->enthusiast();
+        $this->corporate();
+        User::factory()->active()->create(['email' => 'kasun.silva@example.test']);
+        User::factory()->active()->create(['email' => 'priya.fernando@example-airline.test']);
+
+        $this->submit($this->enthusiastPayload())->assertSessionHasErrors('email');
+        $this->submit($this->corporatePayload())->assertSessionHasErrors('email');
+
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+    }
+
+    /**
+     * The same neutral message for an existing account, an existing
+     * membership and an open application: the form never reveals which.
+     */
+    public function test_every_blocked_email_gets_the_same_neutral_message(): void
+    {
+        $category = $this->professional();
+        User::factory()->active()->create(['email' => 'account.only@example.test']);
+        $this->createMembershipFor(User::factory()->active()->create(['email' => 'member@example.test']));
+        MembershipApplication::factory()->for($category, 'category')->create(['email' => 'open.application@example.test']);
+
+        foreach (['account.only@example.test', 'member@example.test', 'open.application@example.test'] as $email) {
+            $errors = $this->submit($this->payload(['email' => $email]))->assertSessionHasErrors('email')
+                ->baseResponse->getSession()->get('errors')->get('email');
+
+            $this->assertSame([StoreMembershipApplicationRequest::EMAIL_UNAVAILABLE_MESSAGE], $errors, $email);
+        }
+
+        $message = StoreMembershipApplicationRequest::EMAIL_UNAVAILABLE_MESSAGE;
+        $this->assertStringNotContainsString('An account already exists', $message);
+        $this->assertStringContainsString('sign in or contact ACI', $message);
+    }
+
+    public function test_blocked_email_message_is_shown_beside_the_email_field_with_other_input_kept(): void
+    {
+        $this->professional();
+        User::factory()->active()->create(['email' => 'nimal.perera@example.test']);
+
+        $this->from(route('membership.apply'))
+            ->followingRedirects()
+            ->submit($this->payload())
+            ->assertOk()
+            ->assertSee('We cannot accept a new application with this email address.')
+            ->assertSee('value="Nimal Perera"', false)
+            ->assertSee('value="Nimal.Perera@Example.Test"', false)
+            ->assertDontSee('An account already exists');
+    }
+
+    public function test_the_concurrent_duplicate_backstop_uses_the_same_neutral_message(): void
+    {
+        $category = $this->professional();
+        $existing = MembershipApplication::factory()->for($category, 'category')->create(['email' => 'nimal.perera@example.test']);
+
+        try {
+            app(SubmitMembershipApplication::class)->handle([
+                'membership_category_id' => $category->id,
+                'full_name' => 'Nimal Perera',
+                'email' => $existing->email,
+                'mobile' => '+94771234567',
+                'address' => '12 Airport Road, Colombo',
+                'aviation_role' => 'First Officer',
+                'aviation_organisation' => 'Example Airlines',
+            ], [$this->pdf()]);
+            $this->fail('A concurrent duplicate must be refused.');
+        } catch (ValidationException $exception) {
+            $this->assertSame([StoreMembershipApplicationRequest::EMAIL_UNAVAILABLE_MESSAGE], $exception->errors()['email']);
+        }
+
+        $this->assertSame(1, $this->tableCount('membership_applications'));
+        $this->assertSame([], Storage::disk('private')->allFiles());
+    }
+
+    // --- submission hardening: phone numbers ----------------------------------
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function phoneNumbersWithoutCountryCode(): array
+    {
+        return [
+            'local with trunk zero' => ['0771234567'],
+            'national without zero' => ['77 123 4567'],
+            'double zero prefix' => ['0094771234567'],
+        ];
+    }
+
+    #[DataProvider('phoneNumbersWithoutCountryCode')]
+    public function test_phone_number_without_an_international_country_code_is_rejected(string $mobile): void
+    {
+        $this->professional();
+
+        $this->submit($this->payload(['mobile' => $mobile]))->assertSessionHasErrors([
+            'mobile' => 'Enter the mobile number with its international country code, starting with + (for example +94 77 123 4567).',
+        ]);
+
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function invalidInternationalPhoneNumbers(): array
+    {
+        return [
+            'too short' => ['+94 77'],
+            'too long' => ['+94 7712345678901234'],
+            'country code starting with zero' => ['+0 771234567'],
+            'letters' => ['+94 77 CALL ME'],
+            'extension text' => ['+94 77 123 4567 ext 2'],
+            'two plus signs' => ['++94 77 123 4567'],
+            'mostly punctuation' => ['+94 12-----34'],
+        ];
+    }
+
+    #[DataProvider('invalidInternationalPhoneNumbers')]
+    public function test_invalid_international_phone_number_is_rejected(string $mobile): void
+    {
+        $this->professional();
+
+        $this->submit($this->payload(['mobile' => $mobile]))->assertSessionHasErrors([
+            'mobile' => 'Enter a valid mobile number in international format, for example +94 77 123 4567.',
+        ]);
+
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function trunkZeroPhoneNumbers(): array
+    {
+        return [
+            'zero after country code' => ['+94 077 123 4567'],
+            'bracketed zero' => ['+44 (0)20 7946 0958'],
+        ];
+    }
+
+    #[DataProvider('trunkZeroPhoneNumbers')]
+    public function test_ambiguous_trunk_zero_after_the_country_code_is_rejected(string $mobile): void
+    {
+        $this->professional();
+
+        $this->submit($this->payload(['mobile' => $mobile]))->assertSessionHasErrors([
+            'mobile' => 'Remove the leading 0 after the country code from the mobile number (for example +94 77 123 4567, not +94 077 123 4567).',
+        ]);
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function phoneNumbersToStandardise(): array
+    {
+        return [
+            'spaced' => ['+94 77 123 4567', '+94771234567'],
+            'punctuated' => ['+94 (77) 123-4567', '+94771234567'],
+            'dotted' => ['+1.202.555.0143', '+12025550143'],
+            'already E.164' => ['+447946095800', '+447946095800'],
+            'unseparated London' => ['+442079460958', '+442079460958'],
+            'Italy keeps its leading zero' => ['+39 06 1234 5678', '+390612345678'],
+        ];
+    }
+
+    #[DataProvider('phoneNumbersToStandardise')]
+    public function test_valid_phone_numbers_are_stored_in_e164_format(string $mobile, string $expected): void
+    {
+        $this->professional();
+
+        $this->submit($this->payload(['mobile' => $mobile]))->assertSessionHasNoErrors();
+
+        $this->assertSame($expected, MembershipApplication::query()->firstOrFail()->mobile);
+    }
+
+    /**
+     * @return array<string, array{string, mixed}>
+     */
+    public static function nonStringPhoneValues(): array
+    {
+        return [
+            'mobile as array' => ['mobile', ['+94771234567']],
+            'mobile as nested array' => ['mobile', [['+94771234567']]],
+            'company phone as array' => ['company_phone', ['+94112345678']],
+        ];
+    }
+
+    /**
+     * A crafted non-string value must be a plain validation error — never a
+     * PHP "Array to string conversion" warning turned into a 500.
+     */
+    #[DataProvider('nonStringPhoneValues')]
+    public function test_a_non_string_phone_value_is_rejected_safely(string $field, mixed $value): void
+    {
+        $this->corporate();
+
+        $this->from(route('membership.apply'))
+            ->submit($this->corporatePayload([$field => $value]))
+            ->assertRedirect(route('membership.apply'))
+            ->assertSessionHasErrors([$field => 'The '.($field === 'mobile' ? 'mobile' : 'company phone').' field must be a string.']);
+
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+    }
+
+    // --- submission hardening: Unicode email addresses ------------------------
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function unicodeEmails(): array
+    {
+        return [
+            'accented local part' => ['josé.pérez@example.com', 'josé.pérez@example.com'],
+            'accented local part, upper case' => ['JOSÉ@Example.com', 'josé@example.com'],
+            'non-Latin local part' => ['用户@example.com', '用户@example.com'],
+            'internationalised domain in punycode' => ['user@xn--exmple-cua.com', 'user@xn--exmple-cua.com'],
+        ];
+    }
+
+    #[DataProvider('unicodeEmails')]
+    public function test_unicode_email_addresses_are_accepted(string $email, string $stored): void
+    {
+        $this->professional();
+
+        $this->submit($this->payload(['email' => $email]))->assertSessionHasNoErrors();
+
+        $this->assertSame($stored, MembershipApplication::query()->firstOrFail()->email);
+    }
+
+    /**
+     * PHP's address filter (behind Laravel's `filter`/`filter_unicode`) does
+     * not accept a domain written in Unicode; such a domain must be entered in
+     * its punycode form (accepted above). Rejected with the clear message.
+     */
+    public function test_an_internationalised_domain_written_in_unicode_is_rejected_clearly(): void
+    {
+        $this->professional();
+
+        $this->submit($this->payload(['email' => 'user@exämple.com']))
+            ->assertSessionHasErrors(['email' => 'Enter a valid email address, for example name@example.com.']);
+    }
+
+    public function test_corporate_company_email_accepts_a_unicode_local_part(): void
+    {
+        $this->corporate();
+
+        $this->submit($this->corporatePayload(['company_email' => 'información@example-airline.test']))->assertSessionHasNoErrors();
+
+        $this->assertSame('información@example-airline.test', MembershipApplication::query()->firstOrFail()->company_email);
+    }
+
+    // --- Corporate submission blockers ----------------------------------------
+
+    /**
+     * Regression: the Company Website field was `type="url"`, so the browser
+     * refused to submit a Corporate application whose website was typed
+     * without a scheme ("www.…") — the POST never reached the server.
+     */
+    public function test_corporate_company_website_field_does_not_block_submission_in_the_browser(): void
+    {
+        $this->corporate();
+
+        $html = $this->get('/membership/apply?category=corporate')->assertOk()->getContent();
+        $website = $this->xpath($html)->query('//input[@name="company_website"]')->item(0);
+
+        $this->assertNotNull($website);
+        $this->assertNotSame('url', $website->getAttribute('type'));
+        $this->assertSame('url', $website->getAttribute('inputmode'));
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function companyWebsitesWithoutScheme(): array
+    {
+        return [
+            'www domain' => ['www.example-airline.lk', 'https://www.example-airline.lk'],
+            'bare domain' => ['example-airline.lk', 'https://example-airline.lk'],
+            'with path and spaces' => ['  example-airline.lk/about  ', 'https://example-airline.lk/about'],
+        ];
+    }
+
+    #[DataProvider('companyWebsitesWithoutScheme')]
+    public function test_corporate_company_website_without_a_scheme_is_accepted_as_https(string $typed, string $stored): void
+    {
+        $this->corporate();
+
+        $this->submit($this->corporatePayload(['company_website' => $typed]))->assertSessionHasNoErrors()->assertRedirect();
+
+        $this->assertSame($stored, MembershipApplication::query()->firstOrFail()->company_website);
+    }
+
+    public function test_corporate_company_website_keeps_an_explicit_scheme_and_still_rejects_invalid_values(): void
+    {
+        $this->corporate();
+
+        $this->submit($this->corporatePayload(['company_website' => 'not a website']))->assertSessionHasErrors('company_website');
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+
+        $this->submit($this->corporatePayload(['company_website' => 'http://example-airline.lk']))->assertSessionHasNoErrors();
+        $this->assertSame('http://example-airline.lk', MembershipApplication::query()->firstOrFail()->company_website);
+    }
+
+    /**
+     * Regression: the upload inputs are visually hidden (1x1), so a missing
+     * document made the browser block submission with an invisible bubble.
+     * The widget must surface the message itself.
+     */
+    public function test_a_missing_upload_is_reported_visibly_by_the_upload_widget(): void
+    {
+        $this->corporate();
+
+        $html = $this->get('/membership/apply?category=corporate')->assertOk()->getContent();
+
+        $this->assertSame(2, $this->xpath($html)->query('//*[@data-proof-widget]//input[@type="file"][@data-proof-upload]')->length);
+        $this->assertStringContainsString("proof.addEventListener('invalid', function () {", $html);
+        $this->assertStringContainsString('fileList.textContent = proof.validationMessage', $html);
+        $this->assertStringContainsString("widget.scrollIntoView({ block: 'center' });", $html);
+    }
+
+    public function test_corporate_company_phone_follows_the_same_international_rules(): void
+    {
+        $this->corporate();
+
+        $this->submit($this->corporatePayload(['company_phone' => '011 234 5678']))->assertSessionHasErrors([
+            'company_phone' => 'Enter the company phone number with its international country code, starting with + (for example +94 77 123 4567).',
+        ]);
+
+        $this->submit($this->corporatePayload(['company_phone' => '+94 (11) 234-5678']))->assertSessionHasNoErrors();
+        $this->assertSame('+94112345678', MembershipApplication::query()->firstOrFail()->company_phone);
+    }
+
+    /**
+     * Phone numbers carry no uniqueness rule (docs/database/04): a number
+     * already used on another application does not block a new one.
+     */
+    public function test_a_phone_number_already_used_on_another_application_is_accepted(): void
+    {
+        $category = $this->professional();
+        MembershipApplication::factory()->for($category, 'category')->create([
+            'email' => 'someone.else@example.test',
+            'mobile' => '+94771234567',
+        ]);
+
+        $this->submit($this->payload(['mobile' => '+94 77 123 4567']))->assertSessionHasNoErrors();
+
+        $this->assertSame(2, MembershipApplication::query()->where('mobile', '+94771234567')->count());
+    }
+
+    public function test_the_country_code_widget_drops_a_typed_trunk_zero_except_for_italy(): void
+    {
+        $this->professional();
+
+        $html = $this->get('/membership/apply')->assertOk()->getContent();
+
+        $this->assertStringContainsString("if (code !== '+39') { number = number.replace(/^0+/, ''); }", $html);
+    }
+
+    // --- submission hardening: uploads, failures and duplicates ---------------
+
+    public function test_a_document_that_failed_to_upload_reports_a_clear_message(): void
+    {
+        $this->professional();
+        $failed = new UploadedFile($this->pdf()->getRealPath(), 'big.pdf', 'application/pdf', UPLOAD_ERR_INI_SIZE, true);
+
+        $this->submit($this->payload(['proof_documents' => [$failed]]))->assertSessionHasErrors([
+            'proof_documents.0' => 'A document could not be uploaded. Please check its size and try again.',
+        ]);
+
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+    }
+
+    public function test_the_form_asks_for_documents_again_after_it_is_returned_with_errors(): void
+    {
+        $this->professional();
+
+        $this->get('/membership/apply')->assertDontSee('Please attach your documents again.');
+
+        $this->from(route('membership.apply'))
+            ->followingRedirects()
+            ->submit($this->payload(['mobile' => '0771234567']))
+            ->assertOk()
+            ->assertSee('Please attach your documents again.');
+    }
+
+    public function test_a_save_failure_returns_to_the_form_with_an_explanation_and_saves_nothing(): void
+    {
+        Notification::fake();
+        Exceptions::fake();
+        $this->professional();
+        $this->mock(StoreProofDocument::class)
+            ->shouldReceive('handle')
+            ->andThrow(new RuntimeException('Disk unavailable'));
+
+        $response = $this->from(route('membership.apply'))->submit($this->payload());
+
+        $response->assertRedirect(route('membership.apply'))
+            ->assertSessionHasErrors(['submission' => MembershipApplicationController::SAVE_FAILED_MESSAGE])
+            ->assertSessionHasInput('full_name', 'Nimal Perera');
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+        $this->assertSame(0, $this->tableCount('documents'));
+        $this->assertSame(0, $this->tableCount('membership_status_history'));
+        $this->assertSame(0, DB::table('audit_logs')->where('event', 'membership_application.submitted')->count());
+        Notification::assertNothingSent();
+        Exceptions::assertReported(RuntimeException::class);
+
+        $this->get(route('membership.apply'))
+            ->assertOk()
+            ->assertSee('Sorry, we could not save your application, so it has not been submitted.')
+            ->assertDontSee('Please correct the highlighted fields')
+            ->assertDontSee('submitted successfully');
+    }
+
+    public function test_a_database_failure_while_saving_is_rolled_back_and_explained(): void
+    {
+        Notification::fake();
+        Exceptions::fake();
+        $this->professional();
+
+        // The application row and its document are written, then the status
+        // history insert fails — the whole submission must roll back.
+        DB::listen(function (QueryExecuted $query): void {
+            if (str_starts_with($query->sql, 'insert into `membership_status_history`')) {
+                throw new RuntimeException('Simulated database failure');
+            }
+        });
+
+        $this->from(route('membership.apply'))
+            ->submit($this->payload())
+            ->assertRedirect(route('membership.apply'))
+            ->assertSessionHasErrors(['submission' => MembershipApplicationController::SAVE_FAILED_MESSAGE]);
+
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+        $this->assertSame(0, $this->tableCount('documents'));
+        $this->assertSame([], Storage::disk('private')->allFiles());
+        Notification::assertNothingSent();
+    }
+
+    public function test_an_email_failure_after_saving_still_shows_success_and_saves_once(): void
+    {
+        $this->professional();
+        Notification::shouldReceive('route')->andThrow(new RuntimeException('SMTP down'));
+
+        $location = $this->submit($this->payload())
+            ->assertSessionHasNoErrors()
+            ->assertRedirect()
+            ->headers->get('Location');
+
+        $this->assertStringContainsString('/membership/apply/submitted/', $location);
+        $this->assertSame(1, $this->tableCount('membership_applications'));
+        $this->assertSame(1, $this->tableCount('documents'));
+    }
+
+    public function test_an_oversized_request_returns_to_the_form_with_a_clear_message(): void
+    {
+        $this->professional();
+        $tooLarge = (string) (100 * 1024 * 1024 * 1024);
+
+        $this->call('POST', route('membership.apply.store'), [], [], [], ['CONTENT_LENGTH' => $tooLarge])
+            ->assertRedirect(route('membership.apply', ['upload' => 'too-large']));
+
+        $this->get(route('membership.apply', ['upload' => 'too-large']))
+            ->assertOk()
+            ->assertSee(MembershipApplicationController::REQUEST_TOO_LARGE_MESSAGE);
+        $this->get(route('membership.apply'))->assertDontSee(MembershipApplicationController::REQUEST_TOO_LARGE_MESSAGE);
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+    }
+
+    public function test_an_oversized_request_elsewhere_keeps_the_default_response(): void
+    {
+        $this->call('POST', '/login', [], [], [], ['CONTENT_LENGTH' => (string) (100 * 1024 * 1024 * 1024)])
+            ->assertStatus(413);
+    }
+
+    public function test_submitting_the_same_application_twice_saves_it_only_once(): void
+    {
+        Notification::fake();
+        $this->professional();
+
+        $first = $this->submit($this->payload())->assertSessionHasNoErrors()->assertRedirect();
+        $this->submit($this->payload())
+            ->assertSessionHasErrors(['email' => StoreMembershipApplicationRequest::EMAIL_UNAVAILABLE_MESSAGE]);
+
+        $this->assertSame(1, $this->tableCount('membership_applications'));
+        $this->assertSame(1, $this->tableCount('documents'));
+        Notification::assertSentOnDemandTimes(ApplicationSubmitted::class, 1);
+
+        // Refreshing the confirmation page re-reads it; it never re-submits.
+        $location = $first->headers->get('Location');
+        $this->get($location)->assertOk();
+        $this->get($location)->assertOk();
+        $this->assertSame(1, $this->tableCount('membership_applications'));
+    }
+
+    public function test_the_submit_button_is_guarded_against_a_double_click(): void
+    {
+        $this->professional();
+
+        $html = $this->get('/membership/apply')->assertOk()->getContent();
+
+        $this->assertSame(1, $this->xpath($html)->query('//form[@id="application-form"]//button[@type="submit"][@data-submit-button]')->length);
+        $this->assertStringContainsString('if (submitting) {', $html);
+        $this->assertStringContainsString('submitButton.disabled = true;', $html);
+        $this->assertStringContainsString("window.addEventListener('pageshow'", $html);
+    }
+
+    public function test_corporate_representative_phone_is_repopulated_after_a_validation_error(): void
+    {
+        $this->corporate();
+
+        $html = $this->from(route('membership.apply'))
+            ->followingRedirects()
+            ->submit($this->corporatePayload(['company_name' => '']))
+            ->assertOk()
+            ->getContent();
+
+        $combined = $this->xpath($html)->query('//input[@data-mobile-combined]');
+        $this->assertSame(2, $combined->length);
+        foreach ($combined as $input) {
+            $this->assertSame('+94 77 555 1234', $input->getAttribute('value'));
+        }
+    }
+
+    // --- submission hardening: privacy of the confirmation --------------------
+
+    public function test_a_confirmation_link_cannot_be_altered_to_show_another_application(): void
+    {
+        $category = $this->professional();
+        $other = MembershipApplication::factory()->for($category, 'category')->create(['email' => 'other.person@example.test']);
+
+        $location = $this->submit($this->payload())->headers->get('Location');
+        $mine = MembershipApplication::query()->where('email', 'nimal.perera@example.test')->firstOrFail();
+
+        $this->get(str_replace($mine->public_id, $other->public_id, $location))
+            ->assertForbidden()
+            ->assertDontSee($other->public_id);
+        $this->get(route('membership.apply.submitted', $other))->assertForbidden();
+    }
+
+    // --- category-specific confirmation, email error placement, form script ----
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function categoryConfirmations(): array
+    {
+        return [
+            'student' => [MembershipCategory::CODE_STUDENT, 'Student'],
+            'professional' => [MembershipCategory::CODE_PROFESSIONAL, 'Professional'],
+            'veteran' => [MembershipCategory::CODE_VETERAN, 'Veteran Aviation Professional'],
+            'enthusiast' => [MembershipCategory::CODE_ENTHUSIAST, 'Aviation Enthusiast'],
+            'corporate' => [MembershipCategory::CODE_CORPORATE, 'Corporate'],
+        ];
+    }
+
+    #[DataProvider('categoryConfirmations')]
+    public function test_a_saved_application_redirects_to_the_confirmation_naming_its_category(string $code, string $label): void
+    {
+        $payload = match ($code) {
+            MembershipCategory::CODE_STUDENT => $this->studentPayload(),
+            MembershipCategory::CODE_PROFESSIONAL => $this->payload(),
+            MembershipCategory::CODE_VETERAN => $this->payload([
+                'category' => MembershipCategory::CODE_VETERAN,
+                'years_experience' => 25,
+                'previous_employers' => 'Example Airlines',
+            ]),
+            MembershipCategory::CODE_ENTHUSIAST => $this->enthusiastPayload(),
+            MembershipCategory::CODE_CORPORATE => $this->corporatePayload(),
+        };
+        match ($code) {
+            MembershipCategory::CODE_STUDENT => MembershipCategory::factory()->student()->create(),
+            MembershipCategory::CODE_PROFESSIONAL => $this->professional(),
+            MembershipCategory::CODE_VETERAN => MembershipCategory::factory()->veteran()->create(),
+            MembershipCategory::CODE_ENTHUSIAST => $this->enthusiast(),
+            MembershipCategory::CODE_CORPORATE => $this->corporate(),
+        };
+
+        $response = $this->from(route('membership.apply'))->submit($payload)->assertSessionHasNoErrors();
+
+        $application = MembershipApplication::query()->firstOrFail();
+        $location = $response->headers->get('Location');
+        $this->assertStringContainsString('/membership/apply/submitted/'.$application->public_id.'?', $location);
+        $this->assertStringNotContainsString(route('membership.apply').'?', $location);
+
+        $this->get($location)
+            ->assertOk()
+            ->assertSee("Your application for {$label} membership has been successfully submitted. The Aviation Club team will get back to you soon.")
+            ->assertSee($application->public_id);
+    }
+
+    public function test_the_confirmation_is_not_shown_when_the_save_fails(): void
+    {
+        Exceptions::fake();
+        $this->professional();
+        $this->mock(StoreProofDocument::class)->shouldReceive('handle')->andThrow(new RuntimeException('Disk unavailable'));
+
+        $response = $this->from(route('membership.apply'))->submit($this->payload());
+
+        $response->assertRedirect(route('membership.apply'));
+        $this->assertStringNotContainsString('/membership/apply/submitted/', $response->headers->get('Location'));
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function emailFieldsPerLayout(): array
+    {
+        return [
+            'individual form' => ['professional', 'email'],
+            'corporate form' => ['corporate', 'email_corporate'],
+        ];
+    }
+
+    #[DataProvider('emailFieldsPerLayout')]
+    public function test_a_blocked_email_message_is_shown_directly_beside_the_email_textbox(string $layout, string $inputId): void
+    {
+        $this->professional();
+        $this->corporate();
+        User::factory()->active()->create(['email' => 'nimal.perera@example.test']);
+        $payload = $layout === 'corporate'
+            ? $this->corporatePayload(['email' => 'nimal.perera@example.test'])
+            : $this->payload();
+
+        $html = $this->from(route('membership.apply'))
+            ->followingRedirects()
+            ->submit($payload)
+            ->assertOk()
+            ->getContent();
+
+        $beside = $this->xpath($html)->query(
+            '//input[@id="'.$inputId.'"][@aria-invalid="true"]/following-sibling::p[normalize-space(.)="'.StoreMembershipApplicationRequest::EMAIL_UNAVAILABLE_MESSAGE.'"]'
+        );
+        $this->assertSame(1, $beside->length);
+        $this->assertSame(0, $this->tableCount('membership_applications'));
+    }
+
+    /**
+     * The Student/Veteran groups are nested inside the "hide for Corporate"
+     * card. Enabling fields per section let that outer card re-enable and
+     * re-require the hidden inner group's fields, so the browser silently
+     * refused to submit. A field must now be judged by every enclosing section.
+     */
+    public function test_the_form_script_keeps_fields_in_hidden_nested_sections_disabled_and_optional(): void
+    {
+        $this->professional();
+
+        $html = $this->get('/membership/apply')->assertOk()->getContent();
+
+        $this->assertGreaterThan(0, $this->xpath($html)->query(
+            '//*[@data-category-section-hide-for]//*[@data-category-section]//*[@data-required-when-visible]'
+        )->length, 'The nested sections this guards against still exist.');
+        $this->assertStringNotContainsString('setSectionVisibility', $html);
+        $this->assertStringContainsString("var hiddenSectionSelector = '[data-category-section][hidden], [data-category-section-hide-for][hidden]';", $html);
+        $this->assertStringContainsString('var active = !field.closest(hiddenSectionSelector);', $html);
+        $this->assertStringContainsString("if (field.hasAttribute('data-required-when-visible')) { field.required = active; }", $html);
+    }
+
+    public function test_the_confirmation_does_not_require_or_expose_a_signed_in_session(): void
+    {
+        $this->professional();
+        $location = $this->submit($this->payload())->headers->get('Location');
+
+        $this->actingAs(User::factory()->admin()->create(['email' => 'staff@example.test']))
+            ->get($location)
+            ->assertOk()
+            ->assertDontSee('staff@example.test')
+            ->assertDontSee('nimal.perera@example.test');
     }
 }

@@ -32,6 +32,7 @@
       and two inputs sharing one `name` would collide on `id` too.
 --}}
 @use('App\Models\MembershipCategory')
+@use('App\Http\Controllers\Membership\MembershipApplicationController')
 
 <x-layouts.public title="Become a Member">
     <x-public.hero>
@@ -75,6 +76,18 @@
 
                 <form id="application-form" method="POST" action="{{ route('membership.apply.store') }}" enctype="multipart/form-data" class="space-y-8">
                     @csrf
+
+                    @if ($requestTooLarge)
+                        <div class="w-full rounded-lg border border-[#CC001F]/50 bg-[#CC001F]/5 px-4 py-3 text-sm text-[#CC001F]" role="alert">
+                            {{ MembershipApplicationController::REQUEST_TOO_LARGE_MESSAGE }}
+                        </div>
+                    @endif
+
+                    @error('submission')
+                        <div class="w-full rounded-lg border border-[#CC001F]/50 bg-[#CC001F]/5 px-4 py-3 text-sm text-[#CC001F]" role="alert">
+                            {{ $message }}
+                        </div>
+                    @enderror
 
                     <fieldset>
                         <legend class="mb-3 font-display text-lg font-bold text-primary">1. Choose your membership category</legend>
@@ -120,7 +133,7 @@
                             All fields are required.
                         </p>
 
-                        @if ($errors->any())
+                        @if ($errors->any() && ! $errors->has('submission'))
                             <div class="mt-6 w-full rounded-lg border border-[#CC001F]/50 bg-[#CC001F]/5 px-4 py-3 text-sm text-[#CC001F]" role="alert">
                                 Please correct the highlighted fields and try again.
                             </div>
@@ -202,7 +215,7 @@
                         <h2 class="font-display text-lg font-bold text-primary">2. Company Details</h2>
                         <p class="mt-1 text-sm text-muted-foreground">All fields are required unless marked optional.</p>
 
-                        @if ($errors->any())
+                        @if ($errors->any() && ! $errors->has('submission'))
                             <div class="mt-6 w-full rounded-lg border border-[#CC001F]/50 bg-[#CC001F]/5 px-4 py-3 text-sm text-[#CC001F]" role="alert">
                                 Please correct the highlighted fields and try again.
                             </div>
@@ -246,7 +259,7 @@
 
                                 <div class="space-y-1.5">
                                     <label for="company_website" class="block text-sm font-medium leading-none">Company Website</label>
-                                    <input id="company_website" name="company_website" type="url" value="{{ old('company_website') }}" maxlength="255" placeholder="https://" @if ($errors->has('company_website')) aria-invalid="true" @endif class="field-control">
+                                    <input id="company_website" name="company_website" type="text" inputmode="url" autocomplete="url" value="{{ old('company_website') }}" maxlength="255" placeholder="www.example.com" @if ($errors->has('company_website')) aria-invalid="true" @endif class="field-control">
                                     @error('company_website')
                                         <p class="text-xs text-[#CC001F]">{{ $message }}</p>
                                     @enderror
@@ -300,7 +313,7 @@
                                             @endforeach
                                         </select>
                                         <input type="tel" data-mobile-number inputmode="tel" placeholder="77 123 4567" class="field-control min-w-0 flex-1" aria-label="Representative mobile number">
-                                        <input type="hidden" data-mobile-combined data-required-when-visible>
+                                        <input type="hidden" data-mobile-combined value="{{ old('mobile') }}" data-required-when-visible>
                                     </div>
 
                                     @error('mobile')
@@ -356,6 +369,10 @@
                             @foreach (collect($errors->get('proof_documents'))->merge(collect($errors->get('proof_documents.*'))->flatten())->unique() as $message)
                                 <p id="{{ $loop->first ? 'proof_documents-error' : 'proof_documents-error-'.$loop->index }}" class="text-xs text-[#CC001F]">{{ $message }}</p>
                             @endforeach
+
+                            @if ($errors->any())
+                                <p data-reattach-notice class="text-xs text-muted-foreground">For your security, attached files are not kept when the form is returned. Please attach your documents again.</p>
+                            @endif
                         </div>
                     </div>
 
@@ -394,6 +411,10 @@
                             @foreach (collect($errors->get('proof_documents'))->merge(collect($errors->get('proof_documents.*'))->flatten())->unique() as $message)
                                 <p class="text-xs text-[#CC001F]">{{ $message }}</p>
                             @endforeach
+
+                            @if ($errors->any())
+                                <p data-reattach-notice class="text-xs text-muted-foreground">For your security, attached files are not kept when the form is returned. Please attach the company letter again.</p>
+                            @endif
                         </div>
                     </div>
 
@@ -413,7 +434,7 @@
                         @enderror
                     </div>
 
-                    <button type="submit" class="btn btn-lg btn-brand w-full">Submit Application</button>
+                    <button type="submit" data-submit-button class="btn btn-lg btn-brand w-full">Submit Application</button>
                 </form>
 
                 {{-- Progressive enhancement (no library): show only the selected category's
@@ -436,15 +457,15 @@
                         // names (full_name/email/mobile/address/aviation_role/
                         // aviation_organisation/proof_documents) never collide with the one
                         // currently-visible copy.
-                        function setSectionVisibility(section, active) {
-                            section.hidden = !active;
-                            section.querySelectorAll('input, select, textarea').forEach(function (field) {
-                                field.disabled = !active;
-                            });
-                            section.querySelectorAll('[data-required-when-visible]').forEach(function (field) {
-                                field.required = active;
-                            });
-                        }
+                        //
+                        // Sections nest (the Student/Veteran groups sit inside the
+                        // "hide for Corporate" card), so a field is enabled/required only
+                        // when *no* enclosing section is hidden. Deciding this per section
+                        // let the outer card re-enable — and re-require — the hidden
+                        // inner group's fields, and the browser then silently refused to
+                        // submit because a required field could not be shown.
+                        var sectionSelector = '[data-category-section], [data-category-section-hide-for]';
+                        var hiddenSectionSelector = '[data-category-section][hidden], [data-category-section-hide-for][hidden]';
 
                         function apply() {
                             var checked = form.querySelector('input[name="category"]:checked');
@@ -453,7 +474,7 @@
                             // Shown only for the listed code (existing mechanism).
                             form.querySelectorAll('[data-category-section]').forEach(function (section) {
                                 var codes = section.getAttribute('data-category-section').split(',');
-                                setSectionVisibility(section, codes.indexOf(code) !== -1);
+                                section.hidden = codes.indexOf(code) === -1;
                             });
 
                             // Shown for every code except the listed one(s) — the inverse,
@@ -461,7 +482,14 @@
                             // instead of these" cases.
                             form.querySelectorAll('[data-category-section-hide-for]').forEach(function (section) {
                                 var codes = section.getAttribute('data-category-section-hide-for').split(',');
-                                setSectionVisibility(section, codes.indexOf(code) === -1);
+                                section.hidden = codes.indexOf(code) !== -1;
+                            });
+
+                            form.querySelectorAll('input, select, textarea').forEach(function (field) {
+                                if (!field.closest(sectionSelector)) { return; }
+                                var active = !field.closest(hiddenSectionSelector);
+                                field.disabled = !active;
+                                if (field.hasAttribute('data-required-when-visible')) { field.required = active; }
                             });
 
                             if (code && labels[code]) {
@@ -487,7 +515,17 @@
                             if (!proof || !fileList) { return; }
                             proof.addEventListener('change', function () {
                                 var names = Array.prototype.map.call(proof.files, function (file) { return file.name; });
+                                fileList.classList.remove('text-[#CC001F]');
                                 fileList.textContent = names.length ? names.length + ' file(s) selected: ' + names.join(', ') : '';
+                            });
+
+                            // The file input itself is visually hidden (1x1), so the
+                            // browser's own "required" bubble is effectively invisible:
+                            // say it in the widget and bring the widget into view.
+                            proof.addEventListener('invalid', function () {
+                                fileList.classList.add('text-[#CC001F]');
+                                fileList.textContent = proof.validationMessage || 'Please attach at least one document.';
+                                widget.scrollIntoView({ block: 'center' });
                             });
                         });
 
@@ -521,9 +559,12 @@
                                 }
                             }
 
+                            // A national trunk "0" typed after a chosen country code
+                            // (e.g. +94 then 077…) is dropped; Italy (+39) keeps it.
                             function combineMobile() {
                                 var code = mobileCountry.value;
                                 var number = mobileNumber.value.trim();
+                                if (code !== '+39') { number = number.replace(/^0+/, ''); }
                                 mobileCombined.value = number === '' ? '' : code + ' ' + number;
                             }
 
@@ -531,6 +572,37 @@
                             mobileNumber.addEventListener('input', combineMobile);
                             form.addEventListener('submit', combineMobile);
                             combineMobile();
+                        });
+
+                        // Guard against a double click sending the application twice:
+                        // only the first submit goes through, and the button shows that
+                        // it is in progress. Restored if the page is shown again from
+                        // the browser's back/forward cache.
+                        var submitButton = form.querySelector('[data-submit-button]');
+                        var submitLabel = submitButton ? submitButton.textContent : '';
+                        var submitting = false;
+
+                        form.addEventListener('submit', function (event) {
+                            if (submitting) {
+                                event.preventDefault();
+                                return;
+                            }
+                            submitting = true;
+                            if (submitButton) {
+                                submitButton.disabled = true;
+                                submitButton.setAttribute('aria-busy', 'true');
+                                submitButton.textContent = 'Submitting…';
+                            }
+                        });
+
+                        window.addEventListener('pageshow', function (event) {
+                            if (!event.persisted) { return; }
+                            submitting = false;
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                                submitButton.removeAttribute('aria-busy');
+                                submitButton.textContent = submitLabel;
+                            }
                         });
                     })();
                 </script>

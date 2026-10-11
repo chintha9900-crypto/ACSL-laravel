@@ -7,6 +7,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -38,5 +39,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn (Request $request) => RoleRedirect::homeRouteFor($request->user()));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // A membership application whose uploads exceed the server's POST size
+        // limit is rejected by global middleware before the session starts, so
+        // the applicant is sent back to the form with a flag (not flashed
+        // errors) that the page turns into a clear message.
+        $exceptions->render(function (PostTooLargeException $exception, Request $request) {
+            if ($request->isMethod('POST') && $request->is('membership/apply')) {
+                return redirect()->route('membership.apply', ['upload' => 'too-large']);
+            }
+
+            return null;
+        });
     })->create();

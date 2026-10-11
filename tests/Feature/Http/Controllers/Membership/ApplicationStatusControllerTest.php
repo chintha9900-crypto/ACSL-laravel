@@ -226,8 +226,8 @@ class ApplicationStatusControllerTest extends MysqlTestCase
     // --- link from the A2.1 confirmation page ---------------------------------
 
     /**
-     * The confirmation page itself is now a plain success message only (no
-     * reference, no link — explicit instruction); this proves the
+     * The confirmation page shows the success message and reference but no
+     * status link (explicit instruction); this proves the
      * `statusUrl()` capability it used to surface is nonetheless still
      * generated correctly and reachable on its own.
      */
@@ -250,7 +250,7 @@ class ApplicationStatusControllerTest extends MysqlTestCase
 
         $this->get($confirmation)
             ->assertOk()
-            ->assertSee('Your application was successfully submitted. We will get back to you soon.')
+            ->assertSee('Your application for Professional membership has been successfully submitted. The Aviation Club team will get back to you soon.')
             ->assertDontSee('View application status')
             ->assertDontSee('Nimal Perera');
 

@@ -4,6 +4,8 @@ namespace App\Http\Requests\Membership;
 
 use App\Models\MembershipApplication;
 use App\Models\MembershipCategory;
+use App\Models\User;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +16,18 @@ use Illuminate\Validation\Validator;
 
 class StoreMembershipApplicationRequest extends FormRequest
 {
+    /**
+     * Shown whenever the email cannot open a new application. Deliberately the
+     * same for an open application, an existing membership and an existing
+     * account, so the form never reveals which of those exists.
+     */
+    public const EMAIL_UNAVAILABLE_MESSAGE = 'We cannot accept a new application with this email address. If you have already applied, or you already have an ACI account or membership, please sign in or contact ACI for help.';
+
+    /**
+     * E.164: "+", a country code that does not start with 0, at most 15 digits in all.
+     */
+    private const E164_PATTERN = '/^\+[1-9][0-9]{6,14}$/';
+
     /**
      * The application is public; access is not decided by a session.
      */
@@ -29,6 +43,14 @@ class StoreMembershipApplicationRequest extends FormRequest
     {
         if (is_string($this->input('email'))) {
             $this->merge(['email' => Str::lower(trim($this->input('email')))]);
+        }
+
+        // A company website typed without a scheme ("www.example.com") is
+        // given https:// so it can pass the `url` rule; anything still invalid
+        // is reported beside the field as before.
+        $website = $this->input('company_website');
+        if (is_string($website) && trim($website) !== '' && preg_match('#^[a-z][a-z0-9+.-]*://#i', trim($website)) !== 1) {
+            $this->merge(['company_website' => 'https://'.trim($website)]);
         }
     }
 
@@ -58,8 +80,10 @@ class StoreMembershipApplicationRequest extends FormRequest
                 Rule::exists('membership_categories', 'code')->where('is_active', true),
             ],
             'full_name' => ['required', 'string', 'max:160'],
-            'email' => ['required', 'string', 'email', 'max:255'],
-            'mobile' => ['required', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s().-]{5,38}[0-9]$/'],
+            // `filter_unicode` allows Unicode local parts (josé@…) and punycode
+            // (xn--…) domains, while still rejecting addresses such as a@b.
+            'email' => ['required', 'string', 'email:rfc,filter_unicode', 'max:255'],
+            'mobile' => ['required', 'string', 'max:40', $this->internationalPhone('mobile number')],
             'address' => ['required', 'string', 'max:400'],
             'aviation_role' => ['required', 'string', 'max:160'],
             'aviation_organisation' => ['required', 'string', 'max:200'],
@@ -68,8 +92,8 @@ class StoreMembershipApplicationRequest extends FormRequest
             'years_experience' => [$veteran, 'required', 'integer', 'between:0,80'],
             'previous_employers' => [$veteran, 'required', 'string', 'max:2000'],
             'company_name' => [$corporate, 'required', 'string', 'max:160'],
-            'company_email' => [$corporate, 'required', 'string', 'email', 'max:255'],
-            'company_phone' => [$corporate, 'required', 'string', 'max:40', 'regex:/^\+?[0-9][0-9\s().-]{5,38}[0-9]$/'],
+            'company_email' => [$corporate, 'required', 'string', 'email:rfc,filter_unicode', 'max:255'],
+            'company_phone' => [$corporate, 'required', 'string', 'max:40', $this->internationalPhone('company phone number')],
             'company_website' => [$corporate, 'nullable', 'string', 'url', 'max:255'],
             'proof_documents' => [$needsProof, 'required', 'array', 'min:1', 'max:'.$proof['max_files']],
             'proof_documents.*' => [
@@ -93,8 +117,8 @@ class StoreMembershipApplicationRequest extends FormRequest
 
         return [
             'category.exists' => 'Please choose one of the available membership categories.',
-            'mobile.regex' => 'Enter a valid mobile number, including the country code if outside Sri Lanka.',
-            'company_phone.regex' => 'Enter a valid company phone number, including the country code if outside Sri Lanka.',
+            'email.email' => 'Enter a valid email address, for example name@example.com.',
+            'company_email.email' => 'Enter a valid company email address, for example info@example.com.',
             'proof_documents.required' => 'Aviation eligibility proof is required. Please upload at least one document.',
             'proof_documents.min' => 'Aviation eligibility proof is required. Please upload at least one document.',
             'proof_documents.max' => 'You can upload at most '.$proof['max_files'].' documents.',
@@ -129,10 +153,12 @@ class StoreMembershipApplicationRequest extends FormRequest
     }
 
     /**
-     * Duplicate protection: an open application, or an existing membership, for
-     * this email (docs/database/15 R-06). A rejected application does not block a
-     * new one. The database's unique `open_email_key` remains the backstop
-     * against a concurrent duplicate.
+     * Duplicate protection: an open application or an existing membership for
+     * this email (docs/database/15 R-06), or an existing user account — activation
+     * never reuses an existing account (OD-06), so such an application could
+     * never be activated. A rejected application does not block a new one. The
+     * database's unique `open_email_key` remains the backstop against a
+     * concurrent duplicate. One neutral message covers every case.
      *
      * @return list<callable(Validator): void>
      */
@@ -144,11 +170,8 @@ class StoreMembershipApplicationRequest extends FormRequest
                     return;
                 }
 
-                if ($this->hasOpenApplicationOrMembership($this->string('email')->toString())) {
-                    $validator->errors()->add(
-                        'email',
-                        'An application or membership already exists for this email address. If you need help, please contact ACI.'
-                    );
+                if ($this->emailIsUnavailable($this->string('email')->toString())) {
+                    $validator->errors()->add('email', self::EMAIL_UNAVAILABLE_MESSAGE);
                 }
             },
         ];
@@ -186,7 +209,19 @@ class StoreMembershipApplicationRequest extends FormRequest
                 'company_website',
             ]),
             'membership_category_id' => $category->id,
+            ...collect(['mobile', 'company_phone'])
+                ->filter(fn (string $field): bool => $this->safe()->has($field))
+                ->mapWithKeys(fn (string $field): array => [$field => self::toE164($this->safe()->string($field)->toString())])
+                ->all(),
         ];
+    }
+
+    /**
+     * The stored form of an already validated phone number: E.164, "+" and digits only.
+     */
+    public static function toE164(string $phone): string
+    {
+        return '+'.preg_replace('/\D/', '', $phone);
     }
 
     /**
@@ -197,17 +232,56 @@ class StoreMembershipApplicationRequest extends FormRequest
         return array_values($this->file('proof_documents', []));
     }
 
-    private function hasOpenApplicationOrMembership(string $email): bool
+    private function emailIsUnavailable(string $email): bool
     {
         $hasOpenApplication = MembershipApplication::query()
             ->where('email', $email)
             ->whereIn('status', MembershipApplication::OPEN_STATUSES)
             ->exists();
 
-        return $hasOpenApplication || DB::table('memberships')
-            ->join('membership_applications', 'membership_applications.id', '=', 'memberships.membership_application_id')
-            ->where('membership_applications.email', $email)
-            ->exists();
+        return $hasOpenApplication
+            || User::query()->where('email', $email)->exists()
+            || DB::table('memberships')
+                ->join('membership_applications', 'membership_applications.id', '=', 'memberships.membership_application_id')
+                ->where('membership_applications.email', $email)
+                ->exists();
+    }
+
+    /**
+     * A phone number must carry an explicit international country code and
+     * reduce to a valid E.164 number once spaces and ( ) . - are removed. A
+     * national trunk "0" written as its own group after the country code
+     * (e.g. "+94 077…" or "+44 (0)20…") is ambiguous and rejected; Italy (+39),
+     * whose numbers keep the 0, is the exception. Uniqueness is deliberately not checked
+     * (docs/database/04: no matching rule applies to phone numbers).
+     */
+    private function internationalPhone(string $label): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail) use ($label): void {
+            // A non-string (e.g. an array) is already rejected by the `string` rule.
+            if (! is_string($value)) {
+                return;
+            }
+
+            $value = trim($value);
+
+            if (! str_starts_with($value, '+')) {
+                $fail("Enter the {$label} with its international country code, starting with + (for example +94 77 123 4567).");
+
+                return;
+            }
+
+            if (preg_match('/^\+[0-9\s().-]+$/', $value) !== 1
+                || preg_match(self::E164_PATTERN, self::toE164($value)) !== 1) {
+                $fail("Enter a valid {$label} in international format, for example +94 77 123 4567.");
+
+                return;
+            }
+
+            if (preg_match('/^\+[0-9]{1,3}(?:[\s.-]+\(?0|[\s.-]*\(0)/', $value) === 1 && ! str_starts_with($value, '+39')) {
+                $fail("Remove the leading 0 after the country code from the {$label} (for example +94 77 123 4567, not +94 077 123 4567).");
+            }
+        };
     }
 
     private function roleLabel(): string

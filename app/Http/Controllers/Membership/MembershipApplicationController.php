@@ -14,7 +14,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 class MembershipApplicationController extends Controller
 {
@@ -22,6 +24,16 @@ class MembershipApplicationController extends Controller
      * How long the confirmation link shown after submitting stays valid.
      */
     private const RECEIPT_LINK_HOURS = 24;
+
+    /**
+     * Shown when the application could not be saved; nothing was submitted.
+     */
+    public const SAVE_FAILED_MESSAGE = 'Sorry, we could not save your application, so it has not been submitted. Please attach your documents again and resubmit. If the problem continues, please contact ACI.';
+
+    /**
+     * Shown when the request body was larger than the server accepts.
+     */
+    public const REQUEST_TOO_LARGE_MESSAGE = 'Your application could not be submitted because the attached files were too large in total. Please attach smaller files and fill in the form again.';
 
     /**
      * Show the public application page: one form whose category options come
@@ -37,15 +49,29 @@ class MembershipApplicationController extends Controller
             'selected' => $this->selectedCategory($categories, $request),
             'proof' => config('uploads.aviation_proof'),
             'mobileCountries' => $this->mobileCountries(),
+            'requestTooLarge' => $request->query('upload') === 'too-large',
         ]);
     }
 
     /**
      * Submit an application. No user account is created or required.
+     *
+     * A save failure (database or private storage) has already been rolled
+     * back and cleaned up by the action; it is reported and the applicant is
+     * returned to the form with an explanation instead of an error page.
+     * Success is only shown once the application has been saved.
      */
     public function store(StoreMembershipApplicationRequest $request, SubmitMembershipApplication $submit, NotifyApplicant $notify): RedirectResponse
     {
-        $application = $submit->handle($request->applicationData(), $request->proofDocuments());
+        try {
+            $application = $submit->handle($request->applicationData(), $request->proofDocuments());
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withInput()->withErrors(['submission' => self::SAVE_FAILED_MESSAGE]);
+        }
 
         // M1: never allowed to affect the submission itself — see NotifyApplicant.
         $notify->handle($application, new ApplicationSubmitted($application));

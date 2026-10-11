@@ -97,7 +97,7 @@ class CorporateMembershipWorkflowTest extends MysqlTestCase
         $this->assertSame(MembershipCategory::CODE_CORPORATE, $application->category->code);
         $this->assertSame('Example Airline (Pvt) Ltd', $application->company_name);
         $this->assertSame('info@example-airline.test', $application->company_email);
-        $this->assertSame('+94 11 234 5678', $application->company_phone);
+        $this->assertSame('+94112345678', $application->company_phone);
         $this->assertSame('https://example-airline.test', $application->company_website);
         $this->assertSame('Priya Fernando', $application->full_name);
 
