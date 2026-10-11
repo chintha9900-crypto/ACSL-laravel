@@ -231,6 +231,39 @@ class MembershipControllerTest extends MysqlTestCase
             ->assertDontSee('6 months');
     }
 
+    public function test_the_membership_page_links_to_the_existing_digital_membership_card(): void
+    {
+        $membership = $this->activatedMember();
+        $cardUrl = route('member.membership.card');
+
+        $html = $this->actingAs($membership->user)
+            ->get(route('member.membership.show'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '#<section[^>]*aria-labelledby="summary-heading".*?<a href="'.preg_quote($cardUrl, '#').'"[^>]*>View Digital Membership Card</a>.*?</section>#s',
+            $html,
+            'The membership summary must link to the card.'
+        );
+        $this->assertMatchesRegularExpression(
+            '#<nav aria-label="Member".*?<a href="'.preg_quote($cardUrl, '#').'"[^>]*>Card</a>.*?</nav>#s',
+            $html,
+            'The member navigation must link to the card.'
+        );
+
+        $this->actingAs($membership->user)->get($cardUrl)->assertOk()->assertSee($membership->membership_number);
+    }
+
+    public function test_the_card_button_is_not_offered_in_the_no_membership_empty_state(): void
+    {
+        $this->actingAs($this->member())
+            ->get(route('member.membership.show'))
+            ->assertOk()
+            ->assertSee('You are not a member yet')
+            ->assertDontSee('View Digital Membership Card');
+    }
+
     public function test_a_member_with_no_membership_sees_the_empty_state(): void
     {
         $this->actingAs($this->member())

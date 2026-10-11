@@ -35,6 +35,8 @@
                     <dd class="mt-1 capitalize">{{ str_replace('_', ' ', $user->status) }}</dd>
                 </div>
             </dl>
+
+            <a href="{{ route('member.membership.card') }}" class="btn btn-lg btn-gradient mt-6 inline-flex">View Digital Membership Card</a>
         </section>
 
         <section class="ui-card p-6" aria-labelledby="term-heading">

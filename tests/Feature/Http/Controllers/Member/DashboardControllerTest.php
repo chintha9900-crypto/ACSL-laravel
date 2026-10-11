@@ -49,6 +49,30 @@ class DashboardControllerTest extends MysqlTestCase
         ]);
     }
 
+    public function test_the_dashboard_links_to_the_existing_digital_membership_card(): void
+    {
+        $membership = $this->activatedMember();
+        $cardUrl = route('member.membership.card');
+
+        $html = $this->actingAs($membership->user)
+            ->get(route('member.dashboard'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '#<section[^>]*aria-labelledby="membership-heading".*?<a href="'.preg_quote($cardUrl, '#').'"[^>]*>View Digital Membership Card</a>.*?</section>#s',
+            $html,
+            'The membership section must link to the card.'
+        );
+        $this->assertMatchesRegularExpression(
+            '#<nav aria-label="Member".*?<a href="'.preg_quote($cardUrl, '#').'"[^>]*>Card</a>.*?</nav>#s',
+            $html,
+            'The member navigation must link to the card.'
+        );
+
+        $this->actingAs($membership->user)->get($cardUrl)->assertOk()->assertSee($membership->membership_number);
+    }
+
     public function test_a_member_can_view_their_own_dashboard(): void
     {
         $membership = $this->activatedMember(['full_name' => 'Nimal Perera']);
