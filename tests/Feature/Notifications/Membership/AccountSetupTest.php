@@ -58,6 +58,25 @@ class AccountSetupTest extends MysqlTestCase
         $this->assertStringContainsString('/account/setup/'.self::TOKEN, $html);
     }
 
+    public function test_both_versions_give_the_login_url_and_the_username_instruction_without_any_password(): void
+    {
+        $member = User::factory()->make(['name' => 'Nimal Perera']);
+        $html = $this->notification()->toMail($member)->render();
+        $text = view('emails.membership.account-setup-text', [
+            'name' => 'Nimal Perera',
+            'url' => $this->notification()->setupUrl(),
+            'expiresAt' => '24 September 2026, 17:30 (Asia/Colombo)',
+        ])->render();
+        $loginUrl = route('login');
+
+        foreach ([$html, $text] as $body) {
+            $this->assertStringContainsString('sign in to the member portal at '.($body === $html ? '<a href="'.$loginUrl.'"' : $loginUrl), $body);
+            $this->assertStringContainsString('using your registered email address (the address this email was sent to) as your username', $body);
+            $this->assertDoesNotMatchRegularExpression('/(temporary|temp)\s+password|password\s*:/i', $body);
+            $this->assertSame(substr_count($body, self::TOKEN), substr_count($body, '/account/setup/'.self::TOKEN));
+        }
+    }
+
     public function test_the_token_appears_only_inside_the_setup_url(): void
     {
         $member = User::factory()->make(['name' => 'Nimal Perera']);

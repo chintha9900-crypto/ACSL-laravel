@@ -9,8 +9,10 @@ use Illuminate\Notifications\Notification;
 /**
  * M8 — sent to the member when their membership is activated
  * (docs/architecture/06 §2). Carries the membership number, category and the
- * introductory term's dates; the one-time setup link is M9's job, not this
- * one's, so it is never referenced here beyond "check your email".
+ * introductory term's dates, plus the sign-in page and the instruction to use
+ * the registered email address as the username. The one-time setup link is
+ * M9's job, not this one's, so it is never referenced here beyond "check your
+ * email"; no password is ever sent.
  */
 class Welcome extends Notification
 {
@@ -34,6 +36,8 @@ class Welcome extends Notification
                 ['emails.membership.welcome', 'emails.membership.welcome-text'],
                 [
                     'name' => $notifiable->name,
+                    'email' => $notifiable->email,
+                    'loginUrl' => route('login'),
                     'number' => $this->membership->membership_number,
                     'category' => $this->membership->category->name,
                     'months' => $term?->duration_months,

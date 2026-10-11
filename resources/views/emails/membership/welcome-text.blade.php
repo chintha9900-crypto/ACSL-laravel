@@ -2,7 +2,7 @@ Aviation Club International
 
 Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
 
-Welcome — your Aviation Club International membership is now active.
+Congratulations, and welcome to Aviation Club International! You are now a member, and your membership is active.
 
 Membership number: {!! $number !!}
 Category: {!! $category !!}
@@ -12,6 +12,8 @@ Your first {!! $months !!} month(s) are free, valid from {!! $startsOn !!} to {!
 
 Your digital membership card, with a QR code you can use to verify your membership, is available on your membership page once you have signed in.
 
-Check your email for a separate message with a link to create your account password.
+Check your email for a separate message with a secure, one-time link to create your account password.
+
+Once you have created your password, sign in to the member portal at {!! $loginUrl !!} using your registered email address, {!! str_replace(["\r", "\n"], '', $email) !!}, as your username.
 
 Aviation Club International
