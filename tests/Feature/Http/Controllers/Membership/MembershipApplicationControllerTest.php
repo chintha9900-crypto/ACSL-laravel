@@ -39,9 +39,19 @@ class MembershipApplicationControllerTest extends MysqlTestCase
         Storage::fake('public');
     }
 
+    private function student(): MembershipCategory
+    {
+        return MembershipCategory::query()->where('code', 'S')->firstOrFail();
+    }
+
     private function professional(): MembershipCategory
     {
-        return MembershipCategory::factory()->professional()->create();
+        return MembershipCategory::query()->where('code', 'P')->firstOrFail();
+    }
+
+    private function veteran(): MembershipCategory
+    {
+        return MembershipCategory::query()->where('code', 'V')->firstOrFail();
     }
 
     /**
@@ -188,9 +198,9 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
     public function test_guest_can_open_the_application_page_and_sees_the_database_categories(): void
     {
-        MembershipCategory::factory()->student()->create();
+        $this->student();
         $this->professional();
-        MembershipCategory::factory()->veteran()->create();
+        $this->veteran();
 
         $this->get('/membership/apply')
             ->assertOk()
@@ -262,9 +272,9 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
     public function test_page_is_one_form_offering_every_active_category_as_a_radio_choice(): void
     {
-        MembershipCategory::factory()->student()->create();
+        $this->student();
         $this->professional();
-        MembershipCategory::factory()->veteran()->inactive()->create();
+        $this->veteran()->update(['is_active' => false]);
 
         $this->get('/membership/apply')
             ->assertOk()
@@ -282,9 +292,9 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
     public function test_category_in_the_query_string_only_preselects_a_radio(): void
     {
-        MembershipCategory::factory()->student()->create();
+        $this->student();
         $this->professional();
-        MembershipCategory::factory()->veteran()->create();
+        $this->veteran();
 
         $this->assertCheckedCategories(['V'], $this->get('/membership/apply?category=veteran')->getContent());
         $this->assertCheckedCategories(['S'], $this->get('/membership/apply?category=student')->getContent());
@@ -294,15 +304,15 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
     public function test_inactive_category_is_not_preselected_from_the_query_string(): void
     {
-        MembershipCategory::factory()->student()->create();
-        MembershipCategory::factory()->veteran()->inactive()->create();
+        $this->student();
+        $this->veteran()->update(['is_active' => false]);
 
         $this->assertCheckedCategories([], $this->get('/membership/apply?category=veteran')->getContent());
     }
 
     public function test_previous_category_choice_is_kept_when_validation_fails(): void
     {
-        MembershipCategory::factory()->student()->create();
+        $this->student();
         $this->professional();
 
         $this->from('/membership/apply')->submit($this->payload(['category' => 'S', 'full_name' => '']))
@@ -390,7 +400,7 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
     public function test_inactive_category_is_rejected(): void
     {
-        MembershipCategory::factory()->professional()->inactive()->create();
+        $this->professional()->update(['is_active' => false]);
 
         $this->submit($this->payload())->assertSessionHasErrors('category');
 
@@ -399,7 +409,7 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
     public function test_student_must_supply_ordered_study_dates(): void
     {
-        MembershipCategory::factory()->student()->create();
+        $this->student();
         $student = $this->payload(['category' => 'S']);
 
         $this->submit($student)->assertSessionHasErrors(['study_start_date', 'expected_completion_date']);
@@ -412,7 +422,7 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
     public function test_veteran_must_supply_experience_and_previous_employers(): void
     {
-        MembershipCategory::factory()->veteran()->create();
+        $this->veteran();
 
         $this->submit($this->payload(['category' => 'V']))
             ->assertSessionHasErrors(['years_experience', 'previous_employers']);
@@ -546,8 +556,8 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
     public function test_student_and_veteran_specific_fields_are_stored(): void
     {
-        MembershipCategory::factory()->student()->create();
-        MembershipCategory::factory()->veteran()->create();
+        $this->student();
+        $this->veteran();
 
         $this->submit($this->payload([
             'category' => 'S', 'email' => 'student@example.test', 'aviation_role' => 'Aircraft Maintenance',
@@ -891,7 +901,7 @@ class MembershipApplicationControllerTest extends MysqlTestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
-        MembershipCategory::factory()->student()->create();
+        $this->student();
         $this->submit($this->payload([
             'category' => MembershipCategory::CODE_STUDENT,
             'email' => 'student@example.test',
@@ -899,7 +909,7 @@ class MembershipApplicationControllerTest extends MysqlTestCase
             'expected_completion_date' => '2026-06-01',
         ]))->assertRedirect()->assertSessionHasNoErrors();
 
-        MembershipCategory::factory()->veteran()->create();
+        $this->veteran();
         $this->submit($this->payload([
             'category' => MembershipCategory::CODE_VETERAN,
             'email' => 'veteran@example.test',
@@ -915,9 +925,9 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
     public function test_all_five_categories_render_as_radio_choices(): void
     {
-        MembershipCategory::factory()->student()->create();
+        $this->student();
         $this->professional();
-        MembershipCategory::factory()->veteran()->create();
+        $this->veteran();
         $this->enthusiast();
         $this->corporate();
 
@@ -1065,7 +1075,7 @@ class MembershipApplicationControllerTest extends MysqlTestCase
     public function test_valid_student_application_is_saved_and_redirects_to_the_confirmation(): void
     {
         Notification::fake();
-        $category = MembershipCategory::factory()->student()->create();
+        $category = $this->student();
 
         $response = $this->submit($this->studentPayload());
 
@@ -1712,9 +1722,9 @@ class MembershipApplicationControllerTest extends MysqlTestCase
             MembershipCategory::CODE_CORPORATE => $this->corporatePayload(),
         };
         match ($code) {
-            MembershipCategory::CODE_STUDENT => MembershipCategory::factory()->student()->create(),
+            MembershipCategory::CODE_STUDENT => $this->student(),
             MembershipCategory::CODE_PROFESSIONAL => $this->professional(),
-            MembershipCategory::CODE_VETERAN => MembershipCategory::factory()->veteran()->create(),
+            MembershipCategory::CODE_VETERAN => $this->veteran(),
             MembershipCategory::CODE_ENTHUSIAST => $this->enthusiast(),
             MembershipCategory::CODE_CORPORATE => $this->corporate(),
         };

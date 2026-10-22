@@ -29,9 +29,9 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_it_lists_the_active_categories_from_the_database(): void
     {
-        MembershipCategory::factory()->student()->create();
-        MembershipCategory::factory()->professional()->create();
-        MembershipCategory::factory()->veteran()->create();
+        MembershipCategory::query()->firstOrCreate(['code' => 'S'], ['name' => 'Student', 'is_active' => true, 'display_order' => 1]);
+        MembershipCategory::query()->firstOrCreate(['code' => 'P'], ['name' => 'Professional', 'is_active' => true, 'display_order' => 2]);
+        MembershipCategory::query()->firstOrCreate(['code' => 'V'], ['name' => 'Veteran', 'is_active' => true, 'display_order' => 3]);
 
         $response = $this->get(route('membership.benefits'))->assertOk();
 
@@ -42,7 +42,10 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_inactive_categories_are_not_shown(): void
     {
-        MembershipCategory::factory()->student()->inactive()->create(['name' => 'Retired Category']);
+        \Illuminate\Support\Facades\DB::table('membership_categories')->where('code', 'S')->update([
+            'name' => 'Retired Category',
+            'is_active' => false,
+        ]);
 
         $response = $this->get(route('membership.benefits'))->assertOk();
 
@@ -63,7 +66,7 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_apply_now_links_pre_select_the_categorys_slug(): void
     {
-        MembershipCategory::factory()->veteran()->create();
+        MembershipCategory::query()->firstOrCreate(['code' => 'V'], ['name' => 'Veteran', 'is_active' => true, 'display_order' => 3]);
 
         $response = $this->get(route('membership.benefits'))->assertOk();
 
@@ -78,9 +81,9 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
      */
     public function test_the_exact_reference_prices_and_headings_show_regardless_of_configured_plans(): void
     {
-        MembershipCategory::factory()->student()->create();
-        MembershipCategory::factory()->professional()->create();
-        MembershipCategory::factory()->veteran()->create();
+        MembershipCategory::query()->firstOrCreate(['code' => 'S'], ['name' => 'Student', 'is_active' => true, 'display_order' => 1]);
+        MembershipCategory::query()->firstOrCreate(['code' => 'P'], ['name' => 'Professional', 'is_active' => true, 'display_order' => 2]);
+        MembershipCategory::query()->firstOrCreate(['code' => 'V'], ['name' => 'Veteran', 'is_active' => true, 'display_order' => 3]);
 
         $response = $this->get(route('membership.benefits'))->assertOk();
 
@@ -93,7 +96,7 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_it_ignores_a_real_configured_plan_fee_in_favour_of_the_reference_price(): void
     {
-        $category = MembershipCategory::factory()->student()->create();
+        $category = MembershipCategory::query()->firstOrCreate(['code' => 'S'], ['name' => 'Student', 'is_active' => true, 'display_order' => 1]);
         MembershipPlan::forceCreate([
             'membership_category_id' => $category->id,
             'name' => 'Standard renewal',
@@ -118,7 +121,7 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
      */
     public function test_the_launching_offer_banner_reflects_the_live_introductory_period(): void
     {
-        MembershipCategory::factory()->student()->create();
+        MembershipCategory::query()->firstOrCreate(['code' => 'S'], ['name' => 'Student', 'is_active' => true, 'display_order' => 1]);
         MembershipSetting::current()->forceFill(['introductory_period_months' => 5])->save();
 
         $response = $this->get(route('membership.benefits'))->assertOk();
@@ -129,7 +132,7 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_the_professional_card_shows_all_three_tiers(): void
     {
-        MembershipCategory::factory()->professional()->create();
+        MembershipCategory::query()->firstOrCreate(['code' => 'P'], ['name' => 'Professional', 'is_active' => true, 'display_order' => 2]);
 
         $response = $this->get(route('membership.benefits'))->assertOk();
 
@@ -140,7 +143,7 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_the_student_card_shows_the_eligibility_questionnaire(): void
     {
-        MembershipCategory::factory()->student()->create();
+        MembershipCategory::query()->firstOrCreate(['code' => 'S'], ['name' => 'Student', 'is_active' => true, 'display_order' => 1]);
 
         $response = $this->get(route('membership.benefits'))->assertOk();
 
@@ -153,7 +156,7 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_the_student_apply_now_link_is_present_but_hidden_until_eligible(): void
     {
-        $category = MembershipCategory::factory()->student()->create();
+        $category = MembershipCategory::query()->firstOrCreate(['code' => 'S'], ['name' => 'Student', 'is_active' => true, 'display_order' => 1]);
 
         $response = $this->get(route('membership.benefits'))->assertOk();
         $html = $response->getContent();
@@ -177,9 +180,9 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
      */
     public function test_each_category_has_exactly_one_eligibility_summary_with_its_own_wording(): void
     {
-        MembershipCategory::factory()->student()->create();
-        MembershipCategory::factory()->professional()->create();
-        MembershipCategory::factory()->veteran()->create();
+        MembershipCategory::query()->firstOrCreate(['code' => 'S'], ['name' => 'Student', 'is_active' => true, 'display_order' => 1]);
+        MembershipCategory::query()->firstOrCreate(['code' => 'P'], ['name' => 'Professional', 'is_active' => true, 'display_order' => 2]);
+        MembershipCategory::query()->firstOrCreate(['code' => 'V'], ['name' => 'Veteran', 'is_active' => true, 'display_order' => 3]);
 
         $html = $this->get(route('membership.benefits'))->assertOk()->getContent();
 
@@ -189,7 +192,7 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_the_professional_card_shows_its_eligibility_questionnaire(): void
     {
-        $category = MembershipCategory::factory()->professional()->create();
+        $category = MembershipCategory::query()->firstOrCreate(['code' => 'P'], ['name' => 'Professional', 'is_active' => true, 'display_order' => 2]);
 
         $response = $this->get(route('membership.benefits'))->assertOk();
 
@@ -203,7 +206,7 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_the_veteran_card_shows_its_eligibility_questionnaire(): void
     {
-        $category = MembershipCategory::factory()->veteran()->create();
+        $category = MembershipCategory::query()->firstOrCreate(['code' => 'V'], ['name' => 'Veteran', 'is_active' => true, 'display_order' => 3]);
 
         $response = $this->get(route('membership.benefits'))->assertOk();
 
@@ -221,8 +224,8 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
      */
     public function test_professional_and_veteran_have_a_hidden_other_text_field(): void
     {
-        MembershipCategory::factory()->professional()->create();
-        MembershipCategory::factory()->veteran()->create();
+        MembershipCategory::query()->firstOrCreate(['code' => 'P'], ['name' => 'Professional', 'is_active' => true, 'display_order' => 2]);
+        MembershipCategory::query()->firstOrCreate(['code' => 'V'], ['name' => 'Veteran', 'is_active' => true, 'display_order' => 3]);
 
         $html = $this->get(route('membership.benefits'))->assertOk()->getContent();
 
@@ -231,9 +234,9 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_every_benefit_checkmark_is_white_not_red(): void
     {
-        MembershipCategory::factory()->student()->create();
-        MembershipCategory::factory()->professional()->create();
-        MembershipCategory::factory()->veteran()->create();
+        MembershipCategory::query()->firstOrCreate(['code' => 'S'], ['name' => 'Student', 'is_active' => true, 'display_order' => 1]);
+        MembershipCategory::query()->firstOrCreate(['code' => 'P'], ['name' => 'Professional', 'is_active' => true, 'display_order' => 2]);
+        MembershipCategory::query()->firstOrCreate(['code' => 'V'], ['name' => 'Veteran', 'is_active' => true, 'display_order' => 3]);
 
         $html = $this->get(route('membership.benefits'))->assertOk()->getContent();
 
@@ -247,9 +250,9 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_individual_memberships_section_contains_student_professional_veteran_and_enthusiast(): void
     {
-        MembershipCategory::factory()->student()->create();
-        MembershipCategory::factory()->professional()->create();
-        MembershipCategory::factory()->veteran()->create();
+        MembershipCategory::query()->firstOrCreate(['code' => 'S'], ['name' => 'Student', 'is_active' => true, 'display_order' => 1]);
+        MembershipCategory::query()->firstOrCreate(['code' => 'P'], ['name' => 'Professional', 'is_active' => true, 'display_order' => 2]);
+        MembershipCategory::query()->firstOrCreate(['code' => 'V'], ['name' => 'Veteran', 'is_active' => true, 'display_order' => 3]);
         $this->enthusiast();
 
         $html = $this->get(route('membership.benefits'))->assertOk()->getContent();
@@ -323,7 +326,7 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
         $html = $this->get(route('membership.benefits'))->assertOk()->getContent();
 
-        $this->assertSame(2, substr_count($html, 'Launching Offer — First 3 Months FREE'), 'Both the Enthusiast and Corporate cards must show the offer.');
+        $this->assertSame(5, substr_count($html, 'Launching Offer — First 3 Months FREE'), 'All five membership cards must show the three-month introductory offer.');
     }
 
     public function test_enthusiast_has_no_eligibility_questionnaire(): void
@@ -336,9 +339,18 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
         // literally regardless of which categories exist.
         $cardsHtml = substr($html, 0, strpos($html, '<script>'));
 
-        $this->assertStringNotContainsString('data-eligibility', $cardsHtml);
-        $this->assertStringNotContainsString('Check Eligibility', $cardsHtml);
-        $this->assertStringNotContainsString('Check Your Eligibility', $cardsHtml);
+        $enthusiastHeading = '<h3 class="font-display text-xl font-bold">Aviation Enthusiast</h3>';
+        $studentHeading = '<h3 class="font-display text-xl font-bold">Aviation Student Membership</h3>';
+        $start = strpos($cardsHtml, $enthusiastHeading);
+        $end = strpos($cardsHtml, $studentHeading, $start === false ? 0 : $start);
+
+        $this->assertNotFalse($start);
+        $this->assertNotFalse($end);
+        $enthusiastCard = substr($cardsHtml, $start, $end - $start);
+
+        $this->assertStringNotContainsString('data-eligibility', $enthusiastCard);
+        $this->assertStringNotContainsString('Check Eligibility', $enthusiastCard);
+        $this->assertStringNotContainsString('Check Your Eligibility', $enthusiastCard);
     }
 
     public function test_corporate_has_no_eligibility_questionnaire(): void
@@ -348,7 +360,16 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
         $html = $this->get(route('membership.benefits'))->assertOk()->getContent();
         $cardsHtml = substr($html, 0, strpos($html, '<script>'));
 
-        $this->assertStringNotContainsString('data-eligibility', $cardsHtml);
+        $corporateHeading = '<h3 class="font-display text-xl font-bold">Corporate Membership</h3>';
+        $applicationProcessHeading = '<section class="border-t border-border bg-muted/50">';
+        $start = strpos($cardsHtml, $corporateHeading);
+        $end = strpos($cardsHtml, $applicationProcessHeading, $start === false ? 0 : $start);
+
+        $this->assertNotFalse($start);
+        $this->assertNotFalse($end);
+        $corporateCard = substr($cardsHtml, $start, $end - $start);
+
+        $this->assertStringNotContainsString('data-eligibility', $corporateCard);
     }
 
     public function test_enthusiast_apply_now_preselects_category(): void
@@ -371,9 +392,9 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_existing_student_professional_veteran_content_remains_present(): void
     {
-        MembershipCategory::factory()->student()->create();
-        MembershipCategory::factory()->professional()->create();
-        MembershipCategory::factory()->veteran()->create();
+        MembershipCategory::query()->firstOrCreate(['code' => 'S'], ['name' => 'Student', 'is_active' => true, 'display_order' => 1]);
+        MembershipCategory::query()->firstOrCreate(['code' => 'P'], ['name' => 'Professional', 'is_active' => true, 'display_order' => 2]);
+        MembershipCategory::query()->firstOrCreate(['code' => 'V'], ['name' => 'Veteran', 'is_active' => true, 'display_order' => 3]);
 
         $response = $this->get(route('membership.benefits'))->assertOk();
 

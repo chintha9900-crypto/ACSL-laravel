@@ -33,7 +33,7 @@ class MembershipEmailTriggersTest extends MysqlTestCase
     public function test_submitting_an_application_sends_m1_to_the_applicant(): void
     {
         Notification::fake();
-        MembershipCategory::factory()->professional()->create();
+        MembershipCategory::query()->firstOrCreate(['code' => 'P'], ['name' => 'Professional', 'is_active' => true, 'display_order' => 2]);
 
         $this->post(route('membership.apply.store'), [
             'category' => 'P',
