@@ -15,10 +15,75 @@
       already live in production, with no link (no `/blog` route exists).
 --}}
 <x-layouts.public title="Home">
-    {{-- 1. Hero --}}
-    <section class="bg-background">
-        <div class="container mx-auto grid gap-10 px-4 py-16 md:py-20 lg:grid-cols-2 lg:items-center lg:gap-16 lg:px-8 lg:py-28">
-            <div class="text-center lg:text-left">
+    {{-- 1. Hero — full-width background sky video behind the unchanged copy.
+
+         Video: "Wolken Zeitraffer 2 - Clouds Timelapse 2 (Royalty Free) (Kostenlos)
+         1280x720p 60FPS" by FreeSwissVideo (https://www.youtube.com/user/FreeSwissVideo),
+         via Wikimedia Commons
+         (https://commons.wikimedia.org/wiki/File:Wolken_Zeitraffer_2_-_Clouds_Timelapse_2_(Royalty_Free)_(Kostenlos)_1280x720p_60FPS.webm),
+         licensed CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/); licence
+         reviewed on Commons 2013-02-10. Stored locally: Commons' own 480p VP9
+         transcode (public/videos/hero-sky.webm) and a frame from it as the poster
+         (public/images/hero-sky-poster.jpg). By decision, there is no on-screen
+         credit; the attribution is kept here and in the HTML comment at the end
+         of this section (which is sent to the browser in the page source). Note:
+         CC BY 3.0 expects credit reasonable to the medium for people viewing the
+         work, which a source-only credit may not satisfy.
+
+         The poster is also the section background, so it is what shows on a slow
+         connection, if the video fails, where WebM is unsupported, without
+         JavaScript, and when the visitor prefers reduced motion. The video's
+         source is only attached by the script below once reduced motion has been
+         ruled out, so those visitors never download it.
+
+         Readability: on desktop a light gradient keeps the existing dark text
+         readable. Below `lg`, a light full-hero overlay lets more sky show, and a
+         soft, blurred panel behind the text block keeps it readable. Both are set
+         so the paragraph (#666666) stays at or above WCAG AA 4.5:1 against every
+         frame of the clip, measured from rendered pixels; lowering either 85%
+         stop drops the desktop/mobile worst case below 4.5:1. --}}
+    <section class="relative isolate overflow-hidden bg-background bg-cover bg-center" style="background-image: url('{{ asset('images/hero-sky-poster.jpg') }}');">
+        <video
+            id="hero-video"
+            class="absolute inset-0 -z-20 h-full w-full object-cover motion-reduce:hidden"
+            autoplay
+            muted
+            loop
+            playsinline
+            disablepictureinpicture
+            preload="auto"
+            poster="{{ asset('images/hero-sky-poster.jpg') }}"
+            aria-hidden="true"
+            tabindex="-1"
+        >
+            <source data-src="{{ asset('videos/hero-sky.webm') }}" type="video/webm">
+        </video>
+        <script>
+            (function () {
+                var video = document.getElementById('hero-video');
+                if (!video) {
+                    return;
+                }
+                if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    video.removeAttribute('autoplay');
+                    return;
+                }
+                video.querySelectorAll('source[data-src]').forEach(function (source) {
+                    source.src = source.getAttribute('data-src');
+                });
+                video.load();
+                var playing = video.play();
+                if (playing && playing.catch) {
+                    playing.catch(function () {});
+                }
+            })();
+        </script>
+        <div class="absolute inset-0 -z-10 bg-background/35 lg:bg-transparent lg:bg-gradient-to-r lg:from-background/95 lg:via-background/85 lg:to-background/10" aria-hidden="true"></div>
+
+        <div class="container mx-auto grid min-h-[26rem] gap-10 px-4 py-16 md:min-h-[30rem] md:py-20 lg:min-h-[34rem] lg:grid-cols-2 lg:items-center lg:gap-16 lg:px-8 lg:py-28">
+            <div class="relative text-center lg:text-left">
+                <div class="pointer-events-none absolute -inset-x-10 -inset-y-10 -z-10 rounded-[3rem] bg-background/85 blur-xl lg:hidden" aria-hidden="true"></div>
+
                 <span class="inline-flex items-center rounded-md border border-[#666666]/40 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-[#4D4D4D]">
                     International Aviation Community
                 </span>
@@ -35,15 +100,9 @@
                     <a href="{{ route('membership.apply') }}" class="btn btn-lg btn-brand">Become a Member</a>
                 </div>
             </div>
-
-            {{-- Decorative brand panel — the reference's photographic illustration
-                 (pilots/engineers/cabin crew/ATC) is not an asset ACI has supplied;
-                 nothing is invented here beyond the plane glyph already used as a
-                 brand accent in the footer (docs/frontend/06 §6). --}}
-            <div class="mx-auto flex aspect-[4/3] w-full max-w-md items-center justify-center rounded-3xl bg-gradient-to-br from-[#4D4D4D] to-[#666666] shadow-lg lg:aspect-auto lg:h-full lg:max-w-none lg:min-h-[22rem]" role="img" aria-label="Aviation Club International">
-                <svg class="h-24 w-24 -rotate-45 text-white/90 md:h-32 md:w-32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
-            </div>
         </div>
+
+        <!-- Hero background video: "Wolken Zeitraffer 2 - Clouds Timelapse 2 (Royalty Free) (Kostenlos) 1280x720p 60FPS" by FreeSwissVideo (https://www.youtube.com/user/FreeSwissVideo), source: https://commons.wikimedia.org/wiki/File:Wolken_Zeitraffer_2_-_Clouds_Timelapse_2_(Royalty_Free)_(Kostenlos)_1280x720p_60FPS.webm, licensed under CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/). Used as Wikimedia Commons' 480p VP9 transcode; poster is a frame from the clip. -->
     </section>
 
     {{-- 2. About --}}

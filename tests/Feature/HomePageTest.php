@@ -19,6 +19,129 @@ class HomePageTest extends TestCase
         $response->assertSee('Everything you need to grow.');
     }
 
+    public function test_the_hero_has_a_full_width_muted_looping_inline_background_video_without_controls(): void
+    {
+        $html = $this->get(route('home'))->assertOk()->getContent();
+        $xpath = $this->xpath($html);
+
+        $hero = $xpath->query('//section[.//h1[contains(., "One Community. One Passion.")]]')->item(0);
+        $this->assertNotNull($hero);
+
+        $videos = $xpath->query('.//video', $hero);
+        $this->assertSame(1, $videos->length, 'The hero must contain exactly one video.');
+        $video = $videos->item(0);
+
+        foreach (['autoplay', 'muted', 'loop', 'playsinline'] as $attribute) {
+            $this->assertTrue($video->hasAttribute($attribute), "The hero video must have [{$attribute}].");
+        }
+        $this->assertFalse($video->hasAttribute('controls'), 'The hero video must not show player controls.');
+        $this->assertStringContainsString('absolute inset-0', $video->getAttribute('class'), 'The video must cover the whole hero section.');
+        $this->assertStringContainsString('object-cover', $video->getAttribute('class'));
+        $this->assertSame('true', $video->getAttribute('aria-hidden'));
+
+        // Locally stored assets only — no third-party streaming embed. The source
+        // is attached by script (after the reduced-motion check), never in markup.
+        $source = $xpath->query('.//source', $video)->item(0);
+        $this->assertSame(asset('videos/hero-sky.webm'), $source->getAttribute('data-src'));
+        $this->assertFalse($source->hasAttribute('src'), 'The video must not start downloading before the reduced-motion check.');
+        $this->assertFalse($video->hasAttribute('src'));
+        $this->assertSame('video/webm', $source->getAttribute('type'));
+        $this->assertFileExists(public_path('videos/hero-sky.webm'));
+        $this->assertSame(0, $xpath->query('.//iframe', $hero)->length);
+    }
+
+    public function test_the_hero_has_a_poster_fallback_and_respects_reduced_motion(): void
+    {
+        $html = $this->get(route('home'))->assertOk()->getContent();
+        $xpath = $this->xpath($html);
+        $hero = $xpath->query('//section[.//h1[contains(., "One Community. One Passion.")]]')->item(0);
+        $video = $xpath->query('.//video', $hero)->item(0);
+        $poster = asset('images/hero-sky-poster.jpg');
+
+        $this->assertSame($poster, $video->getAttribute('poster'));
+        $this->assertStringContainsString("background-image: url('{$poster}')", $hero->getAttribute('style'), 'The poster must also be the section background, for when the video is hidden or fails.');
+        $this->assertFileExists(public_path('images/hero-sky-poster.jpg'));
+
+        $this->assertStringContainsString('motion-reduce:hidden', $video->getAttribute('class'));
+        $this->assertStringContainsString("matchMedia('(prefers-reduced-motion: reduce)')", $html);
+        $this->assertStringContainsString("video.removeAttribute('autoplay');", $html);
+
+        // Reduced motion returns before any source is attached or loaded.
+        $script = $xpath->query('.//script', $hero)->item(0)->textContent;
+        $reducedCheck = strpos($script, 'prefers-reduced-motion');
+        $this->assertNotFalse($reducedCheck);
+        $this->assertGreaterThan($reducedCheck, strpos($script, "source.src = source.getAttribute('data-src');"));
+        $this->assertGreaterThan($reducedCheck, strpos($script, 'video.load();'));
+        $this->assertMatchesRegularExpression("/prefers-reduced-motion: reduce\)'\)\.matches\) \{\s*video\.removeAttribute\('autoplay'\);\s*return;/", $script);
+    }
+
+    public function test_below_desktop_a_light_overlay_shows_more_sky_and_a_soft_panel_keeps_the_text_readable(): void
+    {
+        $html = $this->get(route('home'))->assertOk()->getContent();
+        $xpath = $this->xpath($html);
+        $hero = $xpath->query('//section[.//h1[contains(., "One Community. One Passion.")]]')->item(0);
+
+        // Full-hero overlay: light below lg, the unchanged gradient from lg up.
+        $overlay = $xpath->query('./div[@aria-hidden="true"]', $hero)->item(0);
+        $overlayClasses = explode(' ', $overlay->getAttribute('class'));
+        $this->assertContains('bg-background/35', $overlayClasses);
+        $this->assertNotContains('bg-background/80', $overlayClasses);
+        // 85% stops: measured across every frame of the clip, anything lighter
+        // drops the paragraph below WCAG AA 4.5:1 on desktop or mobile.
+        foreach (['lg:bg-gradient-to-r', 'lg:from-background/95', 'lg:via-background/85', 'lg:to-background/10'] as $class) {
+            $this->assertContains($class, $overlayClasses);
+        }
+
+        // A blurred readability panel sits only behind the text column, below lg.
+        $textColumn = $xpath->query('.//h1', $hero)->item(0)->parentNode;
+        $panel = $xpath->query('./div[@aria-hidden="true"]', $textColumn)->item(0);
+        $this->assertNotNull($panel, 'The text column must contain the readability panel.');
+        $panelClasses = explode(' ', $panel->getAttribute('class'));
+        foreach (['absolute', '-z-10', 'bg-background/85', 'blur-xl', 'lg:hidden', 'pointer-events-none'] as $class) {
+            $this->assertContains($class, $panelClasses);
+        }
+        $this->assertContains('relative', explode(' ', $textColumn->getAttribute('class')));
+    }
+
+    public function test_the_hero_keeps_its_copy_and_cta_removes_the_side_panel_and_keeps_the_attribution_in_the_page_source(): void
+    {
+        $html = $this->get(route('home'))->assertOk()->getContent();
+        $xpath = $this->xpath($html);
+        $hero = $xpath->query('//section[.//h1[contains(., "One Community. One Passion.")]]')->item(0);
+
+        $this->assertStringContainsString('International Aviation Community', $hero->textContent);
+        $this->assertSame('One Community. One Passion. Aviation.', trim(preg_replace('/\s+/', ' ', $xpath->query('.//h1', $hero)->item(0)->textContent)));
+        $this->assertStringContainsString('For people who work, study or take part in aviation.', $hero->textContent);
+        $cta = $xpath->query('.//a[normalize-space(.)="Become a Member"]', $hero)->item(0);
+        $this->assertSame(route('membership.apply'), $cta->getAttribute('href'));
+
+        // The decorative right-column panel is gone.
+        $this->assertSame(0, $xpath->query('.//*[@role="img"]', $hero)->length);
+        $this->assertSame(0, $xpath->query('.//svg', $hero)->length);
+
+        // No on-screen credit (decision), but the full CC BY 3.0 attribution is
+        // still delivered in the page source as an HTML comment inside the hero.
+        $this->assertSame(0, $xpath->query('.//a[@href="https://creativecommons.org/licenses/by/3.0/"]', $hero)->length);
+        $this->assertStringNotContainsString('Sky video', $hero->textContent);
+        $this->assertStringNotContainsString('FreeSwissVideo', $hero->textContent);
+        $comments = implode(' ', array_map(fn ($node) => $node->nodeValue, iterator_to_array($xpath->query('.//comment()', $hero))));
+        foreach ([
+            'Wolken Zeitraffer 2 - Clouds Timelapse 2',
+            'by FreeSwissVideo (https://www.youtube.com/user/FreeSwissVideo)',
+            'https://commons.wikimedia.org/wiki/File:Wolken_Zeitraffer_2_-_Clouds_Timelapse_2_(Royalty_Free)_(Kostenlos)_1280x720p_60FPS.webm',
+            'CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)',
+        ] as $attribution) {
+            $this->assertStringContainsString($attribution, $comments);
+        }
+
+        // The About section still follows directly after the hero.
+        $next = $hero->nextSibling;
+        while ($next !== null && $next->nodeName !== 'section') {
+            $next = $next->nextSibling;
+        }
+        $this->assertStringContainsString('About ACI', $next?->textContent ?? '');
+    }
+
     public function test_the_home_page_shows_all_six_documented_benefits(): void
     {
         $response = $this->get(route('home'))->assertOk();
