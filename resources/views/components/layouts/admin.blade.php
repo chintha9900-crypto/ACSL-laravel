@@ -46,6 +46,14 @@
                         @endcan
                         @can('viewAny', \App\Models\Payment::class)
                             <a href="{{ route('admin.payments.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Payments</a>
+                            <a href="{{ route('admin.order-payments.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Order payments</a>
+                            <a href="{{ route('admin.payment-reviews.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Payment reviews</a>
+                        @endcan
+                        @can('viewAny', \App\Models\PaymentBankAccount::class)
+                            <a href="{{ route('admin.bank-accounts.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Bank accounts</a>
+                        @endcan
+                        @can('viewAny', \App\Models\EshopSetting::class)
+                            <a href="{{ route('admin.eshop-settings.edit') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Delivery charge</a>
                         @endcan
                         @can('viewAny', \App\Models\BlogPost::class)
                             <a href="{{ route('admin.blog.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Blog posts</a>

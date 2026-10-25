@@ -26,7 +26,7 @@ class StorePaymentEvidence
     /**
      * @param  list<string>  $storedPaths  Receives the path written (for cleanup on failure).
      */
-    public function handle(Payment $payment, User $uploadedBy, UploadedFile $file, array &$storedPaths): Document
+    public function handle(Payment $payment, ?User $uploadedBy, UploadedFile $file, array &$storedPaths): Document
     {
         $extension = $file->guessExtension();
         $extension = $extension === 'jpeg' ? 'jpg' : $extension;
@@ -54,7 +54,7 @@ class StorePaymentEvidence
         $document = new Document([
             'kind' => Document::KIND_PAYMENT_EVIDENCE,
             'payment_id' => $payment->id,
-            'uploaded_by_user_id' => $uploadedBy->id,
+            'uploaded_by_user_id' => $uploadedBy?->id,
             'disk' => Document::DISK_PRIVATE,
             'storage_path' => $path,
             'original_filename' => $this->displayName($file),

@@ -52,6 +52,9 @@
                     <tr>
                         <td class="px-4 py-3">
                             <a href="{{ route('admin.orders.show', $order) }}" class="font-mono text-xs font-semibold text-primary underline underline-offset-2 hover:text-secondary">{{ $order->order_number }}</a>
+                            @if ($order->is_test)
+                                <span class="ml-1 rounded border border-[#CC001F]/50 px-1.5 text-[10px] font-semibold uppercase text-[#CC001F]">Test</span>
+                            @endif
                         </td>
                         <td class="px-4 py-3">
                             <div>{{ $order->customer_name }}</div>

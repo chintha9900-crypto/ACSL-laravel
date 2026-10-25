@@ -10,6 +10,10 @@
             <h1 class="font-display text-3xl font-bold text-primary md:text-4xl">Receipt</h1>
             <p class="mt-2 text-muted-foreground">Order <span class="font-mono font-semibold text-foreground">{{ $order->order_number }}</span></p>
 
+            @if ($order->is_test)
+                <p class="mt-4 rounded-lg border border-[#CC001F]/50 bg-[#CC001F]/5 px-4 py-3 text-sm font-semibold text-[#CC001F]" role="note">TEST RECEIPT — simulated Dummy / Test Payment (Development Only). No money was taken. Not valid as a receipt.</p>
+            @endif
+
             <div class="ui-card mt-6 p-6 md:p-8">
                 <dl class="grid gap-4 sm:grid-cols-2">
                     <div>
@@ -30,6 +34,26 @@
                         <dt class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Customer email</dt>
                         <dd class="mt-1">{{ $order->customer_email }}</dd>
                     </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payment method</dt>
+                        <dd class="mt-1">{{ $order->paymentMethodLabel() }}</dd>
+                    </div>
+                    @if ($payment?->paid_at)
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Paid on</dt>
+                            <dd class="mt-1">{{ $payment->paid_at->format('j M Y, g:ia') }}</dd>
+                        </div>
+                    @endif
+                    @if ($order->deliveryAddressLines() !== [])
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Delivery address</dt>
+                            <dd class="mt-1">
+                                @foreach ($order->deliveryAddressLines() as $line)
+                                    {{ $line }}<br>
+                                @endforeach
+                            </dd>
+                        </div>
+                    @endif
                     @if ($order->customer_phone)
                         <div>
                             <dt class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Customer phone</dt>
@@ -62,6 +86,16 @@
                         @endforeach
                     </tbody>
                     <tfoot>
+                        @if ($order->delivery_charge_amount !== null)
+                            <tr class="border-t border-border">
+                                <td colspan="4" class="px-4 py-3 text-right">Items</td>
+                                <td class="px-4 py-3">LKR {{ $order->subtotal_amount }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="4" class="px-4 py-3 text-right">Delivery (Sri Lanka)</td>
+                                <td class="px-4 py-3">LKR {{ $order->delivery_charge_amount }}</td>
+                            </tr>
+                        @endif
                         <tr class="border-t border-border">
                             <td colspan="4" class="px-4 py-3 text-right font-semibold">Order total</td>
                             <td class="px-4 py-3 font-display text-lg font-bold text-primary">LKR {{ number_format((float) $order->total_amount, 2) }}</td>

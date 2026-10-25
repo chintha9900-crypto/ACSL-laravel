@@ -11,6 +11,9 @@
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:8px;padding:32px;">
 <tr><td>
 <h1 style="margin:0 0 20px;font-size:20px;color:#0b2a4a;">Aviation Club</h1>
+@if (! empty($isTest))
+<p style="margin:0 0 16px;padding:8px 12px;border:1px solid #CC001F;color:#CC001F;font-size:14px;font-weight:bold;">TEST ORDER — simulated Dummy / Test Payment (Development Only). No money was taken. This is not a valid receipt.</p>
+@endif
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Hello {{ $customerName }},</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Thank you for your order — your payment has been confirmed. Here is your receipt.</p>
 
@@ -37,6 +40,12 @@ Payment status: <strong>Paid</strong>
 <td style="padding:6px 4px;text-align:right;">{{ $currency }} {{ number_format((float) $item->line_total, 2) }}</td>
 </tr>
 @endforeach
+@if ($deliveryCharge !== null)
+<tr>
+<td colspan="4" style="padding:10px 4px 0;text-align:right;">Delivery (Sri Lanka)</td>
+<td style="padding:10px 4px 0;text-align:right;">{{ $currency }} {{ $deliveryCharge }}</td>
+</tr>
+@endif
 <tr>
 <td colspan="4" style="padding:10px 4px 0;text-align:right;font-weight:bold;">Order total</td>
 <td style="padding:10px 4px 0;text-align:right;font-weight:bold;">{{ $currency }} {{ number_format((float) $totalAmount, 2) }}</td>

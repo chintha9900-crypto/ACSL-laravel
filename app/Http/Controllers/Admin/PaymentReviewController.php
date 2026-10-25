@@ -27,6 +27,7 @@ class PaymentReviewController extends Controller
         Gate::authorize('viewAny', Payment::class);
 
         $payments = Payment::query()
+            ->whereNotNull('membership_term_id') // e-shop transfers: OrderPaymentReviewController
             ->where('status', Payment::STATUS_PROCESSING)
             ->with(['user:id,name,email', 'membershipTerm.membership:id,membership_number', 'evidence'])
             ->orderBy('submitted_at')

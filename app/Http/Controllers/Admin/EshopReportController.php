@@ -31,6 +31,7 @@ class EshopReportController extends Controller
         $from = isset($validated['from']) ? Carbon::parse($validated['from'], $timezone) : $to->copy()->subDays(29);
 
         $rows = Order::query()
+            ->where('is_test', false)
             ->whereBetween('created_at', [$from->copy()->startOfDay()->utc(), $to->copy()->endOfDay()->utc()])
             ->selectRaw('status, currency, COUNT(*) AS orders_count, SUM(total_amount) AS total_value')
             ->groupBy('status', 'currency')

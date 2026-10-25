@@ -21,8 +21,21 @@ return Application::configure(basePath: dirname(__DIR__))
         // reminding members about ones still approaching expiry.
         $schedule->command('membership:expire-terms')->daily();
         $schedule->command('membership:send-renewal-reminders')->daily();
+
+        // Unpaid e-shop orders: PayHere deadlines are 30 minutes, so check often.
+        $schedule->command('orders:expire-unpaid')->everyFiveMinutes()->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
+        // PayHere's server-to-server callback cannot carry a CSRF token; it is
+        // verified by its md5sig signature instead (PayHereNotificationController).
+        $middleware->validateCsrfTokens(except: ['payments/payhere/notify']);
+
+        // ...and its md5sig must be checked against the fields exactly as sent,
+        // so they are not trimmed or converted for that one route.
+        $isPayHereNotification = fn (Request $request): bool => $request->is('payments/payhere/notify');
+        $middleware->trimStrings(except: [$isPayHereNotification]);
+        $middleware->convertEmptyStringsToNull(except: [$isPayHereNotification]);
+
         $middleware->alias([
             'active' => EnsureUserIsActive::class,
             'role' => EnsureUserHasRole::class,

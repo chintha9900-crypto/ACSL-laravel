@@ -31,7 +31,7 @@ class OrderReceipt extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Your Aviation Club order receipt — '.$this->order->order_number)
+            ->subject(($this->order->is_test ? '[TEST] ' : '').'Your Aviation Club order receipt — '.$this->order->order_number)
             ->view(
                 ['emails.orders.receipt', 'emails.orders.receipt-text'],
                 [
@@ -41,6 +41,8 @@ class OrderReceipt extends Notification
                     'currency' => $this->order->currency,
                     'items' => $this->order->items,
                     'totalAmount' => $this->order->total_amount,
+                    'isTest' => $this->order->is_test,
+                    'deliveryCharge' => $this->order->delivery_charge_amount,
                 ],
             );
     }

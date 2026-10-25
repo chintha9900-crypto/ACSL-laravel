@@ -179,7 +179,7 @@ class RoleDashboardsTest extends MysqlTestCase
             ->assertDontSee('href="'.route('dev.dashboard').'"', false);
     }
 
-    public function test_an_editor_can_refund_an_order_review_payments_and_view_the_eshop_financial_summary(): void
+    public function test_an_editor_can_manage_orders_review_payments_and_view_the_eshop_financial_summary_but_not_mark_unrecorded_refunds(): void
     {
         $editor = $this->editor();
         $order = Order::factory()->create(['status' => Order::STATUS_PAID, 'currency' => 'LKR', 'total_amount' => 1500]);
@@ -195,10 +195,17 @@ class RoleDashboardsTest extends MysqlTestCase
             ->assertSee('LKR')
             ->assertSee('1,500.00');
 
+        // Editors still manage fulfilment status…
+        $this->actingAs($editor)
+            ->patch(route('admin.orders.update-status', $order), ['status' => Order::STATUS_PROCESSING])
+            ->assertRedirect(route('admin.orders.show', $order));
+        $this->assertSame(Order::STATUS_PROCESSING, $order->fresh()->status);
+
+        // …but "refunded" requires a recorded refund (admin-only), so it is refused here.
         $this->actingAs($editor)
             ->patch(route('admin.orders.update-status', $order), ['status' => Order::STATUS_REFUNDED])
-            ->assertRedirect(route('admin.orders.show', $order));
-        $this->assertSame(Order::STATUS_REFUNDED, $order->fresh()->status);
+            ->assertSessionHasErrors('status');
+        $this->assertSame(Order::STATUS_PROCESSING, $order->fresh()->status);
     }
 
     public function test_the_eshop_summary_groups_by_status_and_currency_within_the_date_range(): void

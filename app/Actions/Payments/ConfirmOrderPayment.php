@@ -3,79 +3,158 @@
 namespace App\Actions\Payments;
 
 use App\Actions\Orders\NotifyCustomer;
+use App\Actions\Orders\RecordOrderAudit;
+use App\Actions\Orders\ReleaseOrderStock;
+use App\Exceptions\PaymentCannotBeReviewedException;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\PaymentReview;
+use App\Models\User;
 use App\Notifications\Orders\OrderReceipt;
 use Illuminate\Support\Facades\DB;
+use LogicException;
 
 /**
- * The single place an order payment is ever marked `paid` — the stand-in
- * today's `ManualPaymentGateway` calls, and exactly what a real gateway's
- * webhook controller would call once one exists, so that controller never
- * needs to know how to update a `Payment`/`Order` itself.
+ * The single internal "payment verified" transition for e-shop orders, used
+ * by admin bank-transfer approval, the verified PayHere notification and the
+ * development dummy adapter alike. Callers verify the payment first; this
+ * only applies the result.
  *
- * Idempotent: locks the payment row first, and if it is already `paid`
- * returns immediately without touching anything else — a duplicated
- * webhook delivery or a double click can never pay twice, create a second
- * order-status transition, deduct stock again (this never references
- * `Inventory` at all; stock was already deducted once, at order placement
- * in E-Shop Step 6), or send a second receipt email: the email is sent only
- * from inside the branch that actually performs the pending→paid write, so
- * a replayed confirmation — which hits the early return above instead —
- * can never trigger it again.
+ * Lock order (shared by every order/payment action): order → payments →
+ * inventory. The transaction retries on deadlock, and the receipt is sent
+ * only after commit, so a retry or rollback can never send one.
  *
- * The email is sent only after the transaction commits, never from inside
- * it: a transient mail failure must not roll back a payment that genuinely
- * succeeded.
+ * - Membership payments are refused outright.
+ * - Already settled: no change, no second receipt (idempotent).
+ * - Order awaiting payment: payment → paid (stale rejection fields cleared),
+ *   order → paid, other open attempts closed, receipt sent once.
+ * - Order closed another way (cancelled, expired, or paid by another
+ *   attempt): with `$strict`, refused; otherwise (a gateway reporting money
+ *   already taken) the payment is recorded as paid and put in the manual
+ *   review queue — the order is never reopened, stock is not touched and no
+ *   receipt is sent.
  */
 class ConfirmOrderPayment
 {
-    public function __construct(private readonly NotifyCustomer $notifyCustomer) {}
+    public function __construct(
+        private readonly NotifyCustomer $notifyCustomer,
+        private readonly RecordOrderAudit $audit,
+        private readonly FlagPaymentForReview $flag,
+        private readonly ReleaseOrderStock $releaseOrderStock,
+    ) {}
 
-    public function handle(Payment $payment): Payment
-    {
-        [$confirmed, $justConfirmed] = DB::transaction(function () use ($payment): array {
+    /**
+     * @param  array<string, mixed>  $attributes  Extra payment columns to record (metadata is merged).
+     * @param  list<string>|null  $requireStatuses  Payment statuses this confirmation may start from.
+     * @param  bool  $isAdminReview  Record $actor as the reviewer (bank-transfer approval).
+     *
+     * @throws PaymentCannotBeReviewedException
+     */
+    public function handle(
+        Payment $payment,
+        ?User $actor = null,
+        array $attributes = [],
+        ?array $requireStatuses = null,
+        bool $strict = false,
+        ?string $actorType = null,
+        bool $isAdminReview = false,
+    ): Payment {
+        return DB::transaction(function () use ($payment, $actor, $attributes, $requireStatuses, $strict, $actorType, $isAdminReview): Payment {
+            $purpose = Payment::query()->whereKey($payment->id)->first(['order_id', 'membership_term_id']);
+
+            if ($purpose === null || $purpose->order_id === null || $purpose->membership_term_id !== null) {
+                throw new LogicException('Only e-shop order payments can be confirmed here.');
+            }
+
+            $order = Order::query()->lockForUpdate()->findOrFail($purpose->order_id);
             $locked = Payment::query()->lockForUpdate()->findOrFail($payment->id);
 
-            if ($locked->status === Payment::STATUS_PAID) {
-                return [$locked, false];
+            if ($locked->isSettled()) {
+                return $locked;
             }
+
+            if ($requireStatuses !== null && ! in_array($locked->status, $requireStatuses, true)) {
+                throw new PaymentCannotBeReviewedException('This payment is not currently awaiting confirmation.');
+            }
+
+            $orderAwaitingPayment = $order->status === Order::STATUS_PENDING_PAYMENT;
+
+            if (! $orderAwaitingPayment && $strict) {
+                throw new PaymentCannotBeReviewedException('This order is no longer awaiting payment.');
+            }
+
+            $now = now();
+            $metadata = [...($locked->metadata ?? []), ...($attributes['metadata'] ?? [])];
+            unset($attributes['metadata']);
 
             $locked->forceFill([
+                ...$attributes,
                 'status' => Payment::STATUS_PAID,
-                'paid_at' => now(),
+                'paid_at' => $now,
+                'failed_at' => null,
+                'rejection_reason' => null,
+                'metadata' => $metadata === [] ? null : $metadata,
+                ...($isAdminReview && $actor !== null ? ['reviewed_by_user_id' => $actor->id, 'reviewed_at' => $now] : []),
             ])->save();
 
-            if ($locked->order_id !== null) {
-                $order = Order::query()->lockForUpdate()->find($locked->order_id);
+            $this->audit->handle($locked, 'payment.confirmed', $actor, ['gateway' => $locked->gateway, 'amount' => $locked->amount, 'currency' => $locked->currency], $actorType);
 
-                if ($order !== null && $order->status === Order::STATUS_PENDING_PAYMENT) {
-                    $order->update(['status' => Order::STATUS_PAID]);
-                }
+            if (! $orderAwaitingPayment) {
+                $this->flag->handle(
+                    $order,
+                    $locked,
+                    PaymentReview::TYPE_LATE_PAYMENT,
+                    "Payment received for order {$order->order_number} after it was {$order->status}. The order was not reopened — verify and refund if appropriate.",
+                    ['order_status' => $order->status, 'gateway' => $locked->gateway, 'amount' => $locked->amount, 'currency' => $locked->currency],
+                    ['late_payment'],
+                );
+
+                return $locked;
             }
 
-            return [$locked, true];
-        });
+            $order->update(['status' => Order::STATUS_PAID]);
+            $this->audit->handle($order, 'order.paid', $actor, ['payment' => $locked->public_id, 'gateway' => $locked->gateway], $actorType);
 
-        if ($justConfirmed) {
-            $this->sendReceipt($confirmed);
-        }
+            $this->closeOtherAttempts($order, $locked, $actor, $actorType);
 
-        return $confirmed;
+            if ($order->is_test) {
+                $this->releaseOrderStock->handle($order, $actor, 'Simulated test order — stock returned');
+            }
+
+            DB::afterCommit(fn () => $this->notifyCustomer->handle($order, new OrderReceipt($order->fresh('items'))));
+
+            return $locked;
+        }, 3);
     }
 
-    private function sendReceipt(Payment $payment): void
+    /**
+     * Once the order is paid, no other attempt may stay open. A bank transfer
+     * whose evidence is under review may represent real money, so it goes to
+     * manual review instead of being silently dropped.
+     */
+    private function closeOtherAttempts(Order $order, Payment $paid, ?User $actor, ?string $actorType): void
     {
-        if ($payment->order_id === null) {
-            return;
-        }
+        $order->payments()
+            ->whereKeyNot($paid->id)
+            ->whereIn('status', [Payment::STATUS_PENDING, Payment::STATUS_PROCESSING])
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get()
+            ->each(function (Payment $other) use ($order, $actor, $actorType): void {
+                $wasUnderReview = $other->status === Payment::STATUS_PROCESSING;
+                $other->forceFill(['status' => Payment::STATUS_CANCELLED])->save();
+                $this->audit->handle($other, 'payment.cancelled', $actor, ['reason' => 'Order paid by another attempt'], $actorType);
 
-        $order = Order::query()->with('items')->find($payment->order_id);
-
-        if ($order === null) {
-            return;
-        }
-
-        $this->notifyCustomer->handle($order, new OrderReceipt($order));
+                if ($wasUnderReview) {
+                    $this->flag->handle(
+                        $order,
+                        $other,
+                        PaymentReview::TYPE_TRANSFER_CONFLICT,
+                        "Bank transfer evidence (reference {$other->transaction_reference}) was under review when order {$order->order_number} was paid by another attempt. Verify whether this transfer was received and refund if so.",
+                        ['transaction_reference' => $other->transaction_reference, 'amount' => $other->amount, 'currency' => $other->currency],
+                        ['paid_elsewhere'],
+                    );
+                }
+            });
     }
 }

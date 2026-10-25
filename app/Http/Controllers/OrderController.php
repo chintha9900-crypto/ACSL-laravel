@@ -20,7 +20,7 @@ class OrderController extends Controller
         return view('orders.show', [
             'order' => $order,
             'paymentUrl' => $this->orderRouteUrl($order, 'payment.show'),
-            'receiptUrl' => $order->status === Order::STATUS_PAID ? $this->orderRouteUrl($order, 'orders.receipt') : null,
+            'receiptUrl' => $order->hasReceipt() ? $this->orderRouteUrl($order, 'orders.receipt') : null,
         ]);
     }
 }

@@ -11,12 +11,25 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
+use Tests\Concerns\CreatesEshopOrders;
 use Tests\Concerns\CreatesReviewableApplications;
 use Tests\MysqlTestCase;
 
 class OrderControllerTest extends MysqlTestCase
 {
+    use CreatesEshopOrders;
     use CreatesReviewableApplications;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // These tests cover the member's order history, not delivery pricing:
+        // an explicitly configured zero charge keeps totals equal to the item
+        // totals. Delivery inclusion is covered by tests/Feature/Eshop.
+        $this->eshopBankAccount();
+        $this->configureDeliveryCharge('0.00');
+    }
 
     private function withStock(Product $product, int $quantity = 10): Product
     {
@@ -34,7 +47,10 @@ class OrderControllerTest extends MysqlTestCase
         return [
             'name' => 'Nimal Perera',
             'email' => 'nimal@example.test',
-            'phone' => '+94 77 123 4567',
+            'phone' => '+94771234567',
+            'address_line1' => '12 Galle Road',
+            'city' => 'Colombo',
+            'country' => 'LK',
             ...$overrides,
         ];
     }

@@ -14,6 +14,7 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Notifications\Orders\OrderReceipt;
 use Illuminate\Support\Facades\Notification;
+use Tests\Concerns\CreatesEshopOrders;
 use Tests\Concerns\CreatesReviewableApplications;
 use Tests\MysqlTestCase;
 
@@ -25,7 +26,19 @@ use Tests\MysqlTestCase;
  */
 class OrderReceiptEmailTest extends MysqlTestCase
 {
+    use CreatesEshopOrders;
     use CreatesReviewableApplications;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // These tests cover receipt emails, not delivery pricing: an explicitly
+        // configured zero charge keeps the totals equal to the item totals.
+        // Delivery in receipts is covered by tests/Feature/Eshop.
+        $this->eshopBankAccount();
+        $this->configureDeliveryCharge('0.00');
+    }
 
     private function withStock(Product $product, int $quantity = 10): Product
     {
@@ -43,7 +56,10 @@ class OrderReceiptEmailTest extends MysqlTestCase
         return [
             'name' => 'Nimal Perera',
             'email' => 'nimal@example.test',
-            'phone' => '+94 77 123 4567',
+            'phone' => '+94771234567',
+            'address_line1' => '12 Galle Road',
+            'city' => 'Colombo',
+            'country' => 'LK',
             ...$overrides,
         ];
     }

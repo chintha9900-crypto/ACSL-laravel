@@ -27,4 +27,15 @@ class PaymentPolicy
     {
         return $user->hasPermission(Ability::ReviewPayments);
     }
+
+    /**
+     * Recording a refund is admin-only. No permission grants it to other
+     * roles; an active admin passes through the `Gate::before` bypass
+     * (AppServiceProvider). Editors keep `review` for flagged payments and
+     * bank-transfer approval.
+     */
+    public function recordRefund(User $user, Payment $payment): bool
+    {
+        return false;
+    }
 }

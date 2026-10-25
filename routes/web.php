@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BankAccountController;
 use App\Http\Controllers\Admin\BlogCategoryController;
 use App\Http\Controllers\Admin\BlogCommentController as AdminBlogCommentController;
 use App\Http\Controllers\Admin\BlogPostController as AdminBlogPostController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\EditorInvitationController;
 use App\Http\Controllers\Admin\EshopReportController;
+use App\Http\Controllers\Admin\EshopSettingsController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\MembershipActivationController;
@@ -17,7 +19,10 @@ use App\Http\Controllers\Admin\MembershipApplicationReviewController;
 use App\Http\Controllers\Admin\MembershipSetupLinkController;
 use App\Http\Controllers\Admin\NewsController as AdminNewsController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\OrderPaymentReviewController;
+use App\Http\Controllers\Admin\PaymentRefundController;
 use App\Http\Controllers\Admin\PaymentReviewController;
+use App\Http\Controllers\Admin\PaymentReviewQueueController;
 use App\Http\Controllers\Admin\ProductCategoryController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\SchoolClubStudentBatchController;
@@ -29,6 +34,7 @@ use App\Http\Controllers\CommercialPartnerController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CsrController;
 use App\Http\Controllers\Dev\DashboardController as DevDashboardController;
+use App\Http\Controllers\DummyPaymentController;
 use App\Http\Controllers\Editor\DashboardController as EditorDashboardController;
 use App\Http\Controllers\EshopController;
 use App\Http\Controllers\EventController;
@@ -50,6 +56,7 @@ use App\Http\Controllers\Membership\VerificationController;
 use App\Http\Controllers\NewsController;
 use App\Http\Controllers\NewsEventsController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PayHereNotificationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ReceiptController;
 use App\Models\MembershipSetting;
@@ -162,18 +169,28 @@ Route::get('orders/{order}/receipt', [ReceiptController::class, 'show'])
     ->middleware('throttle:60,1')
     ->name('orders.receipt');
 
-// E-Shop Step 7 — payment structure and confirmation only (no real
-// gateway/webhooks/receipts-by-email yet). confirm/fail/cancel stand in for
-// what a real gateway's signed webhook would otherwise call
-// (`PaymentGatewayContract`, bound to `ManualPaymentGateway` in
-// AppServiceProvider) — reachable only by whoever can already view the
-// order (`AuthorizesOrderAccess`), same as `orders.show`.
+// Payment for one order — reachable only by whoever can already view the
+// order (`AuthorizesOrderAccess`), same as `orders.show`. Nothing here marks
+// a payment paid: bank transfers are verified by an admin, PayHere by its
+// verified notify callback, and the dummy method is development-only.
 Route::controller(PaymentController::class)->prefix('payment')->name('payment.')->group(function () {
     Route::get('{order}', 'show')->middleware('throttle:60,1')->name('show');
-    Route::post('{order}/confirm', 'confirm')->name('confirm');
-    Route::post('{order}/fail', 'fail')->name('fail');
-    Route::post('{order}/cancel', 'cancel')->name('cancel');
+    Route::post('{order}/retry', 'retry')->middleware('throttle:10,1')->name('retry');
+    Route::post('{order}/bank-transfer', 'submitBankTransfer')->middleware('throttle:10,1')->name('bank-transfer');
+    Route::get('{order}/payhere/return', 'payHereReturn')->middleware('throttle:30,1')->name('payhere.return');
+    Route::get('{order}/payhere/cancel', 'payHereCancel')->middleware('throttle:30,1')->name('payhere.cancel');
 });
+
+Route::post('payment/{order}/dummy/{outcome}', DummyPaymentController::class)
+    ->whereIn('outcome', ['success', 'failure', 'cancel'])
+    ->middleware('throttle:10,1')
+    ->name('payment.dummy');
+
+// PayHere server-to-server notify callback (CSRF-exempt in bootstrap/app.php;
+// every request is verified by md5sig inside the controller).
+Route::post('payments/payhere/notify', PayHereNotificationController::class)
+    ->middleware('throttle:120,1')
+    ->name('payments.payhere.notify');
 
 Route::controller(MembershipApplicationController::class)->group(function () {
     Route::get('membership/apply', 'create')->name('membership.apply');
@@ -298,6 +315,26 @@ Route::middleware(['auth', 'active', 'role:admin,editor'])->prefix('admin')->nam
     Route::get('payments', [PaymentReviewController::class, 'index'])->name('payments.index');
     Route::post('payments/{payment}/confirm', [PaymentReviewController::class, 'confirm'])->name('payments.confirm');
     Route::post('payments/{payment}/reject', [PaymentReviewController::class, 'reject'])->name('payments.reject');
+
+    // E-shop bank-transfer verification (separate from membership renewals).
+    Route::get('order-payments', [OrderPaymentReviewController::class, 'index'])->name('order-payments.index');
+    Route::post('order-payments/{payment}/approve', [OrderPaymentReviewController::class, 'approve'])->name('order-payments.approve');
+    Route::post('order-payments/{payment}/reject', [OrderPaymentReviewController::class, 'reject'])->name('order-payments.reject');
+
+    // E-shop payment conflicts needing a human decision, and manual refunds
+    // (performed in the PayHere merchant portal or by bank, recorded here).
+    Route::get('payment-reviews', [PaymentReviewQueueController::class, 'index'])->name('payment-reviews.index');
+    Route::post('payment-reviews/{paymentReview}/resolve', [PaymentReviewQueueController::class, 'resolve'])->name('payment-reviews.resolve');
+    Route::post('order-payments/{payment}/refunds', [PaymentRefundController::class, 'store'])->name('payment-refunds.store');
+
+    // Delivery charge (commerce.manage) and receiving bank accounts (settings.manage).
+    Route::get('eshop-settings', [EshopSettingsController::class, 'edit'])->name('eshop-settings.edit');
+    Route::put('eshop-settings', [EshopSettingsController::class, 'update'])->name('eshop-settings.update');
+    Route::get('bank-accounts', [BankAccountController::class, 'index'])->name('bank-accounts.index');
+    Route::get('bank-accounts/create', [BankAccountController::class, 'create'])->name('bank-accounts.create');
+    Route::post('bank-accounts', [BankAccountController::class, 'store'])->name('bank-accounts.store');
+    Route::post('bank-accounts/{bankAccount}/activate', [BankAccountController::class, 'activate'])->name('bank-accounts.activate');
+    Route::post('bank-accounts/{bankAccount}/deactivate', [BankAccountController::class, 'deactivate'])->name('bank-accounts.deactivate');
 
     // School Club student batches — review (Policy-gated: application review; approve also activation).
     Route::get('school-club-batches', [SchoolClubStudentBatchController::class, 'index'])->name('school-club-batches.index');

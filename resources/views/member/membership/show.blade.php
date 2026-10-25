@@ -132,21 +132,25 @@
 
                     <div class="mt-4 rounded-lg bg-muted p-4 text-sm">
                         <p class="font-medium">Pay by bank transfer to:</p>
-                        @if ($payment->bankAccount)
-                            <p class="mt-2 whitespace-pre-line">{{ $payment->bankAccount->bank_name }}
-Account name: {{ $payment->bankAccount->account_name }}
-Account number: {{ $payment->bankAccount->account_number }}
-@if ($payment->bankAccount->branch)Branch: {{ $payment->bankAccount->branch }}
+                        {{-- Never a deactivated account: the current active one for the currency. --}}
+                        @php($bankAccount = $payment->currentBankAccount())
+                        @if ($bankAccount)
+                            <p class="mt-2 whitespace-pre-line">{{ $bankAccount->bank_name }}
+Account name: {{ $bankAccount->account_name }}
+Account number: {{ $bankAccount->account_number }}
+@if ($bankAccount->branch)Branch: {{ $bankAccount->branch }}
 @endif
-@if ($payment->bankAccount->sort_code)Sort code: {{ $payment->bankAccount->sort_code }}
+@if ($bankAccount->sort_code)Sort code: {{ $bankAccount->sort_code }}
 @endif
-@if ($payment->bankAccount->iban)IBAN: {{ $payment->bankAccount->iban }}
+@if ($bankAccount->iban)IBAN: {{ $bankAccount->iban }}
 @endif
-@if ($payment->bankAccount->swift_bic)SWIFT/BIC: {{ $payment->bankAccount->swift_bic }}
+@if ($bankAccount->swift_bic)SWIFT/BIC: {{ $bankAccount->swift_bic }}
 @endif</p>
-                            @if ($payment->bankAccount->instructions)
-                                <p class="mt-2 text-muted-foreground">{{ $payment->bankAccount->instructions }}</p>
+                            @if ($bankAccount->instructions)
+                                <p class="mt-2 text-muted-foreground">{{ $bankAccount->instructions }}</p>
                             @endif
+                        @else
+                            <p class="mt-2 text-muted-foreground">Bank details are not available at the moment. Please contact us before transferring.</p>
                         @endif
                     </div>
 

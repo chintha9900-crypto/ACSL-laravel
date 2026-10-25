@@ -12,12 +12,25 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
+use Tests\Concerns\CreatesEshopOrders;
 use Tests\Concerns\CreatesReviewableApplications;
 use Tests\MysqlTestCase;
 
 class OrderControllerTest extends MysqlTestCase
 {
+    use CreatesEshopOrders;
     use CreatesReviewableApplications;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // These tests cover admin order management, not delivery pricing: an
+        // explicitly configured zero charge keeps order totals equal to the
+        // item totals. Delivery inclusion is covered by CheckoutDetailsTest.
+        $this->eshopBankAccount();
+        $this->configureDeliveryCharge('0.00');
+    }
 
     private function withStock(Product $product, int $quantity = 10): Product
     {
@@ -35,7 +48,10 @@ class OrderControllerTest extends MysqlTestCase
         return [
             'name' => 'Nimal Perera',
             'email' => 'nimal@example.test',
-            'phone' => '+94 77 123 4567',
+            'phone' => '+94771234567',
+            'address_line1' => '12 Galle Road',
+            'city' => 'Colombo',
+            'country' => 'LK',
             ...$overrides,
         ];
     }
@@ -355,13 +371,47 @@ class OrderControllerTest extends MysqlTestCase
         $this->confirmPayment($order);
         $admin = $this->admin();
 
-        $this->actingAs($admin)->patch(route('admin.orders.update-status', $order), ['status' => 'refunded'])
-            ->assertSessionHasNoErrors();
+        // An order becomes "refunded" only through a recorded refund.
+        $this->actingAs($admin)->post(route('admin.payment-refunds.store', $order->latestPayment()), [
+            'amount' => $order->total_amount,
+            'reason' => 'Returned',
+            'refund_reference' => 'PH-R-1',
+            'refunded_on' => now()->toDateString(),
+        ])->assertSessionHasNoErrors();
         $this->assertSame('refunded', $order->fresh()->status);
 
         $this->actingAs($admin)->patch(route('admin.orders.update-status', $order), ['status' => 'refunded'])
             ->assertSessionHasErrors('status');
 
         $this->assertSame('refunded', $order->fresh()->status);
+    }
+
+    public function test_a_paid_order_cannot_be_marked_refunded_without_a_recorded_refund(): void
+    {
+        $order = $this->placeOrder($this->withStock(Product::factory()->create()));
+        $this->confirmPayment($order);
+        $payment = $order->latestPayment();
+
+        $this->actingAs($this->admin())->get(route('admin.orders.show', $order))->assertDontSee('<option value="refunded">', false);
+        $this->actingAs($this->admin())->patch(route('admin.orders.update-status', $order), ['status' => 'refunded'])
+            ->assertSessionHasErrors(['status' => 'Record the refund for every payment on this order before marking it refunded.']);
+
+        $this->assertSame('paid', $order->fresh()->status);
+        $this->assertSame('paid', $payment->fresh()->status, 'The original payment record is untouched.');
+        $this->assertNotNull($payment->fresh()->paid_at);
+    }
+
+    public function test_a_partially_refunded_order_cannot_be_marked_refunded(): void
+    {
+        $order = $this->placeOrder($this->withStock(Product::factory()->create(['price' => 100])));
+        $this->confirmPayment($order);
+        $admin = $this->admin();
+        $this->actingAs($admin)->post(route('admin.payment-refunds.store', $order->latestPayment()), [
+            'amount' => '10.00', 'reason' => 'Partial', 'refund_reference' => 'PH-R-2', 'refunded_on' => now()->toDateString(),
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($admin)->patch(route('admin.orders.update-status', $order), ['status' => 'refunded'])->assertSessionHasErrors('status');
+
+        $this->assertSame('paid', $order->fresh()->status);
     }
 }

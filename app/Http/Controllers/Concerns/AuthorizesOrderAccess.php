@@ -17,7 +17,10 @@ use Illuminate\Support\Facades\URL;
  */
 trait AuthorizesOrderAccess
 {
-    protected function authorizeOrderAccess(Request $request, Order $order): void
+    /**
+     * @param  list<string>  $ignoreQuery  Query parameters a payment gateway may append to a signed return link.
+     */
+    protected function authorizeOrderAccess(Request $request, Order $order, array $ignoreQuery = []): void
     {
         $user = $request->user();
 
@@ -29,7 +32,7 @@ trait AuthorizesOrderAccess
             return;
         }
 
-        if (! $request->hasValidSignature()) {
+        if (! $request->hasValidSignatureWhileIgnoring($ignoreQuery)) {
             abort(403);
         }
     }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * E-Shop Step 1 — database foundation only. `order_number` is the
@@ -41,6 +42,48 @@ class Order extends Model
     public const STATUS_REFUNDED = 'refunded';
 
     /**
+     * Set only by the scheduled expiry (Actions/Orders/ExpireUnpaidOrder),
+     * never by an admin status change.
+     */
+    public const STATUS_EXPIRED = 'expired';
+
+    /**
+     * Minutes from order creation until an unpaid order expires, per method.
+     * Always measured from `created_at`, so retrying never extends it.
+     */
+    public const PAYMENT_WINDOW_MINUTES = [
+        'bank_transfer' => 72 * 60,
+        'payhere' => 30,
+        'dummy' => 30,
+    ];
+
+    public const METHOD_BANK_TRANSFER = 'bank_transfer';
+
+    public const METHOD_PAYHERE = 'payhere';
+
+    public const METHOD_DUMMY = 'dummy';
+
+    /**
+     * Payment method => the `payments.gateway` value its attempts are recorded under.
+     */
+    public const METHOD_GATEWAYS = [
+        self::METHOD_BANK_TRANSFER => Payment::GATEWAY_MANUAL_BANK_TRANSFER,
+        self::METHOD_PAYHERE => Payment::GATEWAY_PAYHERE,
+        self::METHOD_DUMMY => Payment::GATEWAY_DUMMY,
+    ];
+
+    /**
+     * Statuses after payment was verified, for which a receipt exists.
+     */
+    public const PAID_STATUSES = [
+        self::STATUS_PAID,
+        self::STATUS_PROCESSING,
+        self::STATUS_PACKED,
+        self::STATUS_SHIPPED,
+        self::STATUS_DELIVERED,
+    ];
+
+    /**
      * @var list<string>
      */
     public const STATUSES = [
@@ -52,6 +95,7 @@ class Order extends Model
         self::STATUS_DELIVERED,
         self::STATUS_CANCELLED,
         self::STATUS_REFUNDED,
+        self::STATUS_EXPIRED,
     ];
 
     /**
@@ -76,6 +120,7 @@ class Order extends Model
         self::STATUS_DELIVERED => [self::STATUS_REFUNDED],
         self::STATUS_CANCELLED => [],
         self::STATUS_REFUNDED => [],
+        self::STATUS_EXPIRED => [],
     ];
 
     /**
@@ -90,6 +135,15 @@ class Order extends Model
         'status',
         'currency',
         'total_amount',
+        'payment_method',
+        'delivery_address_line1',
+        'delivery_address_line2',
+        'delivery_city',
+        'delivery_postcode',
+        'delivery_country',
+        'subtotal_amount',
+        'delivery_charge_amount',
+        'expires_at',
     ];
 
     /**
@@ -99,6 +153,11 @@ class Order extends Model
     {
         return [
             'total_amount' => 'decimal:2',
+            'subtotal_amount' => 'decimal:2',
+            'delivery_charge_amount' => 'decimal:2',
+            'expires_at' => 'datetime',
+            'is_test' => 'boolean',
+            'stock_released_at' => 'datetime',
         ];
     }
 
@@ -142,8 +201,92 @@ class Order extends Model
         return $this->hasMany(Payment::class);
     }
 
+    /**
+     * @return HasMany<PaymentReview, $this>
+     */
+    public function paymentReviews(): HasMany
+    {
+        return $this->hasMany(PaymentReview::class);
+    }
+
+    /**
+     * @return HasMany<PaymentRefund, $this>
+     */
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(PaymentRefund::class);
+    }
+
     public function canTransitionTo(string $status): bool
     {
         return in_array($status, self::TRANSITIONS[$this->status] ?? [], true);
+    }
+
+    public function latestPayment(): ?Payment
+    {
+        return $this->payments()->latest('id')->first();
+    }
+
+    /**
+     * Whether the customer may still start or complete a payment: awaiting
+     * payment and not past its deadline (even before the scheduled expiry
+     * has run).
+     */
+    public function isPayable(): bool
+    {
+        return $this->status === self::STATUS_PENDING_PAYMENT
+            && ($this->expires_at === null || $this->expires_at->isFuture());
+    }
+
+    /**
+     * The payment deadline for a method, measured from the order's creation.
+     */
+    public function paymentDeadlineFor(string $method): Carbon
+    {
+        return $this->created_at->copy()->addMinutes(self::PAYMENT_WINDOW_MINUTES[$method]);
+    }
+
+    /**
+     * Whether refunds are recorded and no received payment remains unrefunded.
+     */
+    public function isFullyRefunded(): bool
+    {
+        return $this->refunds()->exists()
+            && ! $this->payments()->whereIn('status', [Payment::STATUS_PAID, Payment::STATUS_PARTIALLY_REFUNDED])->exists();
+    }
+
+    public function hasReceipt(): bool
+    {
+        return in_array($this->status, self::PAID_STATUSES, true);
+    }
+
+    public function paymentMethodLabel(): string
+    {
+        return match ($this->payment_method) {
+            self::METHOD_BANK_TRANSFER => 'Bank transfer',
+            self::METHOD_PAYHERE => 'PayHere (card / online)',
+            self::METHOD_DUMMY => 'Dummy / Test Payment — Development Only',
+            default => 'Not recorded',
+        };
+    }
+
+    /**
+     * The delivery address as display lines, or an empty list for orders
+     * placed before addresses were collected.
+     *
+     * @return list<string>
+     */
+    public function deliveryAddressLines(): array
+    {
+        if ($this->delivery_address_line1 === null) {
+            return [];
+        }
+
+        return array_values(array_filter([
+            $this->delivery_address_line1,
+            $this->delivery_address_line2,
+            trim($this->delivery_city.' '.$this->delivery_postcode),
+            config('payments.delivery_countries.'.$this->delivery_country, $this->delivery_country),
+        ], fn (?string $line): bool => $line !== null && $line !== ''));
     }
 }

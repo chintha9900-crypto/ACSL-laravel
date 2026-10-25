@@ -16,11 +16,13 @@ use App\Models\User;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
+use Tests\Concerns\CreatesEshopOrders;
 use Tests\Concerns\CreatesReviewableApplications;
 use Tests\MysqlTestCase;
 
 class CheckoutControllerTest extends MysqlTestCase
 {
+    use CreatesEshopOrders;
     use CreatesReviewableApplications;
 
     protected function setUp(): void
@@ -32,6 +34,9 @@ class CheckoutControllerTest extends MysqlTestCase
         // a plain value can be round-tripped through withCookie() across
         // several requests within one test.
         EncryptCookies::except(ResolveCart::COOKIE_NAME);
+
+        $this->eshopBankAccount();
+        $this->configureDeliveryCharge();
     }
 
     protected function tearDown(): void
@@ -59,12 +64,7 @@ class CheckoutControllerTest extends MysqlTestCase
      */
     private function customer(array $overrides = []): array
     {
-        return [
-            'name' => 'Nimal Perera',
-            'email' => 'nimal@example.test',
-            'phone' => '+94 77 123 4567',
-            ...$overrides,
-        ];
+        return $this->checkoutDetails($overrides);
     }
 
     private function guestCart(): Cart
@@ -109,7 +109,9 @@ class CheckoutControllerTest extends MysqlTestCase
         $response->assertRedirect();
         $this->assertStringContainsString((string) $order->public_id, $response->headers->get('Location'));
         $this->assertNull($order->user_id);
-        $this->assertSame('40.00', $order->total_amount);
+        $this->assertSame('40.00', $order->subtotal_amount);
+        $this->assertSame('350.00', $order->delivery_charge_amount, 'The configured delivery charge is snapshotted on the order.');
+        $this->assertSame('390.00', $order->total_amount, 'Total = items + configured delivery charge.');
         $this->assertSame(0, CartItem::query()->count(), 'The cart must be cleared after a successful order.');
     }
 
@@ -201,7 +203,8 @@ class CheckoutControllerTest extends MysqlTestCase
         ]);
 
         $order = Order::query()->firstOrFail();
-        $this->assertSame('100.00', $order->total_amount);
+        $this->assertSame('100.00', $order->subtotal_amount);
+        $this->assertSame('450.00', $order->total_amount, 'Server total = item price + configured delivery; client total ignored.');
         $this->assertSame('100.00', OrderItem::query()->firstOrFail()->unit_price);
     }
 
@@ -318,7 +321,8 @@ class CheckoutControllerTest extends MysqlTestCase
 
         $order = Order::query()->firstOrFail();
         $this->assertSame(2, $order->items()->count());
-        $this->assertSame('35.00', $order->total_amount);
+        $this->assertSame('35.00', $order->subtotal_amount);
+        $this->assertSame('385.00', $order->total_amount);
         $this->assertSame(Order::STATUS_PENDING_PAYMENT, $order->status);
     }
 
@@ -333,7 +337,7 @@ class CheckoutControllerTest extends MysqlTestCase
         $order = Order::query()->firstOrFail();
         $payment = Payment::query()->where('order_id', $order->id)->firstOrFail();
         $this->assertSame(Payment::STATUS_PENDING, $payment->status);
-        $this->assertSame('30.00', $payment->amount);
+        $this->assertSame('380.00', $payment->amount, 'The payment is for the full total, delivery included.');
         $this->assertNull($payment->paid_at);
     }
 

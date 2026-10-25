@@ -19,6 +19,10 @@ class Payment extends Model
 
     public const GATEWAY_MANUAL_BANK_TRANSFER = 'manual_bank_transfer';
 
+    public const GATEWAY_PAYHERE = 'payhere';
+
+    public const GATEWAY_DUMMY = 'dummy';
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_PROCESSING = 'processing';
@@ -28,6 +32,29 @@ class Payment extends Model
     public const STATUS_FAILED = 'failed';
 
     public const STATUS_CANCELLED = 'cancelled';
+
+    public const STATUS_REFUNDED = 'refunded';
+
+    public const STATUS_PARTIALLY_REFUNDED = 'partially_refunded';
+
+    /**
+     * Money was received for these (refunds are recorded on top). A payment
+     * in any of them can never be confirmed, failed or cancelled again.
+     */
+    public const SETTLED_STATUSES = [
+        self::STATUS_PAID,
+        self::STATUS_PARTIALLY_REFUNDED,
+        self::STATUS_REFUNDED,
+    ];
+
+    /**
+     * Final states: no gateway or admin action changes these any more.
+     */
+    public const FINAL_STATUSES = [
+        ...self::SETTLED_STATUSES,
+        self::STATUS_FAILED,
+        self::STATUS_CANCELLED,
+    ];
 
     /**
      * @return array<string, string>
@@ -105,6 +132,30 @@ class Payment extends Model
     /**
      * @return HasMany<Document, $this>
      */
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(PaymentRefund::class);
+    }
+
+    public function isSettled(): bool
+    {
+        return in_array($this->status, self::SETTLED_STATUSES, true);
+    }
+
+    /**
+     * Where to send money now: the account recorded on this payment only
+     * while it is still active, otherwise the currently active account for
+     * the currency. A deactivated account is never shown as a destination.
+     */
+    public function currentBankAccount(): ?PaymentBankAccount
+    {
+        if ($this->bankAccount?->is_active) {
+            return $this->bankAccount;
+        }
+
+        return PaymentBankAccount::query()->activeForCurrency($this->currency)->first();
+    }
+
     public function evidence(): HasMany
     {
         return $this->hasMany(Document::class);

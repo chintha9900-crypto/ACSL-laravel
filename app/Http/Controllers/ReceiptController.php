@@ -23,7 +23,7 @@ class ReceiptController extends Controller
     {
         $this->authorizeOrderAccess($request, $order);
 
-        if ($order->status !== Order::STATUS_PAID) {
+        if (! $order->hasReceipt()) {
             return redirect()->to($this->orderRouteUrl($order, 'payment.show'))
                 ->with('status', 'This order is not paid yet — there is no receipt until payment is confirmed.');
         }
