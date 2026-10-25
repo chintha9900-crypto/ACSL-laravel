@@ -16,13 +16,17 @@ use App\Models\User;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
+use Tests\Concerns\CreatesEligibleMembers;
 use Tests\Concerns\CreatesEshopOrders;
+use Tests\Concerns\CreatesRenewals;
 use Tests\Concerns\CreatesReviewableApplications;
 use Tests\MysqlTestCase;
 
 class CheckoutControllerTest extends MysqlTestCase
 {
+    use CreatesEligibleMembers;
     use CreatesEshopOrders;
+    use CreatesRenewals;
     use CreatesReviewableApplications;
 
     protected function setUp(): void
@@ -127,10 +131,10 @@ class CheckoutControllerTest extends MysqlTestCase
         $this->assertSame($member->id, $order->user_id);
     }
 
-    public function test_an_active_member_can_check_out_a_member_only_product(): void
+    public function test_an_eligible_member_can_check_out_a_member_only_product(): void
     {
         $product = $this->withStock(Product::factory()->memberOnly()->create());
-        $member = $this->member();
+        $member = $this->eligibleMember();
         $this->addToCart($member, $product, 1);
 
         $this->actingAs($member)->post(route('checkout.store'), $this->customer())->assertRedirect();

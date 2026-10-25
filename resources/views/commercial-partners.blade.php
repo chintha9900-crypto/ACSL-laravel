@@ -7,9 +7,8 @@
     controller already decided is visible, same convention as every other
     public listing in this app.
 
-    Name and description are plain, unsanitised strings (no rich-text
-    editor exists for this entity, unlike Blog/News/CSR), so they are
-    always rendered with Blade's escaping `{{ }}` — never `{!! !!}`.
+    Logos only: the partner name is used solely as escaped alt text / link
+    label for screen readers; description and other fields are not shown.
 
     Each partner's `url` is re-validated here, at render time, before ever
     being used as a link target — not merely trusted because it already
@@ -33,7 +32,11 @@
                     No commercial partners are listed right now. Please check back soon.
                 </p>
             @else
-                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {{-- Logos only: the name is never shown, only used as the
+                     logo's alt text / link label. Twice as many columns as
+                     before at every breakpoint, so each logo renders at about
+                     half its previous size. --}}
+                <ul class="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6" role="list" aria-label="Commercial partners">
                     @foreach ($partners as $partner)
                         @php
                             $partnerUrl = null;
@@ -42,32 +45,27 @@
                                 $partnerUrl = $partner->url;
                             }
                         @endphp
-                        <div class="ui-card flex h-full flex-col overflow-hidden">
-                            <div class="flex aspect-[16/9] w-full items-center justify-center overflow-hidden bg-muted p-6">
+                        <li class="ui-card overflow-hidden" data-partner-logo>
+                            @if ($partnerUrl)
+                                <a href="{{ $partnerUrl }}" target="_blank" rel="noopener noreferrer" aria-label="{{ $partner->name }} (opens in a new tab)"
+                                    class="flex aspect-[16/9] w-full items-center justify-center bg-background p-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                            @else
+                                <div class="flex aspect-[16/9] w-full items-center justify-center bg-background p-3">
+                            @endif
                                 @if ($partner->logo_path)
-                                    <img src="{{ Storage::disk('public')->url($partner->logo_path) }}" alt="{{ $partner->name }}" class="max-h-full max-w-full object-contain">
+                                    <img data-fallback src="{{ Storage::disk('public')->url($partner->logo_path) }}" alt="{{ $partner->name }}" loading="lazy" class="max-h-full max-w-full object-contain">
                                 @else
-                                    <svg class="h-10 w-10 text-muted-foreground/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
+                                    <svg class="h-8 w-8 text-muted-foreground/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
+                                    <span class="sr-only">{{ $partner->name }}</span>
                                 @endif
-                            </div>
-
-                            <div class="flex flex-1 flex-col p-5">
-                                <h2 class="font-display text-lg font-bold text-primary">{{ $partner->name }}</h2>
-
-                                @if ($partner->description)
-                                    <p class="mt-2 flex-1 text-sm text-muted-foreground">{{ $partner->description }}</p>
-                                @endif
-
-                                @if ($partnerUrl)
-                                    <a href="{{ $partnerUrl }}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary hover:text-[#CC001F]">
-                                        Visit website
-                                        <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg>
-                                    </a>
-                                @endif
-                            </div>
-                        </div>
+                            @if ($partnerUrl)
+                                </a>
+                            @else
+                                </div>
+                            @endif
+                        </li>
                     @endforeach
-                </div>
+                </ul>
             @endif
 
             <div class="mt-10 flex justify-center">

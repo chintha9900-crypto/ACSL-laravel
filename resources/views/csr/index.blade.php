@@ -28,7 +28,7 @@
                         <article class="ui-card overflow-hidden">
                             <div class="aspect-[16/9] w-full overflow-hidden bg-[#4D4D4D]">
                                 @if ($project->image_path)
-                                    <img src="{{ Storage::disk('public')->url($project->image_path) }}" alt="{{ $project->title }}" class="h-full w-full object-cover">
+                                    <img data-fallback src="{{ Storage::disk('public')->url($project->image_path) }}" alt="{{ $project->title }}" class="h-full w-full object-cover">
                                 @else
                                     <div class="grid h-full w-full place-items-center">
                                         <svg class="h-10 w-10 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>

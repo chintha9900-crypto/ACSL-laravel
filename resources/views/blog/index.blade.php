@@ -46,7 +46,7 @@
                             <article class="ui-card flex h-full flex-col overflow-hidden">
                                 <a href="{{ route('blog.show', $post->slug) }}" class="block aspect-[16/10] w-full overflow-hidden bg-[#4D4D4D]" tabindex="-1" aria-hidden="true">
                                     @if ($post->featured_image_path)
-                                        <img src="{{ Storage::disk('public')->url($post->featured_image_path) }}" alt="" class="h-full w-full object-cover">
+                                        <img data-fallback src="{{ Storage::disk('public')->url($post->featured_image_path) }}" alt="" class="h-full w-full object-cover">
                                     @else
                                         <span class="grid h-full w-full place-items-center">
                                             <svg class="h-10 w-10 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>

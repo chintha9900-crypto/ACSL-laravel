@@ -16,7 +16,40 @@
                 <div>
                     @php($image = $product->images->first())
                     @if ($image)
-                        <img src="{{ Storage::disk('public')->url($image->image_path) }}" alt="{{ $product->name }}" class="aspect-square w-full rounded-xl border border-border object-cover">
+                        <img data-fallback data-gallery-main src="{{ $product->imageUrl($image) }}" alt="{{ $image->alt_text ?: $product->name }}" class="aspect-square w-full rounded-xl border border-border object-cover">
+
+                        @php($galleryImages = $product->images->take((int) config('uploads.product_image.max_files')))
+                        @if ($galleryImages->count() > 1)
+                            {{-- Gallery: thumbnails swap the main image; without JavaScript they open the full image. --}}
+                            <ul class="mt-3 grid grid-cols-4 gap-2" aria-label="{{ $product->name }} photos" data-gallery-thumbs>
+                                @foreach ($galleryImages as $galleryImage)
+                                    @php($galleryUrl = $product->imageUrl($galleryImage))
+                                    <li>
+                                        <a href="{{ $galleryUrl }}" data-gallery-thumb data-full="{{ $galleryUrl }}" data-alt="{{ $galleryImage->alt_text ?: $product->name.' — photo '.$loop->iteration }}"
+                                            @if ($loop->first) aria-current="true" @endif
+                                            class="block overflow-hidden rounded-lg border-2 border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[current=true]:border-[#CC001F]">
+                                            <img data-fallback src="{{ $galleryUrl }}" alt="{{ $product->name }} — photo {{ $loop->iteration }}" loading="lazy" class="aspect-square w-full object-cover">
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                            <script>
+                                (function () {
+                                    var main = document.querySelector('[data-gallery-main]');
+                                    var thumbs = document.querySelectorAll('[data-gallery-thumb]');
+                                    if (!main) { return; }
+                                    Array.prototype.forEach.call(thumbs, function (thumb) {
+                                        thumb.addEventListener('click', function (event) {
+                                            event.preventDefault();
+                                            main.src = thumb.getAttribute('data-full');
+                                            main.alt = thumb.getAttribute('data-alt');
+                                            Array.prototype.forEach.call(thumbs, function (other) { other.removeAttribute('aria-current'); });
+                                            thumb.setAttribute('aria-current', 'true');
+                                        });
+                                    });
+                                })();
+                            </script>
+                        @endif
                     @else
                         <div class="grid aspect-square w-full place-items-center rounded-xl border border-border bg-[#4D4D4D] text-white/40">
                             <svg class="h-16 w-16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
@@ -55,7 +88,7 @@
                                 <input type="number" name="quantity" value="1" min="1" max="{{ $quantity }}" class="field-control h-10 w-20">
                                 <button type="submit" class="btn btn-lg btn-brand" data-add-to-cart data-product="{{ $product->slug }}">Add to Cart</button>
                             </form>
-                            <p class="mt-2 text-xs text-muted-foreground">Checkout is coming soon.</p>
+                            <p class="mt-2 text-xs text-muted-foreground">Add to your cart, then check out from the <a href="{{ route('cart.show') }}" class="font-semibold text-[#CC001F] hover:underline">cart</a>.</p>
                         @else
                             <button type="button" disabled class="btn btn-lg btn-brand w-full cursor-not-allowed opacity-60 sm:w-auto">Out of stock</button>
                         @endif

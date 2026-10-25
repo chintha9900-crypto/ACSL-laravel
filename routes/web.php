@@ -58,6 +58,7 @@ use App\Http\Controllers\NewsEventsController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PayHereNotificationController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ProductImageController;
 use App\Http\Controllers\ReceiptController;
 use App\Models\MembershipSetting;
 use Illuminate\Support\Facades\Route;
@@ -139,6 +140,12 @@ Route::controller(EshopController::class)->prefix('eshop')->name('eshop.')->grou
     Route::get('/', 'index')->name('index');
     Route::get('{product}', 'show')->name('show');
 });
+
+// Members-only product images live on the private disk; this route is their
+// only way out, and it re-checks membership eligibility on every request.
+Route::get('eshop/product-images/{productImage}', [ProductImageController::class, 'show'])
+    ->middleware('throttle:240,1')
+    ->name('eshop.images.show');
 
 // E-Shop Step 5 — cart only. No auth middleware: guests may have and use a
 // cart, identified by a guest-token cookie rather than a session login.

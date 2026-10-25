@@ -38,7 +38,7 @@
                             <div class="ui-card flex gap-4 overflow-hidden p-4">
                                 <div class="aspect-[16/10] w-32 flex-shrink-0 overflow-hidden rounded-md bg-[#4D4D4D] sm:w-40">
                                     @if ($item->image_path)
-                                        <img src="{{ Storage::disk('public')->url($item->image_path) }}" alt="" class="h-full w-full object-cover">
+                                        <img data-fallback src="{{ Storage::disk('public')->url($item->image_path) }}" alt="{{ $item->title }}" class="h-full w-full object-cover">
                                     @else
                                         <div class="grid h-full w-full place-items-center">
                                             <svg class="h-6 w-6 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
@@ -82,7 +82,7 @@
                             <div class="ui-card flex gap-4 overflow-hidden p-4">
                                 <div class="aspect-[16/10] w-32 flex-shrink-0 overflow-hidden rounded-md bg-[#4D4D4D] sm:w-40">
                                     @if ($event->image_path)
-                                        <img src="{{ Storage::disk('public')->url($event->image_path) }}" alt="" class="h-full w-full object-cover">
+                                        <img data-fallback src="{{ Storage::disk('public')->url($event->image_path) }}" alt="{{ $event->title }}" class="h-full w-full object-cover">
                                     @else
                                         <div class="grid h-full w-full place-items-center">
                                             <svg class="h-6 w-6 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>

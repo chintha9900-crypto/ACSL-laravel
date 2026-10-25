@@ -11,11 +11,15 @@ use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Testing\TestResponse;
+use Tests\Concerns\CreatesEligibleMembers;
+use Tests\Concerns\CreatesRenewals;
 use Tests\Concerns\CreatesReviewableApplications;
 use Tests\MysqlTestCase;
 
 class CartControllerTest extends MysqlTestCase
 {
+    use CreatesEligibleMembers;
+    use CreatesRenewals;
     use CreatesReviewableApplications;
 
     private function withStock(Product $product, int $quantity = 10): Product
@@ -73,10 +77,10 @@ class CartControllerTest extends MysqlTestCase
         $this->assertSame(1, $cart->items()->count());
     }
 
-    public function test_an_active_member_can_add_a_member_only_product(): void
+    public function test_an_eligible_member_can_add_a_member_only_product(): void
     {
         $product = $this->withStock(Product::factory()->memberOnly()->create());
-        $member = $this->member();
+        $member = $this->eligibleMember();
 
         $this->actingAs($member)
             ->post(route('cart.items.store'), ['product_id' => $product->id, 'quantity' => 1])

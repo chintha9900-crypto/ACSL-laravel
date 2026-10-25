@@ -17,7 +17,7 @@
 
     <div class="container mx-auto max-w-3xl px-4 py-10 lg:px-8">
         @if ($item->image_path)
-            <img src="{{ Storage::disk('public')->url($item->image_path) }}" alt="" class="mb-8 aspect-[16/8] w-full rounded-xl object-cover shadow-elegant">
+            <img data-fallback src="{{ Storage::disk('public')->url($item->image_path) }}" alt="{{ $item->title }}" class="mb-8 aspect-[16/8] w-full rounded-xl object-cover shadow-elegant">
         @endif
 
         @if ($item->excerpt)

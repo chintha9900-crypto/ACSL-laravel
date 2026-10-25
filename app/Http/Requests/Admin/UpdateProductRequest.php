@@ -5,10 +5,12 @@ namespace App\Http\Requests\Admin;
 use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\File;
+use Illuminate\Validation\Validator;
 
 class UpdateProductRequest extends FormRequest
 {
+    use ValidatesProductImages;
+
     public function authorize(): bool
     {
         return $this->user()?->can('update', $this->route('product')) ?? false;
@@ -19,8 +21,6 @@ class UpdateProductRequest extends FormRequest
      */
     public function rules(): array
     {
-        $image = config('uploads.product_image');
-
         return [
             'product_category_id' => ['required', Rule::exists('product_categories', 'id')],
             'name' => ['required', 'string', 'max:255'],
@@ -30,7 +30,7 @@ class UpdateProductRequest extends FormRequest
             'price' => ['required', 'numeric', 'min:0'],
             'access_type' => ['required', Rule::in(Product::ACCESS_TYPES)],
             'quantity' => ['required', 'integer', 'min:0'],
-            'image' => ['nullable', File::types($image['extensions'])->max($image['max_kb'])],
+            ...$this->imageRules($this->route('product')),
         ];
     }
 
@@ -40,9 +40,18 @@ class UpdateProductRequest extends FormRequest
     public function messages(): array
     {
         return [
+            ...$this->imageMessages(),
             'slug.unique' => 'This slug is already used by another product. Please choose a different one.',
             'slug.alpha_dash' => 'The slug may only contain letters, numbers, dashes and underscores.',
             'sku.unique' => 'This SKU is already used by another product. Please choose a different one.',
         ];
+    }
+
+    /**
+     * @return list<callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [fn (Validator $validator) => $this->validateImageCount($validator, $this->route('product'))];
     }
 }

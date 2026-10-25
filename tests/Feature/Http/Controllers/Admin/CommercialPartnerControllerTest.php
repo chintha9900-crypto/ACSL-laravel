@@ -4,6 +4,7 @@ namespace Tests\Feature\Http\Controllers\Admin;
 
 use App\Models\CommercialPartner;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CreatesReviewableApplications;
 use Tests\Concerns\CreatesUploads;
@@ -27,11 +28,11 @@ class CommercialPartnerControllerTest extends MysqlTestCase
      */
     private function payload(array $overrides = []): array
     {
+        // The form's only three fields.
         return [
+            'logo' => $this->pngUpload('skyline-logo.png'),
             'name' => 'Skyline Flight School',
-            'description' => 'A partner training school.',
             'url' => 'https://skyline.example.test',
-            'display_order' => 5,
             ...$overrides,
         ];
     }
@@ -128,18 +129,52 @@ class CommercialPartnerControllerTest extends MysqlTestCase
         $this->assertSame('Skyline Flight School', $partner->name);
     }
 
-    public function test_the_display_order_field_is_saved(): void
+    public function test_the_form_asks_only_for_logo_name_and_website(): void
     {
-        $this->actingAs($this->admin())->post(route('admin.commercial-partners.store'), $this->payload(['display_order' => 42]));
+        $html = $this->actingAs($this->admin())->get(route('admin.commercial-partners.create'))->assertOk()->getContent();
 
-        $this->assertSame(42, CommercialPartner::query()->firstOrFail()->display_order);
+        $this->assertStringContainsString('name="logo"', $html);
+        $this->assertStringContainsString('name="name"', $html);
+        $this->assertStringContainsString('name="url"', $html);
+        $this->assertStringContainsString('data-logo-preview', $html);
+        $this->assertStringNotContainsString('name="description"', $html);
+        $this->assertStringNotContainsString('name="display_order"', $html);
+        $this->assertStringNotContainsString('name="topic"', $html);
+    }
+
+    public function test_description_and_display_order_are_no_longer_required_or_overwritten(): void
+    {
+        $this->actingAs($this->admin())->post(route('admin.commercial-partners.store'), $this->payload())->assertSessionHasNoErrors();
+        $this->assertSame(0, CommercialPartner::query()->firstOrFail()->display_order);
+
+        $existing = CommercialPartner::factory()->create(['description' => 'Kept history', 'display_order' => 7, 'logo_path' => 'partners/old.png']);
+        $this->actingAs($this->admin())->patch(route('admin.commercial-partners.update', $existing), [
+            'name' => 'Renamed', 'url' => 'https://renamed.example.test',
+        ])->assertSessionHasNoErrors();
+
+        $existing->refresh();
+        $this->assertSame('Kept history', $existing->description);
+        $this->assertSame(7, $existing->display_order);
     }
 
     public function test_required_fields_are_validated(): void
     {
         $this->actingAs($this->admin())
             ->post(route('admin.commercial-partners.store'), [])
-            ->assertSessionHasErrors(['name']);
+            ->assertSessionHasErrors(['name', 'url', 'logo']);
+
+        $this->assertSame(0, CommercialPartner::query()->count());
+    }
+
+    public function test_the_logo_must_be_a_real_image_within_the_size_limit(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->post(route('admin.commercial-partners.store'), $this->payload(['logo' => $this->pdfUpload('logo.png')]))
+            ->assertSessionHasErrors('logo');
+        $this->actingAs($admin)->post(route('admin.commercial-partners.store'), $this->payload([
+            'logo' => UploadedFile::fake()->create('huge.png', config('uploads.commercial_partner_logo.max_kb') + 1, 'image/png'),
+        ]))->assertSessionHasErrors('logo');
 
         $this->assertSame(0, CommercialPartner::query()->count());
     }
@@ -153,15 +188,17 @@ class CommercialPartnerControllerTest extends MysqlTestCase
         $this->assertSame(0, CommercialPartner::query()->count());
     }
 
-    public function test_a_valid_url_is_accepted_and_a_blank_url_is_allowed(): void
+    public function test_a_valid_url_is_accepted_and_a_blank_or_unsafe_url_is_rejected(): void
     {
         $this->actingAs($this->admin())->post(route('admin.commercial-partners.store'), $this->payload(['url' => 'https://example.test/partners']))
             ->assertSessionHasNoErrors();
         $this->assertSame('https://example.test/partners', CommercialPartner::query()->firstOrFail()->url);
 
-        $this->actingAs($this->admin())->post(route('admin.commercial-partners.store'), $this->payload(['name' => 'No Website Partner', 'url' => '']))
-            ->assertSessionHasNoErrors();
-        $this->assertNull(CommercialPartner::query()->where('name', 'No Website Partner')->firstOrFail()->url);
+        foreach (['', 'javascript:alert(1)', 'ftp://example.test', 'example.test'] as $invalid) {
+            $this->actingAs($this->admin())->post(route('admin.commercial-partners.store'), $this->payload(['name' => 'Bad '.$invalid, 'url' => $invalid]))
+                ->assertSessionHasErrors('url');
+        }
+        $this->assertSame(1, CommercialPartner::query()->count());
     }
 
     public function test_a_logo_can_be_uploaded_on_create(): void
@@ -187,6 +224,39 @@ class CommercialPartnerControllerTest extends MysqlTestCase
         ]))->assertRedirect(route('admin.commercial-partners.index'));
 
         $this->assertSame('New Name', $partner->fresh()->name);
+    }
+
+    public function test_editing_keeps_the_existing_logo_unless_a_new_one_is_uploaded(): void
+    {
+        Storage::disk('public')->put('partners/existing.png', 'png');
+        $partner = CommercialPartner::factory()->create(['logo_path' => 'partners/existing.png']);
+
+        $this->actingAs($this->admin())->get(route('admin.commercial-partners.edit', $partner))
+            ->assertOk()
+            ->assertSee(Storage::disk('public')->url('partners/existing.png'), false)
+            ->assertDontSee('name="logo" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" required', false);
+
+        $this->actingAs($this->admin())->patch(route('admin.commercial-partners.update', $partner), ['name' => 'Same Logo', 'url' => 'https://same.example.test'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('partners/existing.png', $partner->fresh()->logo_path);
+        Storage::disk('public')->assertExists('partners/existing.png');
+    }
+
+    public function test_a_partner_without_a_logo_must_get_one_when_edited(): void
+    {
+        $partner = CommercialPartner::factory()->create(['logo_path' => null]);
+
+        $this->actingAs($this->admin())->patch(route('admin.commercial-partners.update', $partner), ['name' => 'X', 'url' => 'https://x.example.test'])
+            ->assertSessionHasErrors('logo');
+    }
+
+    public function test_an_uploaded_logo_gets_a_generated_filename(): void
+    {
+        $this->actingAs($this->admin())->post(route('admin.commercial-partners.store'), $this->payload(['logo' => $this->pngUpload('../../evil name.png')]));
+
+        $path = CommercialPartner::query()->firstOrFail()->logo_path;
+        $this->assertMatchesRegularExpression('#^partners/[0-9a-z]{26}\.png$#', $path);
     }
 
     public function test_updating_does_not_change_is_active(): void

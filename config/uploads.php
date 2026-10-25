@@ -65,6 +65,8 @@ return [
     'product_image' => [
         'max_kb' => 3072,
         'extensions' => ['jpg', 'jpeg', 'png'],
+        // Gallery size per product (and so also per upload).
+        'max_files' => 4,
     ],
 
     /*

@@ -33,7 +33,11 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Off: its root is the private documents folder (payment evidence,
+            // aviation proof). Nothing uses signed local-disk URLs, so no
+            // `/storage/{path}` route should point into it; public images
+            // are served from the `public` disk's storage link only.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],

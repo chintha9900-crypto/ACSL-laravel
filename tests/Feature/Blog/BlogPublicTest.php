@@ -111,7 +111,7 @@ class BlogPublicTest extends MysqlTestCase
         $html = $this->get(route('blog.index'))->getContent();
         $url = route('blog.show', $post->slug);
 
-        $this->assertMatchesRegularExpression('#<a href="'.preg_quote($url, '#').'" class="block aspect-\[16/10\][^"]*"[^>]*>\s*<img src="[^"]*/storage/blog/card\.jpg"#', $html);
+        $this->assertMatchesRegularExpression('#<a href="'.preg_quote($url, '#').'" class="block aspect-\[16/10\][^"]*"[^>]*>\s*<img data-fallback src="[^"]*/storage/blog/card\.jpg"#', $html);
         $this->assertMatchesRegularExpression('#<h2[^>]*>\s*<a href="'.preg_quote($url, '#').'"[^>]*>Card post</a>#', $html);
         $this->assertStringContainsString('Card excerpt.', $html);
         $this->assertStringContainsString('Bea Writer', $html);

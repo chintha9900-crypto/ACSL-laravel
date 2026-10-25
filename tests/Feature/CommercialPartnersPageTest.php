@@ -103,8 +103,9 @@ class CommercialPartnersPageTest extends MysqlTestCase
 
         $response = $this->get(route('commercial-partners'))->assertOk();
 
-        $response->assertSee('href="https://partner.example.test"', false);
-        $response->assertSee('Visit website');
+        // The logo itself is the link — no visible "Visit website" text.
+        $response->assertSee('href="https://partner.example.test" target="_blank" rel="noopener noreferrer" aria-label="Linked Partner (opens in a new tab)"', false);
+        $response->assertDontSee('Visit website');
     }
 
     /**
@@ -134,15 +135,37 @@ class CommercialPartnersPageTest extends MysqlTestCase
         $response->assertDontSee('Visit website');
     }
 
-    public function test_a_description_is_displayed_when_available(): void
+    public function test_the_page_shows_logos_only_with_no_visible_names_or_descriptions(): void
     {
-        CommercialPartner::factory()->create([
+        $partner = CommercialPartner::factory()->create([
             'name' => 'Described Partner',
             'is_active' => true,
+            'logo_path' => 'partners/described.png',
+            'url' => 'https://described.example.test',
             'description' => 'A genuinely helpful partner description.',
         ]);
 
-        $this->get(route('commercial-partners'))->assertOk()->assertSee('A genuinely helpful partner description.');
+        $html = $this->get(route('commercial-partners'))->assertOk()->getContent();
+        preg_match('#<ul class="grid[^"]*" role="list" aria-label="Commercial partners">(.*?)</ul>#s', $html, $grid);
+        $this->assertNotEmpty($grid);
+
+        $this->assertStringNotContainsString('A genuinely helpful partner description.', $html);
+        // The name exists only as alt text / link label, never as visible text.
+        $this->assertSame('', trim(strip_tags($grid[1])), 'No visible text in the partner grid.');
+        $this->assertStringContainsString('alt="Described Partner"', $grid[1]);
+        $this->assertStringContainsString('object-contain', $grid[1], 'Logos are never cropped or stretched.');
+        $this->assertSame('A genuinely helpful partner description.', $partner->fresh()->description, 'Historical data is kept.');
+    }
+
+    public function test_logos_render_at_about_half_the_previous_size(): void
+    {
+        CommercialPartner::factory()->create(['name' => 'Sized Partner', 'is_active' => true, 'logo_path' => 'partners/sized.png']);
+
+        $response = $this->get(route('commercial-partners'))->assertOk();
+
+        // Previously 1 / 2 / 3 columns (mobile / tablet / desktop); now twice as many.
+        $response->assertSee('grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6', false);
+        $response->assertDontSee('sm:grid-cols-2 lg:grid-cols-3', false);
     }
 
     public function test_a_missing_description_is_handled_gracefully(): void

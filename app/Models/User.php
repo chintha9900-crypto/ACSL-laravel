@@ -7,6 +7,7 @@ use App\Support\Authorization\Ability;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
@@ -22,6 +23,12 @@ class User extends Authenticatable
      * grants, loaded at most once per instance.
      */
     private ?Collection $grantedPermissionNames = null;
+
+    /**
+     * Memoised per request: whether this user currently holds an eligible
+     * membership (see hasEligibleMembership()).
+     */
+    private ?bool $hasEligibleMembership = null;
 
     /**
      * The attributes that are mass assignable.
@@ -82,6 +89,30 @@ class User extends Authenticatable
         }
 
         return $this->grantedPermissionNames()->contains($ability->value);
+    }
+
+    /**
+     * @return HasOne<Membership, $this>
+     */
+    public function membership(): HasOne
+    {
+        return $this->hasOne(Membership::class);
+    }
+
+    /**
+     * Whether this user may view and buy members-only products: an active
+     * account with a membership whose current term is valid today — the
+     * established `Membership::currentTerm()` rule (active status and today,
+     * in the business timezone, within its own dates). Role is deliberately
+     * not considered: an admin or editor account is not proof of membership.
+     */
+    public function hasEligibleMembership(): bool
+    {
+        if ($this->status !== 'active') {
+            return false;
+        }
+
+        return $this->hasEligibleMembership ??= (bool) $this->membership()->with('terms')->first()?->hasCurrentTerm();
     }
 
     /**

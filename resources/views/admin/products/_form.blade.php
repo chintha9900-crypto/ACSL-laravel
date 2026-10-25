@@ -55,22 +55,122 @@
         @enderror
     </div>
 
-    <div class="space-y-1.5">
-        <label for="image" class="block text-sm font-medium leading-none">Product image</label>
-
-        @php($existingImage = ($product->images ?? collect())->sortBy('display_order')->first())
-        @if ($existingImage)
-            <img src="{{ Storage::disk('public')->url($existingImage->image_path) }}" alt="{{ $existingImage->alt_text ?? '' }}" class="mb-2 h-32 w-auto rounded-lg border border-border object-cover">
+    @php($imageConfig = config('uploads.product_image'))
+    @php($existingImages = ($product->images ?? collect())->sortBy('display_order')->values())
+    @php($primaryImageId = (int) old('primary_image', $existingImages->first()?->id))
+    <fieldset class="space-y-3" data-gallery-field data-max-bytes="{{ $imageConfig['max_kb'] * 1024 }}" data-max-label="{{ round($imageConfig['max_kb'] / 1024, 1) }} MB"
+        data-max-files="{{ $imageConfig['max_files'] }}" data-existing-count="{{ $existingImages->count() }}">
+        <legend class="text-sm font-medium leading-none">Product images</legend>
+        <p class="text-xs text-muted-foreground">Up to {{ $imageConfig['max_files'] }} images per product, including the main image. The main image is shown in the shop listing; the others appear in the product page gallery. To replace an image, tick Remove on it and add the new one in the same save.</p>
+        @if ($existingImages->count() > $imageConfig['max_files'])
+            <p class="rounded-md border border-[#CC001F]/40 bg-[#CC001F]/5 px-3 py-2 text-xs text-[#CC001F]" role="status" data-over-limit>
+                This product has {{ $existingImages->count() }} images, more than the current limit of {{ $imageConfig['max_files'] }}. They are all kept; remove {{ $existingImages->count() - $imageConfig['max_files'] }} before adding any new images.
+            </p>
         @endif
 
-        <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-            class="min-w-0 max-w-full cursor-pointer text-sm text-muted-foreground file:mr-3 file:h-8 file:cursor-pointer file:rounded-md file:border file:border-input file:bg-background file:px-3 file:text-xs file:font-medium file:text-foreground file:shadow-sm hover:file:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-        <p class="text-xs text-muted-foreground">JPG or PNG, up to {{ round(config('uploads.product_image.max_kb') / 1024, 1) }}MB. Leave empty to keep the current image.</p>
-        @error('image')
-            <p class="text-xs text-[#CC001F]">{{ $message }}</p>
-        @enderror
-    </div>
+        @if ($existingImages->isNotEmpty())
+            <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Current images">
+                @foreach ($existingImages as $existing)
+                    <li class="rounded-lg border border-border p-2 text-xs" data-existing-image>
+                        <img src="{{ $product->imageUrl($existing) }}" alt="{{ $existing->alt_text ?: ($product->name ?? 'Product').' image '.$loop->iteration }}" class="aspect-square w-full rounded-md object-cover">
+                        <label class="mt-2 flex items-center gap-1.5">
+                            <input type="radio" name="primary_image" value="{{ $existing->id }}" @checked($primaryImageId === $existing->id)>
+                            Main image
+                        </label>
+                        <label class="mt-1 flex items-center gap-1.5">
+                            Position
+                            <input type="number" name="image_order[{{ $existing->id }}]" value="{{ old('image_order.'.$existing->id, $loop->index + 1) }}" min="0" max="999" class="field-control h-7 w-16 px-2 text-xs">
+                        </label>
+                        <label class="mt-1 flex items-center gap-1.5 text-[#CC001F]">
+                            <input type="checkbox" name="remove_images[]" value="{{ $existing->id }}" @checked(in_array((string) $existing->id, (array) old('remove_images', []), true))>
+                            Remove
+                        </label>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
+
+        <div class="space-y-1.5">
+            <label for="images" class="block text-sm font-medium leading-none">Add images</label>
+            <input id="images" name="images[]" type="file" multiple accept=".jpg,.jpeg,.png,image/jpeg,image/png" data-gallery-input
+                @error('images') aria-invalid="true" @enderror
+                class="min-w-0 max-w-full cursor-pointer text-sm text-muted-foreground file:mr-3 file:h-8 file:cursor-pointer file:rounded-md file:border file:border-input file:bg-background file:px-3 file:text-xs file:font-medium file:text-foreground file:shadow-sm hover:file:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+            <p class="text-xs text-muted-foreground">JPG or PNG, up to {{ round($imageConfig['max_kb'] / 1024, 1) }}MB each. You can select several at once (up to {{ max(0, $imageConfig['max_files'] - $existingImages->count()) }} more for this product); they are added after the current images. Existing images are kept unless you tick Remove.</p>
+            <p data-gallery-warning hidden role="alert" class="text-xs text-[#CC001F]"></p>
+            <ul data-gallery-preview hidden class="grid grid-cols-3 gap-2 sm:grid-cols-6" aria-label="Selected images"></ul>
+            @foreach ($errors->get('images*') as $messages)
+                @foreach ($messages as $message)
+                    <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+                @endforeach
+            @endforeach
+            @error('primary_image')
+                <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+            @enderror
+        </div>
+    </fieldset>
 </div>
+
+{{-- Previews of newly selected images; type and size are re-checked on the server. --}}
+<script>
+    (function () {
+        var field = document.querySelector('[data-gallery-field]');
+        if (!field) { return; }
+        var input = field.querySelector('[data-gallery-input]');
+        var preview = field.querySelector('[data-gallery-preview]');
+        var warning = field.querySelector('[data-gallery-warning]');
+        var maxBytes = parseInt(field.getAttribute('data-max-bytes'), 10);
+        var urls = [];
+
+        input.addEventListener('change', function () {
+            urls.forEach(function (url) { URL.revokeObjectURL(url); });
+            urls = [];
+            preview.innerHTML = '';
+            warning.hidden = true;
+            var problems = [];
+
+            Array.prototype.forEach.call(input.files || [], function (file) {
+                if (['image/jpeg', 'image/png'].indexOf(file.type) === -1) {
+                    problems.push(file.name + ' is not a JPG or PNG image.');
+                    return;
+                }
+                if (file.size > maxBytes) {
+                    problems.push(file.name + ' is larger than ' + field.getAttribute('data-max-label') + '.');
+                    return;
+                }
+                var url = URL.createObjectURL(file);
+                urls.push(url);
+                var item = document.createElement('li');
+                var image = document.createElement('img');
+                image.src = url;
+                image.alt = 'Preview of ' + file.name;
+                image.className = 'aspect-square w-full rounded-md border border-border object-cover';
+                item.appendChild(image);
+                preview.appendChild(item);
+            });
+
+            preview.hidden = urls.length === 0;
+
+            // Same total the server enforces: kept images + new ones <= limit.
+            var maxFiles = parseInt(field.getAttribute('data-max-files'), 10);
+            var kept = parseInt(field.getAttribute('data-existing-count'), 10)
+                - field.querySelectorAll('input[name="remove_images[]"]:checked').length;
+            var selected = (input.files || []).length;
+            if (selected > 0 && kept + selected > maxFiles) {
+                problems.push('A product can have at most ' + maxFiles + ' images including the main image; this would make ' + (kept + selected) + '. Tick Remove on an image or choose fewer files.');
+            }
+
+            if (problems.length) {
+                warning.textContent = problems.join(' ') + ' The server will reject this when you save.';
+                warning.hidden = false;
+            }
+        });
+
+        // Re-check when Remove ticks change after files were chosen.
+        field.querySelectorAll('input[name="remove_images[]"]').forEach(function (box) {
+            box.addEventListener('change', function () { input.dispatchEvent(new Event('change')); });
+        });
+    })();
+</script>
 
 {{-- Progressive enhancement (no library): suggest a slug from the name, but
      only until the admin edits the slug field themselves. --}}

@@ -12,7 +12,7 @@
         <div>
             @php($image = $product->images->sortBy('display_order')->first())
             @if ($image)
-                <img src="{{ Storage::disk('public')->url($image->image_path) }}" alt="{{ $image->alt_text ?? $product->name }}" class="w-full rounded-lg border border-border object-cover">
+                <img src="{{ $product->imageUrl($image) }}" alt="{{ $image->alt_text ?? $product->name }}" class="w-full rounded-lg border border-border object-cover">
             @else
                 <div class="grid aspect-square w-full place-items-center rounded-lg border border-border bg-muted text-sm text-muted-foreground">
                     No image uploaded

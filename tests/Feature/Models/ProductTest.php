@@ -6,10 +6,17 @@ use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\User;
 use Illuminate\Database\QueryException;
+use Tests\Concerns\CreatesEligibleMembers;
+use Tests\Concerns\CreatesRenewals;
+use Tests\Concerns\CreatesReviewableApplications;
 use Tests\MysqlTestCase;
 
 class ProductTest extends MysqlTestCase
 {
+    use CreatesEligibleMembers;
+    use CreatesRenewals;
+    use CreatesReviewableApplications;
+
     // --- category relationship ---------------------------------------------
 
     public function test_a_product_belongs_to_a_category(): void
@@ -86,11 +93,25 @@ class ProductTest extends MysqlTestCase
         $this->assertFalse($product->isAccessibleTo($pendingMember));
     }
 
-    public function test_a_member_only_product_is_accessible_to_an_authenticated_active_member(): void
+    public function test_a_member_only_product_is_accessible_only_with_an_eligible_membership(): void
     {
         $product = Product::factory()->memberOnly()->create();
-        $activeMember = User::factory()->active()->create();
 
-        $this->assertTrue($product->isAccessibleTo($activeMember));
+        $this->assertFalse($product->isAccessibleTo(User::factory()->active()->create()), 'An active account alone is not enough.');
+        $this->assertTrue($product->isAccessibleTo($this->eligibleMember()));
+        $this->assertFalse($product->isAccessibleTo($this->expiredMember()));
+    }
+
+    public function test_the_listing_scope_includes_member_only_products_only_for_eligible_members(): void
+    {
+        Product::factory()->memberOnly()->create(['name' => 'Scoped Secret']);
+        Product::factory()->create(['name' => 'Scoped Public']);
+
+        $names = fn (?User $user) => Product::query()->visibleTo($user)->pluck('name')->all();
+
+        $this->assertSame(['Scoped Public'], $names(null));
+        $this->assertSame(['Scoped Public'], $names(User::factory()->active()->create()));
+        $this->assertSame(['Scoped Public'], $names($this->admin()));
+        $this->assertEqualsCanonicalizing(['Scoped Public', 'Scoped Secret'], $names($this->eligibleMember()));
     }
 }

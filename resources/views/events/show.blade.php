@@ -24,7 +24,7 @@
 
     <div class="container mx-auto max-w-3xl px-4 py-10 lg:px-8">
         @if ($event->image_path)
-            <img src="{{ Storage::disk('public')->url($event->image_path) }}" alt="" class="mb-8 aspect-[16/8] w-full rounded-xl object-cover shadow-elegant">
+            <img data-fallback src="{{ Storage::disk('public')->url($event->image_path) }}" alt="{{ $event->title }}" class="mb-8 aspect-[16/8] w-full rounded-xl object-cover shadow-elegant">
         @endif
 
         @if ($event->excerpt)

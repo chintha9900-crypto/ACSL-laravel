@@ -29,7 +29,7 @@
         <div class="min-w-0 lg:col-span-2">
             <article>
                 @if ($post->featured_image_path)
-                    <img src="{{ Storage::disk('public')->url($post->featured_image_path) }}" alt="{{ $post->featured_image_alt ?? '' }}" class="mb-8 aspect-[16/8] w-full rounded-xl object-cover shadow-elegant">
+                    <img data-fallback src="{{ Storage::disk('public')->url($post->featured_image_path) }}" alt="{{ $post->featured_image_alt ?: $post->title }}" class="mb-8 aspect-[16/8] w-full rounded-xl object-cover shadow-elegant">
                 @endif
 
                 <div class="blog-content">
@@ -54,7 +54,7 @@
                             <a href="{{ route('blog.show', $item->slug) }}" class="ui-card block overflow-hidden transition-colors hover:border-[#CC001F]/60">
                                 <span class="block aspect-[16/10] w-full overflow-hidden bg-[#4D4D4D]">
                                     @if ($item->featured_image_path)
-                                        <img src="{{ Storage::disk('public')->url($item->featured_image_path) }}" alt="" class="h-full w-full object-cover">
+                                        <img data-fallback src="{{ Storage::disk('public')->url($item->featured_image_path) }}" alt="" class="h-full w-full object-cover">
                                     @endif
                                 </span>
                                 <span class="block p-3">

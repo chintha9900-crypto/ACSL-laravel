@@ -22,10 +22,20 @@ class StoreCommercialPartnerRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'url' => ['nullable', 'string', 'max:255', 'url'],
-            'display_order' => ['nullable', 'integer', 'min:0'],
-            'logo' => ['nullable', File::types($image['extensions'])->max($image['max_kb'])],
+            'url' => ['required', 'string', 'max:255', 'url:http,https'],
+            'logo' => ['required', File::image()->types($image['extensions'])->max($image['max_kb'])],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'logo.required' => 'Upload the partner logo (JPG or PNG).',
+            'url.required' => 'Enter the company website address.',
+            'url.url' => 'Enter a full website address starting with http:// or https://, e.g. https://example.com.',
         ];
     }
 }

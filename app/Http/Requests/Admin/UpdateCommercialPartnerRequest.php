@@ -21,10 +21,22 @@ class UpdateCommercialPartnerRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'url' => ['nullable', 'string', 'max:255', 'url'],
-            'display_order' => ['nullable', 'integer', 'min:0'],
-            'logo' => ['nullable', File::types($image['extensions'])->max($image['max_kb'])],
+            'url' => ['required', 'string', 'max:255', 'url:http,https'],
+            // Required only when the partner has no logo yet; otherwise the
+            // current logo is kept unless a new one is uploaded.
+            'logo' => [$this->route('partner')?->logo_path ? 'nullable' : 'required', File::image()->types($image['extensions'])->max($image['max_kb'])],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'logo.required' => 'Upload the partner logo (JPG or PNG).',
+            'url.required' => 'Enter the company website address.',
+            'url.url' => 'Enter a full website address starting with http:// or https://, e.g. https://example.com.',
         ];
     }
 }

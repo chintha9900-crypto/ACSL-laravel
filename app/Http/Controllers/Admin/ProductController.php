@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Catalogue\ProductImageFiles;
 use App\Actions\Catalogue\SaveProduct;
 use App\Actions\Catalogue\UpdateProductImage;
 use App\Http\Controllers\Controller;
@@ -12,11 +13,16 @@ use App\Models\ProductCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use RuntimeException;
 
 class ProductController extends Controller
 {
+    /**
+     * Request fields handled by UpdateProductImage, not by SaveProduct.
+     */
+    private const GALLERY_FIELDS = ['images', 'remove_images', 'image_order', 'primary_image'];
+
     public function index(Request $request): View
     {
         Gate::authorize('viewAny', Product::class);
@@ -50,10 +56,13 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request, SaveProduct $save, UpdateProductImage $updateImage): RedirectResponse
     {
-        $product = $save->create($request->safe()->except(['image']));
+        $product = $save->create($request->safe()->except(self::GALLERY_FIELDS));
 
-        if ($request->hasFile('image')) {
-            $updateImage->handle($product, $request->file('image'));
+        try {
+            $updateImage->sync($product, $request->imageUploads());
+        } catch (RuntimeException) {
+            return redirect()->route('admin.products.edit', $product)
+                ->withErrors(['images' => 'The product was saved, but its images could not be stored. Please upload them again.']);
         }
 
         return redirect()->route('admin.products.index')->with('status', 'Product created as inactive.');
@@ -72,7 +81,7 @@ class ProductController extends Controller
     {
         Gate::authorize('update', $product);
 
-        $product->load('inventory');
+        $product->load(['inventory', 'images']);
 
         return view('admin.products.edit', [
             'product' => $product,
@@ -80,12 +89,28 @@ class ProductController extends Controller
         ]);
     }
 
-    public function update(UpdateProductRequest $request, Product $product, SaveProduct $save, UpdateProductImage $updateImage): RedirectResponse
+    public function update(UpdateProductRequest $request, Product $product, SaveProduct $save, UpdateProductImage $updateImage, ProductImageFiles $files): RedirectResponse
     {
-        $save->update($product, $request->safe()->except(['image']));
+        $previousAccessType = $product->access_type;
+        $save->update($product, $request->safe()->except(self::GALLERY_FIELDS));
 
-        if ($request->hasFile('image')) {
-            $updateImage->handle($product, $request->file('image'));
+        try {
+            // Switching between PUBLIC and MEMBER_ONLY moves the image files to
+            // the matching disk (members-only images are never public files).
+            if ($product->access_type !== $previousAccessType) {
+                $files->relocate($product);
+            }
+
+            $updateImage->sync(
+                $product,
+                $request->imageUploads(),
+                array_map('intval', (array) $request->validated('remove_images', [])),
+                (array) $request->validated('image_order', []),
+                $request->validated('primary_image') !== null ? (int) $request->validated('primary_image') : null,
+            );
+        } catch (RuntimeException) {
+            return back()->withInput()
+                ->withErrors(['images' => 'The images could not be stored. The product details were saved and its existing images are unchanged.']);
         }
 
         return redirect()->route('admin.products.index')->with('status', 'Product updated.');
@@ -97,7 +122,7 @@ class ProductController extends Controller
      * `product_category_id`, so this is a clear admin-facing message rather
      * than a raw `QueryException` bubbling up from the database.
      */
-    public function destroy(Product $product): RedirectResponse
+    public function destroy(Product $product, ProductImageFiles $files): RedirectResponse
     {
         Gate::authorize('delete', $product);
 
@@ -105,8 +130,11 @@ class ProductController extends Controller
             return back()->with('warning', 'This product is currently in a customer\'s cart and cannot be deleted.');
         }
 
+        $disk = $files->diskFor($product);
+
         foreach ($product->images as $image) {
-            Storage::disk('public')->delete($image->image_path);
+            // Never delete a file another product's image row still uses.
+            $files->deleteIfUnused($image->image_path, $disk, $product->id);
         }
 
         $product->delete();
