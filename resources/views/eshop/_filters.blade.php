@@ -61,7 +61,7 @@
     {{-- "Members only" filters the catalogue for eligible members; for anyone
          else the server answers with a sign-in prompt (EshopController). --}}
     <ul class="mt-3 space-y-1">
-        @foreach ([null => 'All products', 'members' => 'Members only'] as $accessValue => $accessLabel)
+        @foreach ([null => 'Products', 'members' => 'Members only products'] as $accessValue => $accessLabel)
             @php($accessActive = ($accessValue === 'members') === (($membersOnly ?? false) || ($membersPrompt ?? false)))
             <li>
                 <a href="{{ route('eshop.index', array_filter(['access' => $accessValue, 'category' => $selectedCategory?->slug])) }}"
@@ -80,11 +80,4 @@
             </li>
         @endforeach
     </ul>
-    @guest
-        <p class="mt-2 text-xs text-muted-foreground">Members-only products are shown after you sign in with an eligible membership.</p>
-    @else
-        @unless ($eligibleMember ?? false)
-            <p class="mt-2 text-xs text-muted-foreground" data-membership-required>An eligible (current) membership is required to view and purchase members-only products.</p>
-        @endunless
-    @endguest
 </div>

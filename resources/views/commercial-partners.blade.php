@@ -32,11 +32,13 @@
                     No commercial partners are listed right now. Please check back soon.
                 </p>
             @else
-                {{-- Logos only: the name is never shown, only used as the
-                     logo's alt text / link label. Twice as many columns as
-                     before at every breakpoint, so each logo renders at about
-                     half its previous size. --}}
-                <ul class="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6" role="list" aria-label="Commercial partners">
+                {{-- Logos only, on clean borderless square tiles: the name is
+                     never shown, only used as the logo's alt text / link label.
+                     Each logo sits in a 2:1 box inside its square tile and keeps
+                     its proportions (object-contain). Columns (1 centred / 3 / 4)
+                     and padding are sized so logos render at about 1.5× their
+                     previous size at each breakpoint. --}}
+                <ul class="grid grid-cols-1 justify-items-center gap-4 sm:grid-cols-3 sm:justify-items-stretch lg:grid-cols-4" role="list" aria-label="Commercial partners">
                     @foreach ($partners as $partner)
                         @php
                             $partnerUrl = null;
@@ -45,19 +47,21 @@
                                 $partnerUrl = $partner->url;
                             }
                         @endphp
-                        <li class="ui-card overflow-hidden" data-partner-logo>
+                        <li class="w-full max-w-[15rem] sm:max-w-none" data-partner-logo>
                             @if ($partnerUrl)
                                 <a href="{{ $partnerUrl }}" target="_blank" rel="noopener noreferrer" aria-label="{{ $partner->name }} (opens in a new tab)"
-                                    class="flex aspect-[16/9] w-full items-center justify-center bg-background p-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                    class="flex aspect-square w-full items-center justify-center rounded-md p-3 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:p-6">
                             @else
-                                <div class="flex aspect-[16/9] w-full items-center justify-center bg-background p-3">
+                                <div class="flex aspect-square w-full items-center justify-center p-3 lg:p-6">
                             @endif
-                                @if ($partner->logo_path)
-                                    <img data-fallback src="{{ Storage::disk('public')->url($partner->logo_path) }}" alt="{{ $partner->name }}" loading="lazy" class="max-h-full max-w-full object-contain">
-                                @else
-                                    <svg class="h-8 w-8 text-muted-foreground/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
-                                    <span class="sr-only">{{ $partner->name }}</span>
-                                @endif
+                                <span class="flex aspect-[2/1] w-full items-center justify-center">
+                                    @if ($partner->logo_path)
+                                        <img data-fallback src="{{ Storage::disk('public')->url($partner->logo_path) }}" alt="{{ $partner->name }}" loading="lazy" class="max-h-full max-w-full object-contain">
+                                    @else
+                                        <svg class="h-12 w-12 text-muted-foreground/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
+                                        <span class="sr-only">{{ $partner->name }}</span>
+                                    @endif
+                                </span>
                             @if ($partnerUrl)
                                 </a>
                             @else

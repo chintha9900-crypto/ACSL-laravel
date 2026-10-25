@@ -107,7 +107,7 @@ class MembersOnlyEligibilityTest extends MysqlTestCase
             ->assertSee('Public Cap')
             ->assertDontSee('Secret Wings Pin')
             ->assertDontSee('Hidden members pin')
-            ->assertSee('data-membership-required', false);
+            ->assertDontSee('data-membership-required', false);
 
         $this->actingAs($user)->get(route('eshop.index', ['access' => 'members']))
             ->assertOk()
@@ -132,8 +132,8 @@ class MembersOnlyEligibilityTest extends MysqlTestCase
 
         $this->get(route('eshop.index', ['access' => 'members']))
             ->assertOk()
-            ->assertSee('an account that has an eligible (current) membership')
-            ->assertSee('href="'.route('login').'"', false)
+            ->assertSee('Please log in to your account')
+            ->assertSee('action="'.route('login').'"', false)
             ->assertDontSee('Secret Wings Pin');
         $this->get(route('eshop.show', $product))->assertForbidden()->assertDontSee('Secret Wings Pin');
         $this->post(route('cart.items.store'), ['product_id' => $product->id, 'quantity' => 1])->assertSessionHasErrors('product_id');

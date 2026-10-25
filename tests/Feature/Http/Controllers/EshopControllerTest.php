@@ -96,8 +96,8 @@ class EshopControllerTest extends MysqlTestCase
 
         $response->assertForbidden()
             ->assertSee('data-members-only-dialog', false)
-            ->assertSee('Members-only products')
-            ->assertSee('href="'.route('login').'"', false)
+            ->assertSee('Please log in to your account')
+            ->assertSee('action="'.route('login').'"', false)
             ->assertDontSee('Secret Staff Jacket')
             ->assertDontSee('Hidden description text')
             ->assertDontSee('98,765')

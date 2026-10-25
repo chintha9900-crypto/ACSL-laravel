@@ -157,15 +157,33 @@ class CommercialPartnersPageTest extends MysqlTestCase
         $this->assertSame('A genuinely helpful partner description.', $partner->fresh()->description, 'Historical data is kept.');
     }
 
-    public function test_logos_render_at_about_half_the_previous_size(): void
+    public function test_logos_sit_on_borderless_square_tiles_sized_for_larger_logos(): void
     {
-        CommercialPartner::factory()->create(['name' => 'Sized Partner', 'is_active' => true, 'logo_path' => 'partners/sized.png']);
+        CommercialPartner::factory()->create(['name' => 'Linked Partner', 'is_active' => true, 'logo_path' => 'partners/linked.png', 'url' => 'https://linked.example.test']);
+        CommercialPartner::factory()->create(['name' => 'Plain Partner', 'is_active' => true, 'logo_path' => 'partners/plain.png', 'url' => null]);
 
-        $response = $this->get(route('commercial-partners'))->assertOk();
+        $html = $this->get(route('commercial-partners'))->assertOk()->getContent();
+        preg_match('#<ul class="grid[^"]*" role="list" aria-label="Commercial partners">(.*?)</ul>#s', $html, $grid);
+        $this->assertNotEmpty($grid);
 
-        // Previously 1 / 2 / 3 columns (mobile / tablet / desktop); now twice as many.
-        $response->assertSee('grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6', false);
-        $response->assertDontSee('sm:grid-cols-2 lg:grid-cols-3', false);
+        // Fewer columns than before (1 centred / 3 / 4 instead of 2 / 4 / 6), sized
+        // so logos render at about 1.5x their previous size.
+        $this->assertStringContainsString('grid grid-cols-1 justify-items-center gap-4 sm:grid-cols-3 sm:justify-items-stretch lg:grid-cols-4', $html);
+
+        // Square tiles with no border, shadow or card background.
+        $this->assertSame(2, substr_count($grid[1], 'aspect-square'));
+        foreach (['ui-card', 'border', 'shadow', 'bg-background', 'bg-muted', 'bg-card'] as $decoration) {
+            $this->assertStringNotContainsString($decoration, $grid[1], "No {$decoration} on partner tiles.");
+        }
+
+        // Logos keep their proportions inside a centred 2:1 box.
+        $this->assertSame(2, substr_count($grid[1], 'aspect-[2/1]'));
+        $this->assertSame(2, substr_count($grid[1], 'max-h-full max-w-full object-contain'));
+
+        // Links and accessible names are kept; no visible text.
+        $this->assertStringContainsString('href="https://linked.example.test" target="_blank" rel="noopener noreferrer" aria-label="Linked Partner (opens in a new tab)"', $grid[1]);
+        $this->assertStringContainsString('alt="Plain Partner"', $grid[1]);
+        $this->assertSame('', trim(strip_tags($grid[1])));
     }
 
     public function test_a_missing_description_is_handled_gracefully(): void
