@@ -12,7 +12,7 @@
     <x-public.hero>
         <x-slot:badge>Community Guidelines</x-slot:badge>
         <x-slot:lead>
-            A short set of expectations that keep Aviation Club International a professional, welcoming community.
+            A short set of expectations that keep Aviation Club a professional, welcoming community.
         </x-slot:lead>
         How we <span class="text-[#CC001F]">fly together.</span>
     </x-public.hero>

@@ -21,7 +21,7 @@
     <x-public.hero>
         <x-slot:badge>Membership</x-slot:badge>
         <x-slot:lead>
-            Aviation Club International works with a growing network of commercial partners to bring added value to our members.
+            Aviation Club works with a growing network of commercial partners to bring added value to our members.
         </x-slot:lead>
         Our commercial <span class="text-[#CC001F]">partners.</span>
     </x-public.hero>

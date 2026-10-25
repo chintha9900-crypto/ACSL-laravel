@@ -113,9 +113,9 @@
             </x-ui.section-heading>
 
             <div class="mt-6 space-y-4 text-base leading-relaxed text-muted-foreground">
-                <p>Aviation Club International brings together people from every sector of the aviation industry under one professional community — built on connection, knowledge, experience and continuous learning.</p>
+                <p>Aviation Club brings together people from every sector of the aviation industry under one professional community — built on connection, knowledge, experience and continuous learning.</p>
                 <p>Members can build professional networks, access aviation resources, and connect with experienced people from across the industry.</p>
-                <p>From aspiring aviation professionals to experienced specialists, Aviation Club International supports every stage of the aviation journey.</p>
+                <p>From aspiring aviation professionals to experienced specialists, Aviation Club supports every stage of the aviation journey.</p>
             </div>
         </div>
     </section>

@@ -33,7 +33,7 @@ class RenewalReminder extends Notification
         $plan = MembershipPlan::query()->activeForCategory($this->term->membership->membership_category_id)->first();
 
         return (new MailMessage)
-            ->subject('Your Aviation Club International membership expires soon')
+            ->subject('Your Aviation Club membership expires soon')
             ->view(
                 ['emails.membership.renewal-reminder', 'emails.membership.renewal-reminder-text'],
                 [

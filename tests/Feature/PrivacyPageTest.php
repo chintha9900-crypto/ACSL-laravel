@@ -13,7 +13,7 @@ class PrivacyPageTest extends TestCase
         $response->assertOk();
         $response->assertSee('Information We Collect');
         $response->assertSee('Your Rights');
-        $response->assertSee('being finalised by Aviation Club International');
+        $response->assertSee('being finalised by Aviation Club');
     }
 
     public function test_it_does_not_state_any_invented_legal_claim(): void

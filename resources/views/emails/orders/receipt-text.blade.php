@@ -1,4 +1,4 @@
-Aviation Club International
+Aviation Club
 
 Hello {!! str_replace(["\r", "\n"], ' ', $customerName) !!},
 
@@ -14,4 +14,4 @@ Payment status: Paid
 
 Order total: {!! $currency !!} {{ number_format((float) $totalAmount, 2) }}
 
-Aviation Club International
+Aviation Club

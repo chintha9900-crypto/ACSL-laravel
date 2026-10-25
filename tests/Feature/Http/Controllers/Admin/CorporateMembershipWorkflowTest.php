@@ -214,7 +214,7 @@ class CorporateMembershipWorkflowTest extends MysqlTestCase
 
         $this->get(route('verification.show', ['token' => $membership->verification_token]))
             ->assertOk()
-            ->assertSee('You are a member of Aviation Club International')
+            ->assertSee('You are a member of Aviation Club')
             ->assertSee('Priya Fernando')
             ->assertSee($membership->membership_number);
     }

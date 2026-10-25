@@ -19,9 +19,9 @@
     <div class="mx-auto mt-6 max-w-md rounded-2xl bg-gradient-to-br from-primary to-primary/80 p-6 text-primary-foreground shadow-card">
         <div class="flex items-center justify-between">
             @if ($hasLogo)
-                <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club International" class="h-8 w-auto">
+                <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club" class="h-8 w-auto">
             @else
-                <span class="font-display text-base font-bold">Aviation Club International</span>
+                <span class="font-display text-base font-bold">Aviation Club</span>
             @endif
 
             <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $isCurrentlyValid ? 'bg-secondary/20 text-secondary' : 'bg-white/10 text-primary-foreground/70' }}">

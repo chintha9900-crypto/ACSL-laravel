@@ -11,7 +11,7 @@
     <x-public.hero>
         <x-slot:badge>Legal</x-slot:badge>
         <x-slot:lead>
-            How Aviation Club International handles your information.
+            How Aviation Club handles your information.
         </x-slot:lead>
         Privacy <span class="text-[#CC001F]">Policy.</span>
     </x-public.hero>
@@ -19,7 +19,7 @@
     <section class="border-t border-border">
         <div class="container mx-auto max-w-3xl px-4 py-16 md:py-20 lg:px-8">
             <p class="rounded-lg border border-[#666666]/30 bg-muted px-4 py-3 text-sm text-[#4D4D4D]" role="status">
-                This Privacy Policy is being finalised by Aviation Club International. The sections below outline what it will cover; full content will be published here once approved.
+                This Privacy Policy is being finalised by Aviation Club. The sections below outline what it will cover; full content will be published here once approved.
             </p>
 
             <div class="mt-8 space-y-6">
@@ -33,7 +33,7 @@
                 ] as $heading)
                     <div class="border-b border-border pb-6 last:border-b-0 last:pb-0">
                         <h2 class="font-display text-lg font-bold text-primary">{{ $heading }}</h2>
-                        <p class="mt-2 text-sm italic leading-relaxed text-muted-foreground">Content for this section will be published once approved by Aviation Club International.</p>
+                        <p class="mt-2 text-sm italic leading-relaxed text-muted-foreground">Content for this section will be published once approved by Aviation Club.</p>
                     </div>
                 @endforeach
             </div>

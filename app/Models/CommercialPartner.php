@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * An approved external business/organisation with a commercial partnership
- * with Aviation Club International, publicly listed on the website
+ * with Aviation Club, publicly listed on the website
  * (Phase 1.4A — database foundation only). A flat, uniform list, same shape
  * as `ProductCategory`: `is_active` alone gates visibility — no
  * draft/publish workflow, no taxonomy, no relations.

@@ -110,7 +110,7 @@ class ContactControllerTest extends MysqlTestCase
         $response->assertDontSee('+94 11');
         $response->assertDontSee('Colombo, Sri Lanka');
         $response->assertDontSee('ACSL');
-        $response->assertSee('To be published by Aviation Club International.');
+        $response->assertSee('To be published by Aviation Club.');
     }
 
     public function test_the_recaptcha_widget_is_shown_only_when_a_site_key_is_configured(): void

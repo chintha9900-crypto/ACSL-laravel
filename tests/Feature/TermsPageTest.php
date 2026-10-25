@@ -13,7 +13,7 @@ class TermsPageTest extends TestCase
         $response->assertOk();
         $response->assertSee('Membership Eligibility');
         $response->assertSee('Governing Law');
-        $response->assertSee('being finalised by Aviation Club International');
+        $response->assertSee('being finalised by Aviation Club');
     }
 
     public function test_it_does_not_state_any_invented_contractual_provision(): void

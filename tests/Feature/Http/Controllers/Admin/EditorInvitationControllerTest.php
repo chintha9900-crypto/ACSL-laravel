@@ -69,8 +69,8 @@ class EditorInvitationControllerTest extends MysqlTestCase
         // The email is the editor wording, carries the link, and no password.
         $mail = (new AccountSetup($plain, $token->expires_at))->toMail($editor);
         $html = $mail->render();
-        $this->assertSame('You have been invited to Aviation Club International as an editor', $mail->subject);
-        $this->assertStringContainsString('invited to join Aviation Club International as an editor', $html);
+        $this->assertSame('You have been invited to Aviation Club as an editor', $mail->subject);
+        $this->assertStringContainsString('invited to join Aviation Club as an editor', $html);
         $this->assertStringContainsString('/account/setup/'.$plain, $html);
         $this->assertStringNotContainsString('membership is now active', $html);
         $this->assertDoesNotMatchRegularExpression('/(temporary|temp)\s+password|password\s*:/i', $html);

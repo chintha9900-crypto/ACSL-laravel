@@ -6,7 +6,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex, nofollow">
-        <title>{{ $title }} — Aviation Club International</title>
+        <title>{{ $title }} — Aviation Club</title>
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,7 +24,7 @@
         <header class="bg-primary text-primary-foreground">
             <div class="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 lg:px-8">
                 <div class="flex flex-wrap items-center gap-x-6 gap-y-1">
-                    <span class="font-display text-lg font-bold">Aviation Club International <span class="font-normal text-primary-foreground/70">Member</span></span>
+                    <span class="font-display text-lg font-bold">Aviation Club <span class="font-normal text-primary-foreground/70">Member</span></span>
                     <nav aria-label="Member" class="flex items-center gap-4 text-sm font-medium text-primary-foreground/85">
                         <a href="{{ route('member.dashboard') }}" class="hover:text-secondary">Dashboard</a>
                         <a href="{{ route('member.membership.show') }}" class="hover:text-secondary">Membership</a>

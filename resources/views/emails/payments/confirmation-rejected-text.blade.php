@@ -1,4 +1,4 @@
-Aviation Club International
+Aviation Club
 
 Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
 
@@ -10,4 +10,4 @@ Your renewal has not been cancelled — please submit corrected evidence:
 
 {!! $url !!}
 
-Aviation Club International
+Aviation Club

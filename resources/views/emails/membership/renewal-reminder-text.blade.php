@@ -1,4 +1,4 @@
-Aviation Club International
+Aviation Club
 
 Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
 
@@ -12,4 +12,4 @@ There is no automatic renewal — your membership will not renew unless you pay 
 
 {!! $url !!}
 
-Aviation Club International
+Aviation Club

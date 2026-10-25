@@ -28,7 +28,7 @@ class MoreDetailsRequestedTest extends MysqlTestCase
         $message = (new MoreDetailsRequested($application, 'Please send a clearer copy of your licence.'))->toMail(new User);
         $html = $message->render();
 
-        $this->assertSame('More information needed for your Aviation Club International application', $message->subject);
+        $this->assertSame('More information needed for your Aviation Club application', $message->subject);
         $this->assertStringContainsString('Hello Nimal Perera,', $html);
         $this->assertStringContainsString($application->public_id, $html);
         $this->assertStringContainsString('Please send a clearer copy of your licence.', $html);

@@ -32,7 +32,7 @@ class ApprovedIntroductory extends Notification
         $months = (int) MembershipSetting::current()->introductory_period_months;
 
         return (new MailMessage)
-            ->subject('Your Aviation Club International application has been approved')
+            ->subject('Your Aviation Club application has been approved')
             ->view(
                 ['emails.membership.approved-introductory', 'emails.membership.approved-introductory-text'],
                 [

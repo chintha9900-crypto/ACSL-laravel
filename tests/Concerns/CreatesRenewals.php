@@ -69,7 +69,7 @@ trait CreatesRenewals
         return PaymentBankAccount::forceCreate(array_merge([
             'label' => 'Membership fees — '.$currency,
             'bank_name' => 'Test Bank',
-            'account_name' => 'Aviation Club International',
+            'account_name' => 'Aviation Club',
             'account_number' => '1234567890',
             'currency' => $currency,
             'is_active' => true,

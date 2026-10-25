@@ -1,8 +1,8 @@
-Aviation Club International
+Aviation Club
 
 Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
 
-Congratulations, and welcome to Aviation Club International! You are now a member, and your membership is active.
+Congratulations, and welcome to Aviation Club! You are now a member, and your membership is active.
 
 Membership number: {!! $number !!}
 Category: {!! $category !!}
@@ -16,4 +16,4 @@ Check your email for a separate message with a secure, one-time link to create y
 
 Once you have created your password, sign in to the member portal at {!! $loginUrl !!} using your registered email address, {!! str_replace(["\r", "\n"], '', $email) !!}, as your username.
 
-Aviation Club International
+Aviation Club

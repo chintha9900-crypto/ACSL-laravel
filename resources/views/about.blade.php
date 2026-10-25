@@ -22,7 +22,7 @@
             </x-ui.section-heading>
 
             <div class="mt-6 space-y-4 text-base leading-relaxed text-muted-foreground">
-                <p>Aviation Club International brings together people from every sector of the aviation industry under one professional community — students, working professionals and experienced veterans alike.</p>
+                <p>Aviation Club brings together people from every sector of the aviation industry under one professional community — students, working professionals and experienced veterans alike.</p>
                 <p>We exist to give members a place to connect with others who share the same field, stay informed, and take part in a community built around aviation.</p>
                 <p>Membership is open by application. Every application is reviewed before a member is admitted, so the community stays made up of people genuinely connected to aviation.</p>
             </div>

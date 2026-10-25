@@ -27,7 +27,7 @@ class ApplicationRejected extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Your Aviation Club International application')
+            ->subject('Your Aviation Club application')
             ->view(
                 ['emails.membership.application-rejected', 'emails.membership.application-rejected-text'],
                 [

@@ -1,12 +1,21 @@
 @props(['title' => 'Admin'])
 
+@php
+    // The header names the signed-in user's own area: Admin, Editor or Dev.
+    $portal = match (auth()->user()?->role) {
+        \App\Models\Role::EDITOR => 'Editor',
+        \App\Models\Role::DEV => 'Dev',
+        default => 'Admin',
+    };
+@endphp
+
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex, nofollow">
-        <title>{{ $title }} — Aviation Club International Admin</title>
+        <title>{{ $title }} — Aviation Club {{ $portal }}</title>
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,7 +33,7 @@
         <header class="bg-primary text-primary-foreground">
             <div class="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 lg:px-8">
                 <div class="flex flex-wrap items-center gap-x-6 gap-y-1">
-                    <span class="font-display text-lg font-bold">Aviation Club International <span class="font-normal text-primary-foreground/70">Admin</span></span>
+                    <span class="font-display text-lg font-bold">Aviation Club <span class="font-normal text-primary-foreground/70">{{ $portal }}</span></span>
                     {{--
                         RBAC foundation: every link is wrapped in the same `@can`
                         check its own page already enforces — hiding a link a role

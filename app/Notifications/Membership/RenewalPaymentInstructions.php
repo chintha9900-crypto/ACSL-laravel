@@ -30,7 +30,7 @@ class RenewalPaymentInstructions extends Notification
         $bank = $payment->bankAccount;
 
         return (new MailMessage)
-            ->subject('Renew your Aviation Club International membership')
+            ->subject('Renew your Aviation Club membership')
             ->view(
                 ['emails.membership.renewal-payment-instructions', 'emails.membership.renewal-payment-instructions-text'],
                 [

@@ -1,4 +1,4 @@
-Aviation Club International
+Aviation Club
 
 Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
 
@@ -10,4 +10,4 @@ Please don't reply to this email — use the link below to provide this informat
 
 {!! $url !!}
 
-Aviation Club International
+Aviation Club

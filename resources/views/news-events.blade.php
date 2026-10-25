@@ -13,7 +13,7 @@
     <x-public.hero>
         <x-slot:badge>News &amp; Events</x-slot:badge>
         <x-slot:lead>
-            What's happening at Aviation Club International.
+            What's happening at Aviation Club.
         </x-slot:lead>
         News &amp; <span class="text-[#CC001F]">Events.</span>
     </x-public.hero>

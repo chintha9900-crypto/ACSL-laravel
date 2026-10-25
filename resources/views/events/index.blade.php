@@ -12,7 +12,7 @@
     <x-public.hero>
         <x-slot:badge>Events</x-slot:badge>
         <x-slot:lead>
-            Meetups, workshops and gatherings from Aviation Club International.
+            Meetups, workshops and gatherings from Aviation Club.
         </x-slot:lead>
         Upcoming <span class="text-[#CC001F]">events.</span>
     </x-public.hero>

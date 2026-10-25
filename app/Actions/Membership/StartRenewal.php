@@ -62,13 +62,13 @@ class StartRenewal
         $plan = MembershipPlan::query()->activeForCategory($locked->membership_category_id)->first();
 
         if ($plan === null) {
-            throw new RenewalCannotBeStartedException('No renewal plan is configured for your category yet. Please contact Aviation Club International.');
+            throw new RenewalCannotBeStartedException('No renewal plan is configured for your category yet. Please contact Aviation Club.');
         }
 
         $bankAccount = PaymentBankAccount::query()->activeForCurrency($plan->currency)->first();
 
         if ($bankAccount === null) {
-            throw new RenewalCannotBeStartedException('No bank account is configured for this currency yet. Please contact Aviation Club International.');
+            throw new RenewalCannotBeStartedException('No bank account is configured for this currency yet. Please contact Aviation Club.');
         }
 
         $nextTermNo = (int) MembershipTerm::query()->where('membership_id', $locked->id)->max('term_no') + 1;

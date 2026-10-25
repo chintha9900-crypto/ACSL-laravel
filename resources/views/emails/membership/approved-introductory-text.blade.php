@@ -1,4 +1,4 @@
-Aviation Club International
+Aviation Club
 
 Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
 
@@ -8,4 +8,4 @@ As a new member, your first {!! $months !!} month(s) of membership are free of c
 
 We will be in touch shortly to activate your membership and send you your membership number and account details.
 
-Aviation Club International
+Aviation Club

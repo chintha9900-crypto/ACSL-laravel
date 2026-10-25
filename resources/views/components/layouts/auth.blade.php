@@ -1,4 +1,4 @@
-@props(['title' => 'Aviation Club International'])
+@props(['title' => 'Aviation Club'])
 
 {{-- Same controlled-logo-asset convention as layouts.public/member/admin
      (docs/frontend/08 C-02) — reused here, not reinvented. --}}
@@ -13,7 +13,7 @@
         {{-- Hardcoded, matching every other layout — never config('app.name'),
              which is Laravel's own unrelated scaffold default in .env and is
              never edited by this project (standing rule: .env is untouched). --}}
-        <title>{{ $title }} — Aviation Club International</title>
+        <title>{{ $title }} — Aviation Club</title>
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,9 +31,9 @@
         <main class="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-10">
             <a href="{{ url('/') }}" class="mb-6 flex justify-center">
                 @if ($hasLogo)
-                    <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club International" width="473" height="155" class="h-10 w-auto">
+                    <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club" width="473" height="155" class="h-10 w-auto">
                 @else
-                    <span class="font-display text-lg font-bold text-primary">Aviation Club International</span>
+                    <span class="font-display text-lg font-bold text-primary">Aviation Club</span>
                 @endif
             </a>
 

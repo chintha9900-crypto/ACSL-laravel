@@ -1,4 +1,4 @@
-Aviation Club International
+Aviation Club
 
 Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
 
@@ -12,4 +12,4 @@ Your account itself has not been removed.
 
 {!! $url !!}
 
-Aviation Club International
+Aviation Club

@@ -20,7 +20,7 @@
     <x-public.hero>
         <x-slot:badge>E-Shop</x-slot:badge>
         <x-slot:lead>
-            Aviation Club International merchandise and member benefits — browse what's available to you.
+            Aviation Club merchandise and member benefits — browse what's available to you.
         </x-slot:lead>
         Club <span class="text-[#CC001F]">shop.</span>
     </x-public.hero>
@@ -52,7 +52,7 @@
                     <div class="flex flex-wrap items-end justify-between gap-4">
                         <div>
                             <h2 class="font-display text-2xl font-bold text-primary md:text-3xl">E-Shop</h2>
-                            <p class="mt-1 text-sm text-muted-foreground">Official Aviation Club International merchandise and member benefits.</p>
+                            <p class="mt-1 text-sm text-muted-foreground">Official Aviation Club merchandise and member benefits.</p>
                         </div>
                         <p class="text-sm font-medium text-muted-foreground">
                             @if ($products->isNotEmpty())
@@ -108,7 +108,7 @@
                         <div class="mt-10">{{ $products->links() }}</div>
                     @else
                         @php($placeholderProducts = [
-                            ['name' => 'ACI Pilot Logbook', 'description' => 'Hardbound logbook for recording flight hours, endorsed by Aviation Club International.', 'price' => 2500, 'access' => 'PUBLIC', 'outOfStock' => false],
+                            ['name' => 'ACI Pilot Logbook', 'description' => 'Hardbound logbook for recording flight hours, endorsed by Aviation Club.', 'price' => 2500, 'access' => 'PUBLIC', 'outOfStock' => false],
                             ['name' => 'Club Polo Shirt', 'description' => 'Breathable, embroidered polo shirt in club colours. Available in multiple sizes.', 'price' => 4500, 'access' => 'PUBLIC', 'outOfStock' => false],
                             ['name' => 'Member Enamel Pin Set', 'description' => 'Limited-edition enamel pin set, exclusive to active ACI members.', 'price' => 1800, 'access' => 'MEMBER_ONLY', 'outOfStock' => false],
                             ['name' => 'Flight Planning Kit', 'description' => 'Compact kit with plotter, chinagraph pencils and a quick-reference card.', 'price' => 3200, 'access' => 'PUBLIC', 'outOfStock' => true],

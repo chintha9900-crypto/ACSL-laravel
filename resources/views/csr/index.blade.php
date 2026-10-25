@@ -11,7 +11,7 @@
     <x-public.hero>
         <x-slot:badge>Corporate Social Responsibility</x-slot:badge>
         <x-slot:lead>
-            How Aviation Club International gives back to the communities and environment aviation touches.
+            How Aviation Club gives back to the communities and environment aviation touches.
         </x-slot:lead>
         Our <span class="text-[#CC001F]">CSR</span> projects.
     </x-public.hero>

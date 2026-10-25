@@ -1,4 +1,4 @@
-@props(['title' => 'Aviation Club International'])
+@props(['title' => 'Aviation Club'])
 
 {{-- The approved ACI logo is a controlled brand asset supplied by ACI (docs/frontend/08 C-02).
      Until it is added at public/images/aci-logo.png the name is shown as text; nothing is invented. --}}
@@ -83,7 +83,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>{{ $title }} — Aviation Club International</title>
+        <title>{{ $title }} — Aviation Club</title>
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -102,9 +102,9 @@
             <div class="container mx-auto flex h-16 items-center justify-between px-4 lg:h-20 lg:px-8">
                 <a href="{{ url('/') }}" class="flex items-center gap-2">
                     @if ($hasLogo)
-                        <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club International" width="473" height="155" class="h-11 w-auto lg:h-14">
+                        <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club" width="473" height="155" class="h-11 w-auto lg:h-14">
                     @else
-                        <span class="font-display text-lg font-bold text-primary">Aviation Club International</span>
+                        <span class="font-display text-lg font-bold text-primary">Aviation Club</span>
                     @endif
                 </a>
 
@@ -214,13 +214,13 @@
                             {{-- The logo's own text is dark, so it needs a light backing to
                                  read on this dark footer; the asset itself is untouched. --}}
                             <span class="inline-flex items-center rounded-md bg-white px-3 py-2">
-                                <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club International" width="473" height="155" class="h-8 w-auto">
+                                <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club" width="473" height="155" class="h-8 w-auto">
                             </span>
                         @else
                             <span class="grid h-9 w-9 place-items-center rounded-lg bg-secondary text-secondary-foreground">
                                 <svg class="h-5 w-5 -rotate-45" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
                             </span>
-                            <span class="font-display text-lg font-bold">Aviation Club International</span>
+                            <span class="font-display text-lg font-bold">Aviation Club</span>
                         @endif
                     </a>
                     <p class="text-sm leading-relaxed text-primary-foreground/70">
@@ -268,7 +268,7 @@
 
             <div class="border-t border-white/10">
                 <div class="container mx-auto flex flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-primary-foreground/60 md:flex-row lg:px-8">
-                    <p>&copy; {{ date('Y') }} Aviation Club International. All rights reserved.</p>
+                    <p>&copy; {{ date('Y') }} Aviation Club. All rights reserved.</p>
                     <p>Built for the global aviation community.</p>
                 </div>
             </div>

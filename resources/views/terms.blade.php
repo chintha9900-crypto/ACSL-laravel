@@ -9,7 +9,7 @@
     <x-public.hero>
         <x-slot:badge>Legal</x-slot:badge>
         <x-slot:lead>
-            The terms that apply to using this website and Aviation Club International membership.
+            The terms that apply to using this website and Aviation Club membership.
         </x-slot:lead>
         Terms &amp; <span class="text-[#CC001F]">Conditions.</span>
     </x-public.hero>
@@ -17,7 +17,7 @@
     <section class="border-t border-border">
         <div class="container mx-auto max-w-3xl px-4 py-16 md:py-20 lg:px-8">
             <p class="rounded-lg border border-[#666666]/30 bg-muted px-4 py-3 text-sm text-[#4D4D4D]" role="status">
-                These Terms &amp; Conditions are being finalised by Aviation Club International. The sections below outline what they will cover; full content will be published here once approved.
+                These Terms &amp; Conditions are being finalised by Aviation Club. The sections below outline what they will cover; full content will be published here once approved.
             </p>
 
             <div class="mt-8 space-y-6">
@@ -33,7 +33,7 @@
                 ] as $heading)
                     <div class="border-b border-border pb-6 last:border-b-0 last:pb-0">
                         <h2 class="font-display text-lg font-bold text-primary">{{ $heading }}</h2>
-                        <p class="mt-2 text-sm italic leading-relaxed text-muted-foreground">Content for this section will be published once approved by Aviation Club International.</p>
+                        <p class="mt-2 text-sm italic leading-relaxed text-muted-foreground">Content for this section will be published once approved by Aviation Club.</p>
                     </div>
                 @endforeach
             </div>

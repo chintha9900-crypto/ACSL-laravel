@@ -43,8 +43,8 @@ class AccountSetup extends Notification
         return [
             'title' => 'Set up your account',
             'message' => $this->isEditorInvitation($notifiable)
-                ? 'You have been invited to Aviation Club International as an editor. Check your email for a link to create your password.'
-                : 'Your Aviation Club International membership is active. Check your email for a link to create your password.',
+                ? 'You have been invited to Aviation Club as an editor. Check your email for a link to create your password.'
+                : 'Your Aviation Club membership is active. Check your email for a link to create your password.',
             'action_url' => null,
             'related_public_id' => null,
         ];
@@ -63,8 +63,8 @@ class AccountSetup extends Notification
 
         return (new MailMessage)
             ->subject($editorInvitation
-                ? 'You have been invited to Aviation Club International as an editor'
-                : 'Set up your Aviation Club International account')
+                ? 'You have been invited to Aviation Club as an editor'
+                : 'Set up your Aviation Club account')
             ->view(
                 ['emails.membership.account-setup', 'emails.membership.account-setup-text'],
                 [

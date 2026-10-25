@@ -32,7 +32,7 @@ class ApprovedIntroductoryTest extends MysqlTestCase
         $message = (new ApprovedIntroductory($application))->toMail(new User);
         $html = $message->render();
 
-        $this->assertSame('Your Aviation Club International application has been approved', $message->subject);
+        $this->assertSame('Your Aviation Club application has been approved', $message->subject);
         $this->assertStringContainsString('Hello Nimal Perera,', $html);
         $this->assertStringContainsString($application->category->name, $html);
         $this->assertStringContainsString('first 9 months', $html);

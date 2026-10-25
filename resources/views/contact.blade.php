@@ -22,7 +22,7 @@
     <x-public.hero>
         <x-slot:badge>Contact</x-slot:badge>
         <x-slot:lead>
-            Have a question about membership? Here's how to reach Aviation Club International.
+            Have a question about membership? Here's how to reach Aviation Club.
         </x-slot:lead>
         Get in <span class="text-[#CC001F]">touch.</span>
     </x-public.hero>
@@ -39,7 +39,7 @@
                             <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="m22 6-10 7L2 6"/></svg>
                         </x-ui.icon-tile>
                         <h3 class="mt-4 font-display text-base font-semibold text-primary">Email</h3>
-                        <p class="mt-1 text-sm text-muted-foreground">To be published by Aviation Club International.</p>
+                        <p class="mt-1 text-sm text-muted-foreground">To be published by Aviation Club.</p>
                     </div>
 
                     <div class="ui-card p-6">
@@ -47,7 +47,7 @@
                             <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.4 2.6a2 2 0 0 1 2.8 0l1.2 1.2a2 2 0 0 1 0 2.8l-2 2a12.7 12.7 0 0 0 5 5l2-2a2 2 0 0 1 2.8 0l1.2 1.2a2 2 0 0 1 0 2.8l-1.8 1.8c-.7.7-1.7 1-2.7.8A18 18 0 0 1 3.4 6.5c-.2-1 .1-2 .8-2.7z"/></svg>
                         </x-ui.icon-tile>
                         <h3 class="mt-4 font-display text-base font-semibold text-primary">Phone</h3>
-                        <p class="mt-1 text-sm text-muted-foreground">To be published by Aviation Club International.</p>
+                        <p class="mt-1 text-sm text-muted-foreground">To be published by Aviation Club.</p>
                     </div>
 
                     <div class="ui-card p-6">
@@ -55,7 +55,7 @@
                             <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                         </x-ui.icon-tile>
                         <h3 class="mt-4 font-display text-base font-semibold text-primary">Address</h3>
-                        <p class="mt-1 text-sm text-muted-foreground">To be published by Aviation Club International.</p>
+                        <p class="mt-1 text-sm text-muted-foreground">To be published by Aviation Club.</p>
                     </div>
                 </div>
 

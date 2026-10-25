@@ -30,7 +30,7 @@ class PaymentConfirmed extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Your Aviation Club International renewal is confirmed')
+            ->subject('Your Aviation Club renewal is confirmed')
             ->view(
                 ['emails.payments.payment-confirmed', 'emails.payments.payment-confirmed-text'],
                 [

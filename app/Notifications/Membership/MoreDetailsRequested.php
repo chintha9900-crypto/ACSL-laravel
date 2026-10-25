@@ -30,7 +30,7 @@ class MoreDetailsRequested extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('More information needed for your Aviation Club International application')
+            ->subject('More information needed for your Aviation Club application')
             ->view(
                 ['emails.membership.more-details-requested', 'emails.membership.more-details-requested-text'],
                 [

@@ -10,12 +10,12 @@
 <tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:8px;padding:32px;">
 <tr><td>
-<h1 style="margin:0 0 20px;font-size:20px;color:#0b2a4a;">Aviation Club International</h1>
+<h1 style="margin:0 0 20px;font-size:20px;color:#0b2a4a;">Aviation Club</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Hello {{ $name }},</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Thank you — we have received your payment evidence for {{ $currency }} {{ $amount }}. It is now awaiting review.</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">We will email you again once it has been reviewed.</p>
 <p style="margin:24px 0;text-align:center;"><a href="{{ $url }}" style="display:inline-block;background:#0b2a4a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:12px 24px;border-radius:6px;">View your membership</a></p>
-<p style="margin:24px 0 0;font-size:14px;line-height:1.5;">Aviation Club International</p>
+<p style="margin:24px 0 0;font-size:14px;line-height:1.5;">Aviation Club</p>
 </td></tr>
 </table>
 </td></tr>

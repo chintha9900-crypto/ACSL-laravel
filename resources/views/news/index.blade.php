@@ -10,7 +10,7 @@
     <x-public.hero>
         <x-slot:badge>News</x-slot:badge>
         <x-slot:lead>
-            Announcements and updates from Aviation Club International.
+            Announcements and updates from Aviation Club.
         </x-slot:lead>
         Club <span class="text-[#CC001F]">news.</span>
     </x-public.hero>

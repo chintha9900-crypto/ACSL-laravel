@@ -1,4 +1,4 @@
-Aviation Club International
+Aviation Club
 
 Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
 
@@ -10,4 +10,4 @@ Membership number: {!! $number !!} (unchanged)
 
 {!! $url !!}
 
-Aviation Club International
+Aviation Club

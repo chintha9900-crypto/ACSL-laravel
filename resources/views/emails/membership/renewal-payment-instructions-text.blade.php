@@ -1,4 +1,4 @@
-Aviation Club International
+Aviation Club
 
 Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
 
@@ -26,4 +26,4 @@ Once you have paid, submit your payment reference and evidence on your membershi
 
 {!! $url !!}
 
-Aviation Club International
+Aviation Club

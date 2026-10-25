@@ -11,7 +11,7 @@
     <x-public.hero>
         <x-slot:badge>Blog</x-slot:badge>
         <x-slot:lead>
-            News, stories and updates from Aviation Club International.
+            News, stories and updates from Aviation Club.
         </x-slot:lead>
         Insights &amp; <span class="text-[#CC001F]">stories.</span>
     </x-public.hero>

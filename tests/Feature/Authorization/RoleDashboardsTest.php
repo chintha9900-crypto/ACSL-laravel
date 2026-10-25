@@ -121,6 +121,40 @@ class RoleDashboardsTest extends MysqlTestCase
         $this->actingAs($this->userWithRole($role))->get(route('login'))->assertRedirect(route($route));
     }
 
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function headerLabels(): array
+    {
+        return [
+            'admin' => ['admin', 'admin.dashboard', 'Admin'],
+            'editor' => ['editor', 'editor.dashboard', 'Editor'],
+            'dev' => ['dev', 'dev.dashboard', 'Dev'],
+        ];
+    }
+
+    #[DataProvider('headerLabels')]
+    public function test_the_header_and_title_name_the_signed_in_roles_own_area(string $role, string $route, string $label): void
+    {
+        $html = $this->actingAs($this->userWithRole($role))->get(route($route))->assertOk()->getContent();
+
+        $this->assertStringContainsString('Aviation Club <span class="font-normal text-primary-foreground/70">'.$label.'</span>', $html);
+        $this->assertMatchesRegularExpression('#<title>[^<]* — Aviation Club '.$label.'</title>#', $html);
+        $this->assertStringNotContainsString('Aviation Club International', $html);
+
+        foreach (array_diff(['Admin', 'Editor', 'Dev'], [$label]) as $other) {
+            $this->assertStringNotContainsString('Aviation Club <span class="font-normal text-primary-foreground/70">'.$other.'</span>', $html);
+        }
+    }
+
+    public function test_the_editor_header_stays_editor_on_every_editor_section(): void
+    {
+        $this->actingAs($this->editor())
+            ->get(route('admin.blog.index'))
+            ->assertOk()
+            ->assertSee('Aviation Club <span class="font-normal text-primary-foreground/70">Editor</span>', false);
+    }
+
     public function test_each_layout_dashboard_link_points_to_the_roles_own_dashboard(): void
     {
         $this->actingAs($this->editor())->get(route('editor.dashboard'))

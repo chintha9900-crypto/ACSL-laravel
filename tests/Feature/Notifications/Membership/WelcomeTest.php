@@ -31,7 +31,7 @@ class WelcomeTest extends MysqlTestCase
         $message = (new Welcome($membership))->toMail($membership->user);
         $html = $message->render();
 
-        $this->assertSame('Welcome to Aviation Club International', $message->subject);
+        $this->assertSame('Welcome to Aviation Club', $message->subject);
         $this->assertStringContainsString('Hello Nimal Perera,', $html);
         $this->assertStringContainsString($membership->membership_number, $html);
         $this->assertStringContainsString($membership->category->name, $html);
@@ -55,7 +55,7 @@ class WelcomeTest extends MysqlTestCase
         $this->assertSame('nimal.member@example.test', $message->viewData['email']);
 
         foreach ([$html, $text] as $body) {
-            $this->assertStringContainsString('Congratulations, and welcome to Aviation Club International! You are now a member', $body);
+            $this->assertStringContainsString('Congratulations, and welcome to Aviation Club! You are now a member', $body);
             $this->assertStringContainsString('Membership number: ', $body);
             $this->assertStringContainsString($membership->membership_number, $body);
             $this->assertStringContainsString($loginUrl, $body);

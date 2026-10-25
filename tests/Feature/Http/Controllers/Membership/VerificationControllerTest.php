@@ -65,7 +65,7 @@ class VerificationControllerTest extends MysqlTestCase
 
         $this->get(route('verification.show', ['token' => $membership->verification_token]))
             ->assertOk()
-            ->assertSee('You are a member of Aviation Club International')
+            ->assertSee('You are a member of Aviation Club')
             ->assertSee('Nimal Perera')
             ->assertSee($membership->membership_number)
             ->assertSee(config('membership.verification_vendor_url'), false);
@@ -79,7 +79,7 @@ class VerificationControllerTest extends MysqlTestCase
         $response = $this->get(route('verification.show', ['token' => $membership->verification_token]))
             ->assertOk();
 
-        $response->assertDontSee('You are a member of Aviation Club International');
+        $response->assertDontSee('You are a member of Aviation Club');
         $response->assertDontSee('Nimal Perera');
         $response->assertDontSee($membership->membership_number);
     }
@@ -119,7 +119,7 @@ class VerificationControllerTest extends MysqlTestCase
 
         $this->get(route('verification.show', ['token' => $token]))
             ->assertOk()
-            ->assertDontSee('You are a member of Aviation Club International');
+            ->assertDontSee('You are a member of Aviation Club');
 
         $term = app(StartRenewal::class)->handle($membership);
         app(SubmitPaymentEvidence::class)->handle($term->payment, $membership->user, 'REF-1', $this->pdfUpload());
@@ -127,7 +127,7 @@ class VerificationControllerTest extends MysqlTestCase
 
         $response = $this->get(route('verification.show', ['token' => $token]))
             ->assertOk()
-            ->assertSee('You are a member of Aviation Club International')
+            ->assertSee('You are a member of Aviation Club')
             ->assertSee('Nimal Perera');
 
         $response->assertSee($originalNumber);

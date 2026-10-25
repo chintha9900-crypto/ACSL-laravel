@@ -32,7 +32,7 @@ class NotificationControllerTest extends MysqlTestCase
             'notifiable_id' => $user->id,
             'data' => json_encode([
                 'title' => 'Set up your account',
-                'message' => 'Your Aviation Club International membership is active.',
+                'message' => 'Your Aviation Club membership is active.',
                 'action_url' => null,
                 'related_public_id' => null,
             ]),
@@ -53,7 +53,7 @@ class NotificationControllerTest extends MysqlTestCase
             ->get(route('member.notifications.show'))
             ->assertOk()
             ->assertSee('Set up your account')
-            ->assertSee('Your Aviation Club International membership is active.');
+            ->assertSee('Your Aviation Club membership is active.');
     }
 
     public function test_the_empty_state_is_shown_when_there_are_no_notifications(): void

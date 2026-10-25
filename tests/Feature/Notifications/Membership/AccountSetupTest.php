@@ -48,8 +48,8 @@ class AccountSetupTest extends MysqlTestCase
         $message = $this->notification()->toMail($member);
         $html = $message->render();
 
-        $this->assertSame('Set up your Aviation Club International account', $message->subject);
-        $this->assertStringContainsString('Aviation Club International', $html);
+        $this->assertSame('Set up your Aviation Club account', $message->subject);
+        $this->assertStringContainsString('Aviation Club', $html);
         $this->assertStringContainsString('Hello Nimal Perera,', $html);
         $this->assertStringContainsString('once only', $html);
         $this->assertStringContainsString('create your password', $html);

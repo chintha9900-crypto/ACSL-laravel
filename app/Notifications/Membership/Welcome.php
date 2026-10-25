@@ -31,7 +31,7 @@ class Welcome extends Notification
         $term = $this->membership->terms->first();
 
         return (new MailMessage)
-            ->subject('Welcome to Aviation Club International')
+            ->subject('Welcome to Aviation Club')
             ->view(
                 ['emails.membership.welcome', 'emails.membership.welcome-text'],
                 [
@@ -57,7 +57,7 @@ class Welcome extends Notification
     public function toDatabase(object $notifiable): array
     {
         return [
-            'title' => 'Welcome to Aviation Club International',
+            'title' => 'Welcome to Aviation Club',
             'message' => 'Your membership ('.$this->membership->membership_number.') is now active.',
             'action_url' => route('member.membership.show'),
             'related_public_id' => null,
