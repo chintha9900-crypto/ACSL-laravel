@@ -55,6 +55,35 @@ class AuthenticatedSessionControllerTest extends MysqlTestCase
      * a bug; logging out (or clearing the session cookie) restores the guest
      * experience.
      */
+    public function test_the_password_field_has_an_accessible_show_hide_toggle(): void
+    {
+        $html = $this->get(route('login'))->assertOk()->getContent();
+        $dom = new \DOMDocument;
+        @$dom->loadHTML($html);
+        $xpath = new \DOMXPath($dom);
+
+        // The field itself is unchanged: still a hidden password input.
+        $input = $xpath->query('//input[@id="password"]')->item(0);
+        $this->assertSame('password', $input->getAttribute('type'));
+        $this->assertSame('password', $input->getAttribute('name'));
+        $this->assertSame('current-password', $input->getAttribute('autocomplete'));
+        $this->assertTrue($input->hasAttribute('required'));
+
+        // A real, non-submitting button inside the field's wrapper.
+        $toggle = $xpath->query('//input[@id="password"]/following-sibling::button[@data-password-toggle]')->item(0);
+        $this->assertNotNull($toggle, 'The toggle must sit inside the password field wrapper.');
+        $this->assertSame('button', $toggle->getAttribute('type'));
+        $this->assertSame('password', $toggle->getAttribute('aria-controls'));
+        $this->assertSame('Show password', $toggle->getAttribute('aria-label'));
+        $this->assertSame('false', $toggle->getAttribute('aria-pressed'));
+        $this->assertTrue($toggle->hasAttribute('hidden'), 'Without JavaScript the toggle stays hidden.');
+        $this->assertSame(2, $xpath->query('.//svg[@aria-hidden="true"]', $toggle)->length);
+
+        $this->assertStringContainsString("input.type = reveal ? 'text' : 'password';", $html);
+        $this->assertStringContainsString("toggle.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');", $html);
+        $this->assertStringContainsString("input.form.addEventListener('submit', function () {\n                setVisible(false);", $html);
+    }
+
     public function test_an_already_authenticated_user_is_redirected_away_from_login(): void
     {
         $user = User::factory()->active()->create();
