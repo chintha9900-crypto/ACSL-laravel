@@ -18,7 +18,11 @@
 Membership number: <strong>{{ $number }}</strong><br>
 Category: {{ $category }}
 @if ($months && $startsOn && $expiresOn)
+@if ($schoolClub ?? false)
+<br>Free membership — no joining or renewal fees. Valid from {{ $startsOn }} to {{ $expiresOn }}, renewable free of charge.
+@else
 <br>Your first {{ $months }} {{ Str::plural('month', $months) }} are free, valid from {{ $startsOn }} to {{ $expiresOn }}.
+@endif
 @endif
 </p>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Your digital membership card, with a QR code you can use to verify your membership, is available on your membership page once you have signed in.</p>

@@ -17,15 +17,23 @@
                 <h2 id="applicant-heading" class="font-display text-lg font-bold text-primary">Applicant</h2>
                 <dl class="mt-4 grid gap-x-6 gap-y-4 text-sm md:grid-cols-2">
                     @php
+                        $isSchoolClub = $application->category->code === \App\Models\MembershipCategory::CODE_SCHOOL_CLUB;
                         $rows = [
                             'Category' => $application->category->name,
                             'Submitted' => $application->submitted_at->format('j F Y, H:i').' UTC',
                             'Email' => $application->email,
                             'Mobile' => $application->mobile,
                             'Address' => $application->address,
-                            'Aviation role' => $application->aviation_role,
-                            'Organisation' => $application->aviation_organisation,
+                            ($isSchoolClub ? 'Aviation club name' : 'Aviation role') => $application->aviation_role,
+                            ($isSchoolClub ? 'Position in the aviation club' : 'Organisation') => $application->aviation_organisation,
                         ];
+
+                        // Corporate / School Club organisation details (School Club: the school).
+                        foreach (['company_name' => 'name', 'company_email' => 'email', 'company_phone' => 'phone', 'company_website' => 'website'] as $column => $label) {
+                            if (filled($application->{$column})) {
+                                $rows[($isSchoolClub ? 'School ' : 'Company ').$label] = $application->{$column};
+                            }
+                        }
 
                         if ($application->study_start_date) {
                             $rows['Course start date'] = $application->study_start_date->format('j F Y');

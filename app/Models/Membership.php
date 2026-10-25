@@ -59,6 +59,52 @@ class Membership extends Model
     }
 
     /**
+     * A student member's parent School Club membership.
+     *
+     * @return BelongsTo<Membership, $this>
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_membership_id');
+    }
+
+    /**
+     * A School Club's student memberships.
+     *
+     * @return HasMany<Membership, $this>
+     */
+    public function students(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_membership_id')->orderBy('student_sequence');
+    }
+
+    /**
+     * @return HasMany<SchoolClubStudentBatch, $this>
+     */
+    public function studentBatches(): HasMany
+    {
+        return $this->hasMany(SchoolClubStudentBatch::class)->latest('submitted_at');
+    }
+
+    /**
+     * School Club membership (the school itself or one of its students): free,
+     * with yearly free renewal.
+     */
+    public function isSchoolClub(): bool
+    {
+        return $this->category?->code === MembershipCategory::CODE_SCHOOL_CLUB;
+    }
+
+    /**
+     * The school's own (main) School Club membership — the only one that may
+     * manage student members.
+     */
+    public function isSchoolClubMain(): bool
+    {
+        return $this->isSchoolClub() && $this->parent_membership_id === null;
+    }
+
+    /**
      * The term that is currently valid: `active` and today within its own
      * dates (docs/database/04 §8's derived-state definition). Never inferred
      * from a bare `status = active` alone — the daily expiry job may not have

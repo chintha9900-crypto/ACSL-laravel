@@ -43,7 +43,7 @@ class MembershipApplicationController extends Controller
         Gate::authorize('view', $application);
 
         $application->load([
-            'category:id,name',
+            'category:id,code,name',
             'documents' => fn ($query) => $query->orderBy('id'),
             'detailsRequests.documents',
             'membership.terms',

@@ -64,7 +64,10 @@ class StoreMembershipApplicationRequest extends FormRequest
     {
         $student = 'exclude_unless:category,'.MembershipCategory::CODE_STUDENT;
         $veteran = 'exclude_unless:category,'.MembershipCategory::CODE_VETERAN;
-        $corporate = 'exclude_unless:category,'.MembershipCategory::CODE_CORPORATE;
+        // Corporate and School Club share the organisation (company_*) fields:
+        // for a School Club they hold the school's name and contact details.
+        $corporate = 'exclude_unless:category,'.MembershipCategory::CODE_CORPORATE.','.MembershipCategory::CODE_SCHOOL_CLUB;
+        $schoolClub = $this->input('category') === MembershipCategory::CODE_SCHOOL_CLUB;
         // Aviation Enthusiast is the one category with no eligibility to
         // prove — every other case (including a missing/invalid category,
         // which must still be reported as its own error) keeps requiring
@@ -99,7 +102,8 @@ class StoreMembershipApplicationRequest extends FormRequest
             'proof_documents.*' => [
                 $needsProof,
                 'required',
-                File::types($proof['extensions'])->max($proof['max_kb']),
+                // A School Club's principal request letter must be a PDF.
+                File::types($schoolClub ? ['pdf'] : $proof['extensions'])->max($proof['max_kb']),
             ],
             // The declaration is a submission-time confirmation only — it is
             // never stored (see applicationData() below), just like the
@@ -119,10 +123,14 @@ class StoreMembershipApplicationRequest extends FormRequest
             'category.exists' => 'Please choose one of the available membership categories.',
             'email.email' => 'Enter a valid email address, for example name@example.com.',
             'company_email.email' => 'Enter a valid company email address, for example info@example.com.',
-            'proof_documents.required' => 'Aviation eligibility proof is required. Please upload at least one document.',
+            'proof_documents.required' => $this->input('category') === MembershipCategory::CODE_SCHOOL_CLUB
+                ? "The principal's official request letter is required. Please upload it as a PDF."
+                : 'Aviation eligibility proof is required. Please upload at least one document.',
             'proof_documents.min' => 'Aviation eligibility proof is required. Please upload at least one document.',
             'proof_documents.max' => 'You can upload at most '.$proof['max_files'].' documents.',
-            'proof_documents.*.mimes' => 'Each document must be a PDF, JPG or PNG file.',
+            'proof_documents.*.mimes' => $this->input('category') === MembershipCategory::CODE_SCHOOL_CLUB
+                ? "The principal's official request letter must be a PDF file."
+                : 'Each document must be a PDF, JPG or PNG file.',
             'proof_documents.*.max' => 'Each document must not be larger than '.round($proof['max_kb'] / 1024, 1).' MB.',
             'proof_documents.*.uploaded' => 'A document could not be uploaded. Please check its size and try again.',
             'declaration.accepted' => 'Please confirm the declaration to submit your application.',
@@ -142,13 +150,28 @@ class StoreMembershipApplicationRequest extends FormRequest
             'expected_completion_date' => 'expected completion date',
             'years_experience' => 'years of experience',
             'previous_employers' => 'previous employers',
-            'company_name' => 'company name',
-            'company_email' => 'company email',
-            'company_phone' => 'company phone',
-            'company_website' => 'company website',
-            'proof_documents' => $this->input('category') === MembershipCategory::CODE_CORPORATE
-                ? 'company membership/request letter'
-                : 'aviation proof',
+            ...($this->input('category') === MembershipCategory::CODE_SCHOOL_CLUB
+                ? [
+                    'company_name' => 'school name',
+                    'company_email' => 'school email',
+                    'company_phone' => 'school phone',
+                    'company_website' => 'school website',
+                    'address' => 'school address',
+                    'full_name' => 'representative name',
+                    'email' => 'representative email',
+                    'mobile' => 'representative telephone number',
+                ]
+                : [
+                    'company_name' => 'company name',
+                    'company_email' => 'company email',
+                    'company_phone' => 'company phone',
+                    'company_website' => 'company website',
+                ]),
+            'proof_documents' => match ($this->input('category')) {
+                MembershipCategory::CODE_CORPORATE => 'company membership/request letter',
+                MembershipCategory::CODE_SCHOOL_CLUB => "principal's official request letter",
+                default => 'aviation proof',
+            },
         ];
     }
 
@@ -290,6 +313,7 @@ class StoreMembershipApplicationRequest extends FormRequest
             MembershipCategory::CODE_STUDENT => 'course name',
             MembershipCategory::CODE_VETERAN => 'position held',
             MembershipCategory::CODE_CORPORATE => 'company type',
+            MembershipCategory::CODE_SCHOOL_CLUB => 'aviation club name',
             default => 'occupation',
         };
     }
@@ -300,6 +324,7 @@ class StoreMembershipApplicationRequest extends FormRequest
             MembershipCategory::CODE_STUDENT => 'training institute',
             MembershipCategory::CODE_VETERAN => 'most recent aviation employer',
             MembershipCategory::CODE_CORPORATE => 'representative position/designation',
+            MembershipCategory::CODE_SCHOOL_CLUB => 'position in the aviation club',
             default => 'employer or organisation',
         };
     }

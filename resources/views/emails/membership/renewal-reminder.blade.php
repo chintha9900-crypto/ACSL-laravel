@@ -17,7 +17,11 @@
 @if ($fee)
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">The renewal fee is {{ $fee }}, payable by bank transfer.</p>
 @endif
+@if ($schoolClub ?? false)
+<p style="margin:0 0 16px;font-size:15px;line-height:1.5;">School Club membership is free. There is no automatic renewal — renew it free of charge from your membership page.</p>
+@else
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">There is no automatic renewal — your membership will not renew unless you pay and an admin confirms it.</p>
+@endif
 <p style="margin:24px 0;text-align:center;"><a href="{{ $url }}" style="display:inline-block;background:#0b2a4a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:12px 24px;border-radius:6px;">Renew now</a></p>
 <p style="margin:24px 0 0;font-size:14px;line-height:1.5;">Aviation Club</p>
 </td></tr>

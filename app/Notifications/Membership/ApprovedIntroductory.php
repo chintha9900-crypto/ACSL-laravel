@@ -3,6 +3,7 @@
 namespace App\Notifications\Membership;
 
 use App\Models\MembershipApplication;
+use App\Models\MembershipCategory;
 use App\Models\MembershipSetting;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -29,7 +30,10 @@ class ApprovedIntroductory extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $months = (int) MembershipSetting::current()->introductory_period_months;
+        $schoolClub = $this->application->category->code === MembershipCategory::CODE_SCHOOL_CLUB;
+        $months = $schoolClub
+            ? (int) config('membership.school_club_term_months')
+            : (int) MembershipSetting::current()->introductory_period_months;
 
         return (new MailMessage)
             ->subject('Your Aviation Club application has been approved')
@@ -39,6 +43,7 @@ class ApprovedIntroductory extends Notification
                     'name' => $this->application->full_name,
                     'category' => $this->application->category->name,
                     'months' => $months,
+                    'schoolClub' => $schoolClub,
                 ],
             );
     }

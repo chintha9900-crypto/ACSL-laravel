@@ -94,7 +94,13 @@
                 <p class="mt-3 rounded-lg border border-destructive/50 px-3 py-2 text-xs text-destructive" role="alert">{{ $message }}</p>
             @enderror
 
-            @if ($pendingRenewal === null)
+            @if ($membership->isSchoolClub())
+                <p class="mt-2 text-sm text-muted-foreground">School Club membership is free — there are no joining or renewal fees. Renew it free of charge for another {{ config('membership.school_club_term_months') }} months once your current term is within {{ max(config('membership.renewal_reminder_days')) }} days of ending, or after it has ended.</p>
+                <form method="POST" action="{{ route('member.membership.renewal.start') }}" class="mt-4">
+                    @csrf
+                    <button type="submit" class="btn btn-lg btn-gradient">Renew free of charge</button>
+                </form>
+            @elseif ($pendingRenewal === null)
                 <p class="mt-2 text-sm text-muted-foreground">There is no automatic renewal — start one whenever you are ready. Renewal is normally 12 months and requires payment by bank transfer.</p>
                 <form method="POST" action="{{ route('member.membership.renewal.start') }}" class="mt-4">
                     @csrf

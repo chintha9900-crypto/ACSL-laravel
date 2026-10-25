@@ -22,7 +22,7 @@ class MembershipController extends Controller
     {
         $membership = Membership::query()
             ->where('user_id', $request->user()->id)
-            ->with(['category:id,name,description', 'terms.payment.bankAccount', 'terms.payment.evidence'])
+            ->with(['category:id,code,name,description', 'terms.payment.bankAccount', 'terms.payment.evidence'])
             ->first();
 
         if ($membership === null) {

@@ -77,7 +77,11 @@ class ActivateMembership
         $now = now();
         $local = $now->copy()->setTimezone(config('membership.business_timezone'));
         $startsOn = $local->copy()->startOfDay();
-        $months = (int) MembershipSetting::current()->introductory_period_months;
+        // School Club membership is free with yearly free terms; every other
+        // category starts with the configured introductory free period.
+        $months = $category->code === MembershipCategory::CODE_SCHOOL_CLUB
+            ? (int) config('membership.school_club_term_months')
+            : (int) MembershipSetting::current()->introductory_period_months;
         $expiresOn = $startsOn->copy()->addMonthsNoOverflow($months)->subDay();
 
         $sequence = $this->nextSequence($category->id, $local->year);

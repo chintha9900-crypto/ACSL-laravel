@@ -54,6 +54,7 @@
                         'V' => '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>',
                         'E' => '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>',
                         'C' => '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 10h.01M16 10h.01M8 10h.01M12 14h.01M16 14h.01M8 14h.01"/>',
+                        'SC' => '<path d="M14 22v-4a2 2 0 1 0-4 0v4"/><path d="m18 10 3.447 1.724a1 1 0 0 1 .553.894V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7.382a1 1 0 0 1 .553-.894L6 10"/><path d="M18 5v17"/><path d="m4 6 7.106-3.553a2 2 0 0 1 1.788 0L20 6"/><path d="M6 5v17"/><circle cx="12" cy="9" r="2"/>',
                     ];
 
                     // Exact wording/prices/feature lists from the approved reference
@@ -187,10 +188,11 @@
                     // Mobile stacks in that same reading order: Enthusiast,
                     // Student, Veteran, Professional, Corporate.
                     $individualOrder = ['E' => 0, 'S' => 1, 'V' => 2, 'P' => 3];
-                    $individualCategories = $categories->reject(fn ($category) => $category->code === 'C')
+                    $individualCategories = $categories->reject(fn ($category) => in_array($category->code, ['C', 'SC'], true))
                         ->sortBy(fn ($category) => $individualOrder[$category->code] ?? 99)
                         ->values();
                     $corporate = $categories->firstWhere('code', 'C');
+                    $schoolClub = $categories->firstWhere('code', 'SC');
                 @endphp
 
                 @if ($individualCategories->isNotEmpty())
@@ -202,7 +204,11 @@
                          order, so the Enthusiast/Student (row 1), Veteran/
                          Professional (row 2) arrangement holds regardless of
                          the DB's display order. --}}
-                    <div class="mx-auto mt-8 grid max-w-5xl gap-4 lg:grid-cols-2 lg:grid-rows-2">
+                    {{-- Rows size to their own content (no equal-height rows), so the
+                         Enthusiast/Student row stays compact and its two cards share
+                         one height. While an eligibility check is open, cards keep
+                         their natural height so only the opened card grows. --}}
+                    <div class="mx-auto mt-8 grid max-w-5xl gap-4 lg:grid-cols-2 lg:has-[details[open]]:items-start lg:has-[details[open]]:*:h-auto">
                         @foreach ($individualCategories as $category)
                             @php
                                 $content = $cardContent[$category->code] ?? null;
@@ -278,7 +284,7 @@
                                                 answered "Yes" and a study area is selected; any "No"
                                                 shows a polite ineligibility message instead.
                                             --}}
-                                            <details class="mt-auto group">
+                                            <details class="mt-auto group pt-4">
                                                 <summary class="btn btn-lg btn-brand w-full cursor-pointer list-none text-center [&::-webkit-details-marker]:hidden">Check Eligibility</summary>
 
                                                 <div data-eligibility class="mt-4 space-y-5 rounded-lg bg-white/10 p-4 text-left">
@@ -327,7 +333,7 @@
                                                 Veteran eligibility check — same pattern/classes as
                                                 Student's and Professional's, wording adjusted.
                                             --}}
-                                            <details class="mt-auto group">
+                                            <details class="mt-auto group pt-4">
                                                 <summary class="btn btn-lg btn-brand w-full cursor-pointer list-none text-center [&::-webkit-details-marker]:hidden">Check Your Eligibility</summary>
 
                                                 <div data-eligibility class="mt-4 space-y-5 rounded-lg bg-white/10 p-4 text-left">
@@ -385,7 +391,7 @@
                                                 occupation is chosen (with a required free-text
                                                 answer if "Other").
                                             --}}
-                                            <details class="mt-auto group">
+                                            <details class="mt-auto group pt-4">
                                                 <summary class="btn btn-lg btn-brand w-full cursor-pointer list-none text-center [&::-webkit-details-marker]:hidden">Check Your Eligibility</summary>
 
                                                 <div data-eligibility class="mt-4 space-y-5 rounded-lg bg-white/10 p-4 text-left">
@@ -450,18 +456,19 @@
                     </div>
                 @endif
 
-                @if ($corporate)
-                    @php
-                        $content = $cardContent['C'];
-                    @endphp
+                @if ($corporate || $schoolClub)
                     <div class="mx-auto mt-16 max-w-5xl text-center">
-                        <h2 class="font-display text-2xl font-bold text-primary md:text-3xl">Corporate Membership</h2>
+                        <h2 class="font-display text-2xl font-bold text-primary md:text-3xl">{{ $corporate && $schoolClub ? 'Corporate & School Club Membership' : ($corporate ? 'Corporate Membership' : 'School Club Membership') }}</h2>
                     </div>
 
                     {{-- Same grid width/columns as the Individual section
                          above so this reads as its row 3: Corporate in the
                          left cell, the right cell intentionally left empty. --}}
                     <div class="mx-auto mt-8 grid max-w-5xl gap-4 lg:grid-cols-2">
+                        @if ($corporate)
+                        @php
+                            $content = $cardContent['C'];
+                        @endphp
                         <div class="flex h-full flex-col rounded-xl border-l-4 border-[#CC001F] bg-[#4D4D4D] p-5 text-white shadow-card md:p-6">
                             <div class="flex items-center gap-3">
                                 <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/15">
@@ -502,6 +509,63 @@
                             {{-- No eligibility questionnaire for Corporate. --}}
                             <a href="{{ route('membership.apply', ['category' => $corporate->slug()]) }}" class="btn btn-lg btn-brand mt-6">Apply Now</a>
                         </div>
+                        @endif
+
+                        {{-- School Club — free; same card dimensions/styling as Corporate,
+                             to its right. Eligibility: the principal's official request
+                             letter is mandatory, so "No" explains that and offers no way on;
+                             "Yes" reveals the link to the School Club application. --}}
+                        @if ($schoolClub)
+                        <div class="flex h-full flex-col rounded-xl border-l-4 border-[#CC001F] bg-[#4D4D4D] p-5 text-white shadow-card md:p-6">
+                            <div class="flex items-center gap-3">
+                                <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/15">
+                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! $icons['SC'] !!}</svg>
+                                </span>
+                                <h3 class="font-display text-xl font-bold">School Club Membership</h3>
+                            </div>
+                            <p class="mt-2 text-sm leading-relaxed text-white/75">For schools with an aviation club, and their students</p>
+
+                            <div class="mt-3 rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white/90">
+                                Free membership
+                            </div>
+
+                            <p class="mt-4">
+                                <span class="font-display text-3xl font-bold">Free</span>
+                                <span class="ml-1 text-sm text-white/70">no joining or renewal fees</span>
+                            </p>
+
+                            <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-white/70">Benefits</p>
+                            <ul class="mt-2 space-y-2 text-sm text-white/85">
+                                @foreach (['Member/vendor discounts', 'Aviation news and updates', 'Access to aviation blogs/content', 'Participation in aviation events', 'Networking opportunities'] as $feature)
+                                    <li class="flex items-start gap-2">
+                                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                                        <span>{{ $feature }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+
+                            <details class="group mt-auto pt-6">
+                                <summary class="btn btn-lg btn-brand w-full cursor-pointer list-none text-center [&::-webkit-details-marker]:hidden">Check Eligibility</summary>
+
+                                <div data-eligibility class="mt-4 space-y-5 rounded-lg bg-white/10 p-4 text-left">
+                                    <fieldset>
+                                        <legend class="text-sm font-semibold">Do you have an official request letter from the school principal confirming the school's aviation club?</legend>
+                                        <div class="mt-2 flex gap-5 text-sm text-white/90">
+                                            <label class="flex items-center gap-2"><input type="radio" name="school-club-eligibility-letter" value="yes" class="h-4 w-4"> Yes</label>
+                                            <label class="flex items-center gap-2"><input type="radio" name="school-club-eligibility-letter" value="no" class="h-4 w-4"> No</label>
+                                        </div>
+                                    </fieldset>
+
+                                    <div>
+                                        <a href="{{ route('membership.apply', ['category' => $schoolClub->slug()]) }}" data-eligibility-eligible hidden class="btn btn-lg btn-brand w-full">Continue to School Club application</a>
+                                        <p data-eligibility-ineligible hidden role="status" class="rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-sm text-white/85">
+                                            An official request letter from the school principal confirming the school's aviation club is mandatory for School Club membership. Please obtain the letter first, then check your eligibility again to continue.
+                                        </p>
+                                    </div>
+                                </div>
+                            </details>
+                        </div>
+                        @endif
                     </div>
                 @endif
             @endif
@@ -546,10 +610,6 @@
                         @endif
                     @endforeach
                 </div>
-            </div>
-
-            <div class="mt-10 flex justify-center">
-                <a href="{{ route('membership.apply') }}" class="btn btn-lg btn-brand">Apply Now</a>
             </div>
         </div>
     </section>

@@ -5,6 +5,7 @@ namespace Tests\Feature\Http\Controllers\Membership;
 use App\Models\MembershipCategory;
 use App\Models\MembershipPlan;
 use App\Models\MembershipSetting;
+use Illuminate\Support\Facades\DB;
 use Tests\MysqlTestCase;
 
 class MembershipBenefitsControllerTest extends MysqlTestCase
@@ -42,7 +43,7 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
     public function test_inactive_categories_are_not_shown(): void
     {
-        \Illuminate\Support\Facades\DB::table('membership_categories')->where('code', 'S')->update([
+        DB::table('membership_categories')->where('code', 'S')->update([
             'name' => 'Retired Category',
             'is_active' => false,
         ]);
@@ -186,7 +187,10 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
 
         $html = $this->get(route('membership.benefits'))->assertOk()->getContent();
 
-        $this->assertSame(1, substr_count($html, '>Check Eligibility<'));
+        // Student and School Club (seeded as an active category) each have one.
+        $this->assertSame(2, substr_count($html, '>Check Eligibility<'));
+        $this->assertSame(1, substr_count($html, 'name="student-eligibility-enrolled" value="yes"'));
+        $this->assertSame(1, substr_count($html, 'name="school-club-eligibility-letter" value="yes"'));
         $this->assertSame(2, substr_count($html, '>Check Your Eligibility<'));
     }
 
@@ -363,7 +367,9 @@ class MembershipBenefitsControllerTest extends MysqlTestCase
         $corporateHeading = '<h3 class="font-display text-xl font-bold">Corporate Membership</h3>';
         $applicationProcessHeading = '<section class="border-t border-border bg-muted/50">';
         $start = strpos($cardsHtml, $corporateHeading);
-        $end = strpos($cardsHtml, $applicationProcessHeading, $start === false ? 0 : $start);
+        // The Corporate card ends where the School Club card (to its right) begins.
+        $schoolClubCard = strpos($cardsHtml, 'School Club Membership</h3>', $start === false ? 0 : $start);
+        $end = $schoolClubCard !== false ? strrpos(substr($cardsHtml, 0, $schoolClubCard), '<div class="flex h-full flex-col') : strpos($cardsHtml, $applicationProcessHeading, $start === false ? 0 : $start);
 
         $this->assertNotFalse($start);
         $this->assertNotFalse($end);

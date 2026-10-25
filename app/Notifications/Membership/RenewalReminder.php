@@ -43,6 +43,7 @@ class RenewalReminder extends Notification
                     'expiresOn' => $this->term->expires_on?->format('j F Y'),
                     'fee' => $plan !== null ? $plan->currency.' '.number_format((float) $plan->fee_amount, 2) : null,
                     'url' => route('member.membership.show'),
+                    'schoolClub' => $this->term->membership->isSchoolClub(),
                 ],
             );
     }

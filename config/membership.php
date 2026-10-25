@@ -47,6 +47,14 @@ return [
     'renewal_grace_period_months' => 1,
 
     /*
+     | School Club membership (school and its students) is free. Each term lasts
+     | this many calendar months and is renewed free of charge by the member
+     | (`free_renewal`), opening once the current term is within the largest
+     | `renewal_reminder_days` of its end, or after it has ended.
+     */
+    'school_club_term_months' => 12,
+
+    /*
      | Where a successful public QR/card verification sends the visitor after
      | showing the confirmation. Configurable per environment; the value below
      | is the approved production destination.

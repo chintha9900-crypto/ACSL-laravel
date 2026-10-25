@@ -27,6 +27,12 @@ class MembershipCategory extends Model
     public const CODE_CORPORATE = 'C';
 
     /**
+     * Free School Club membership: one school, one representative account,
+     * plus student members approved in batches.
+     */
+    public const CODE_SCHOOL_CLUB = 'SC';
+
+    /**
      * URL slugs accepted by `?category=` (docs/frontend/03 A7) and their codes.
      *
      * @var array<string, string>
@@ -37,6 +43,7 @@ class MembershipCategory extends Model
         'veteran' => self::CODE_VETERAN,
         'enthusiast' => self::CODE_ENTHUSIAST,
         'corporate' => self::CODE_CORPORATE,
+        'school-club' => self::CODE_SCHOOL_CLUB,
     ];
 
     /**

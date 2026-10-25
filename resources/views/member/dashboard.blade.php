@@ -37,6 +37,11 @@
             </dl>
 
             <a href="{{ route('member.membership.card') }}" class="btn btn-lg btn-gradient mt-6 inline-flex">View Digital Membership Card</a>
+
+            {{-- Main School Club membership only — never for its students or other members. --}}
+            @if ($membership->isSchoolClubMain())
+                <a href="{{ route('member.school-club.students.index') }}" class="btn btn-lg border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground mt-6 ml-2 inline-flex">Manage Student Members</a>
+            @endif
         </section>
 
         <section class="ui-card p-6" aria-labelledby="term-heading">

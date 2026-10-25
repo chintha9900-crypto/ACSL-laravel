@@ -16,6 +16,11 @@ class MembershipTerm extends Model
 
     public const KIND_RENEWAL = 'renewal';
 
+    /**
+     * A School Club renewal: free, no plan and no payment.
+     */
+    public const KIND_FREE_RENEWAL = 'free_renewal';
+
     public const STATUS_PENDING_PAYMENT = 'pending_payment';
 
     public const STATUS_ACTIVE = 'active';

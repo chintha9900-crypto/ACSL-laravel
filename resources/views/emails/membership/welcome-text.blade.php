@@ -7,7 +7,11 @@ Congratulations, and welcome to Aviation Club! You are now a member, and your me
 Membership number: {!! $number !!}
 Category: {!! $category !!}
 @if ($months && $startsOn && $expiresOn)
+@if ($schoolClub ?? false)
+Free membership — no joining or renewal fees. Valid from {!! $startsOn !!} to {!! $expiresOn !!}, renewable free of charge.
+@else
 Your first {!! $months !!} month(s) are free, valid from {!! $startsOn !!} to {!! $expiresOn !!}.
+@endif
 @endif
 
 Your digital membership card, with a QR code you can use to verify your membership, is available on your membership page once you have signed in.

@@ -18,6 +18,11 @@ class Document extends Model
 
     public const KIND_PAYMENT_EVIDENCE = 'payment_evidence';
 
+    /**
+     * The principal-signed student list submitted with a School Club student batch.
+     */
+    public const KIND_SCHOOL_CLUB_STUDENT_LIST = 'school_club_student_list';
+
     public const DISK_PRIVATE = 'private';
 
     public const VISIBILITY_OWNER_AND_ADMIN = 'owner_and_admin';
@@ -34,6 +39,7 @@ class Document extends Model
         'membership_application_id',
         'membership_details_request_id',
         'payment_id',
+        'school_club_student_batch_id',
         'uploaded_by_user_id',
         'disk',
         'storage_path',

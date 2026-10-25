@@ -1466,7 +1466,9 @@ class MembershipApplicationControllerTest extends MysqlTestCase
 
         $html = $this->get('/membership/apply?category=corporate')->assertOk()->getContent();
 
-        $this->assertSame(2, $this->xpath($html)->query('//*[@data-proof-widget]//input[@type="file"][@data-proof-upload]')->length);
+        // Individual, Corporate and School Club each have their own upload widget.
+        $this->assertSame(3, $this->xpath($html)->query('//*[@data-proof-widget]//input[@type="file"][@data-proof-upload]')->length);
+        $this->assertSame(1, $this->xpath($html)->query('//input[@id="proof_documents_corporate"][@data-proof-upload]')->length);
         $this->assertStringContainsString("proof.addEventListener('invalid', function () {", $html);
         $this->assertStringContainsString('fileList.textContent = proof.validationMessage', $html);
         $this->assertStringContainsString("widget.scrollIntoView({ block: 'center' });", $html);
@@ -1668,8 +1670,9 @@ class MembershipApplicationControllerTest extends MysqlTestCase
             ->assertOk()
             ->getContent();
 
+        // Individual, Corporate and School Club each have their own phone widget.
         $combined = $this->xpath($html)->query('//input[@data-mobile-combined]');
-        $this->assertSame(2, $combined->length);
+        $this->assertSame(3, $combined->length);
         foreach ($combined as $input) {
             $this->assertSame('+94 77 555 1234', $input->getAttribute('value'));
         }

@@ -99,10 +99,11 @@
                                 MembershipCategory::CODE_VETERAN => '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>',
                                 MembershipCategory::CODE_ENTHUSIAST => '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>',
                                 MembershipCategory::CODE_CORPORATE => '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 10h.01M16 10h.01M8 10h.01M12 14h.01M16 14h.01M8 14h.01"/>',
+                                MembershipCategory::CODE_SCHOOL_CLUB => '<path d="M14 22v-4a2 2 0 1 0-4 0v4"/><path d="m18 10 3.447 1.724a1 1 0 0 1 .553.894V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7.382a1 1 0 0 1 .553-.894L6 10"/><path d="M18 5v17"/><path d="m4 6 7.106-3.553a2 2 0 0 1 1.788 0L20 6"/><path d="M6 5v17"/><circle cx="12" cy="9" r="2"/>',
                             ];
                         @endphp
 
-                        <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                        <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                             @foreach ($categories as $category)
                                 <label class="cursor-pointer">
                                     <input
@@ -127,7 +128,7 @@
                     </fieldset>
 
                     {{-- Student / Professional / Veteran / Enthusiast: unchanged. --}}
-                    <div data-category-section-hide-for="{{ MembershipCategory::CODE_CORPORATE }}" class="ui-card p-6 md:p-8">
+                    <div data-category-section-hide-for="{{ MembershipCategory::CODE_CORPORATE }},{{ MembershipCategory::CODE_SCHOOL_CLUB }}" class="ui-card p-6 md:p-8">
                         <h2 class="font-display text-lg font-bold text-primary">2. Your details</h2>
                         <p class="mt-1 text-sm text-muted-foreground">
                             All fields are required.
@@ -185,7 +186,7 @@
                         </div>
                     </div>
 
-                    <div data-category-section-hide-for="{{ MembershipCategory::CODE_CORPORATE }}" class="ui-card p-6 md:p-8">
+                    <div data-category-section-hide-for="{{ MembershipCategory::CODE_CORPORATE }},{{ MembershipCategory::CODE_SCHOOL_CLUB }}" class="ui-card p-6 md:p-8">
                         <h2 class="font-display text-lg font-bold text-primary">3. Aviation details</h2>
 
                         <div class="mt-6 space-y-5">
@@ -334,7 +335,7 @@
 
                     {{-- Student / Professional / Veteran: proof required. Enthusiast: no
                          proof at all. Corporate: its own "Supporting Document" card below. --}}
-                    <div data-category-section-hide-for="{{ MembershipCategory::CODE_ENTHUSIAST }},{{ MembershipCategory::CODE_CORPORATE }}" class="ui-card p-6 md:p-8">
+                    <div data-category-section-hide-for="{{ MembershipCategory::CODE_ENTHUSIAST }},{{ MembershipCategory::CODE_CORPORATE }},{{ MembershipCategory::CODE_SCHOOL_CLUB }}" class="ui-card p-6 md:p-8">
                         <h2 class="font-display text-lg font-bold text-primary">4. Aviation eligibility proof</h2>
                         <p class="mt-1 text-sm text-muted-foreground">Required for every category — documents that show your connection to aviation.</p>
 
@@ -417,6 +418,169 @@
                             @endif
                         </div>
                     </div>
+                    {{-- School Club — the same three cards as Corporate (the shared company_* fields
+                         hold the school's details); the principal's request letter must be a PDF. --}}
+                    <div data-category-section="{{ MembershipCategory::CODE_SCHOOL_CLUB }}" class="ui-card p-6 md:p-8">
+                        <h2 class="font-display text-lg font-bold text-primary">2. School Details</h2>
+                        <p class="mt-1 text-sm text-muted-foreground">All fields are required unless marked optional.</p>
+
+                        @if ($errors->any() && ! $errors->has('submission'))
+                            <div class="mt-6 w-full rounded-lg border border-[#CC001F]/50 bg-[#CC001F]/5 px-4 py-3 text-sm text-[#CC001F]" role="alert">
+                                Please correct the highlighted fields and try again.
+                            </div>
+                        @endif
+
+                        <div class="mt-6 space-y-5">
+                            <div class="space-y-1.5">
+                                <label for="school_company_name" class="block text-sm font-medium leading-none">School Name <span class="text-[#CC001F]" aria-hidden="true">*</span></label>
+                                <input id="school_company_name" name="company_name" type="text" value="{{ old('company_name') }}" maxlength="160" data-required-when-visible @if ($errors->has('company_name')) aria-invalid="true" @endif class="field-control">
+                                @error('company_name')
+                                    <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div class="space-y-1.5">
+                                    <label for="aviation_role_school_club" class="block text-sm font-medium leading-none">Aviation Club Name <span class="text-[#CC001F]" aria-hidden="true">*</span></label>
+                                    <input id="aviation_role_school_club" name="aviation_role" type="text" value="{{ old('aviation_role') }}" maxlength="160" placeholder="e.g. Royal College Aviation Club" data-required-when-visible @if ($errors->has('aviation_role')) aria-invalid="true" @endif class="field-control">
+                                    @error('aviation_role')
+                                        <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <label for="school_company_email" class="block text-sm font-medium leading-none">School Email <span class="text-[#CC001F]" aria-hidden="true">*</span></label>
+                                    <input id="school_company_email" name="company_email" type="email" value="{{ old('company_email') }}" maxlength="255" data-required-when-visible @if ($errors->has('company_email')) aria-invalid="true" @endif class="field-control">
+                                    @error('company_email')
+                                        <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div class="space-y-1.5">
+                                    <label for="school_company_phone" class="block text-sm font-medium leading-none">School Phone <span class="text-[#CC001F]" aria-hidden="true">*</span></label>
+                                    <input id="school_company_phone" name="company_phone" type="tel" value="{{ old('company_phone') }}" maxlength="40" placeholder="+94 11 234 5678" data-required-when-visible @if ($errors->has('company_phone')) aria-invalid="true" @endif class="field-control">
+                                    @error('company_phone')
+                                        <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <label for="school_company_website" class="block text-sm font-medium leading-none">School Website</label>
+                                    <input id="school_company_website" name="company_website" type="text" inputmode="url" autocomplete="url" value="{{ old('company_website') }}" maxlength="255" placeholder="www.example.com" @if ($errors->has('company_website')) aria-invalid="true" @endif class="field-control">
+                                    @error('company_website')
+                                        <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label for="address_school_club" class="block text-sm font-medium leading-none">School Address <span class="text-[#CC001F]" aria-hidden="true">*</span></label>
+                                <textarea id="address_school_club" name="address" rows="2" maxlength="400" data-required-when-visible @if ($errors->has('address')) aria-invalid="true" @endif class="field-control">{{ old('address') }}</textarea>
+                                @error('address')
+                                    <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- School Club — Section 2: Representative Details. --}}
+                    <div data-category-section="{{ MembershipCategory::CODE_SCHOOL_CLUB }}" class="ui-card p-6 md:p-8">
+                        <h2 class="font-display text-lg font-bold text-primary">3. Representative Details</h2>
+
+                        <div class="mt-6 space-y-5">
+                            <div class="space-y-1.5">
+                                <label for="full_name_school_club" class="block text-sm font-medium leading-none">Representative Name <span class="text-[#CC001F]" aria-hidden="true">*</span></label>
+                                <input id="full_name_school_club" name="full_name" type="text" value="{{ old('full_name') }}" maxlength="160" autocomplete="name" data-required-when-visible @if ($errors->has('full_name')) aria-invalid="true" @endif class="field-control">
+                                @error('full_name')
+                                    <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div class="space-y-1.5">
+                                    <label for="email_school_club" class="block text-sm font-medium leading-none">Representative Email <span class="text-[#CC001F]" aria-hidden="true">*</span></label>
+                                    <input id="email_school_club" name="email" type="email" value="{{ old('email') }}" maxlength="255" autocomplete="email" data-required-when-visible @if ($errors->has('email')) aria-invalid="true" @endif class="field-control">
+                                    @error('email')
+                                        <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                {{-- Same country-code widget as "Your details" above, wired
+                                     identically by the shared JS below — JS-only, same as
+                                     the individual Mobile field. --}}
+                                <div class="space-y-1.5">
+                                    <label class="block text-sm font-medium leading-none">
+                                        Representative Phone <span class="text-[#CC001F]" aria-hidden="true">*</span>
+                                    </label>
+
+                                    <div data-mobile-widget class="flex gap-2">
+                                        <select data-mobile-country class="field-control w-32 shrink-0 sm:w-40" aria-label="Country code">
+                                            @foreach ($mobileCountries as $country)
+                                                <option value="{{ $country['code'] }}" @selected($country['code'] === '+94')>{{ $country['flag'] }} {{ $country['name'] }} ({{ $country['code'] }})</option>
+                                            @endforeach
+                                        </select>
+                                        <input type="tel" data-mobile-number inputmode="tel" placeholder="77 123 4567" class="field-control min-w-0 flex-1" aria-label="Representative mobile number">
+                                        <input type="hidden" data-mobile-combined value="{{ old('mobile') }}" data-required-when-visible>
+                                    </div>
+
+                                    @error('mobile')
+                                        <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label for="aviation_organisation_school_club" class="block text-sm font-medium leading-none">Position in the Aviation Club <span class="text-[#CC001F]" aria-hidden="true">*</span></label>
+                                <input id="aviation_organisation_school_club" name="aviation_organisation" type="text" value="{{ old('aviation_organisation') }}" maxlength="200" data-required-when-visible @if ($errors->has('aviation_organisation')) aria-invalid="true" @endif class="field-control">
+                                @error('aviation_organisation')
+                                    <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div data-category-section="{{ MembershipCategory::CODE_SCHOOL_CLUB }}" class="ui-card p-6 md:p-8">
+                        <h2 class="font-display text-lg font-bold text-primary">4. Principal's Request Letter</h2>
+                        <p class="mt-1 text-sm text-muted-foreground">An official request letter from the school principal confirming the school's aviation club. PDF only.</p>
+
+                        <div class="mt-4 space-y-1.5" data-proof-widget>
+                            <label for="proof_documents_school_club" class="block text-sm font-medium leading-none">Principal's Official Request Letter (PDF)</label>
+
+                            <label for="proof_documents_school_club" class="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted/40 p-6 text-center transition-colors hover:border-[#CC001F]/50 hover:bg-[#CC001F]/5">
+                                <span class="grid h-11 w-11 place-items-center rounded-full bg-[#4D4D4D] text-white">
+                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2Z"/></svg>
+                                </span>
+                                <span class="text-sm font-medium text-primary">Click to attach the principal's letter</span>
+                                <span class="text-xs text-muted-foreground">
+                                    Accepted: PDF only. Max {{ round($proof['max_kb'] / 1024, 1) }}MB per file, up to {{ $proof['max_files'] }} files.
+                                </span>
+
+                                <input
+                                    id="proof_documents_school_club"
+                                    name="proof_documents[]"
+                                    type="file"
+                                    multiple
+                                    data-proof-upload
+                                    data-required-when-visible
+                                    accept=".pdf,application/pdf"
+                                    class="sr-only"
+                                >
+                            </label>
+
+                            <p data-file-list class="text-xs text-muted-foreground" aria-live="polite"></p>
+
+                            @foreach (collect($errors->get('proof_documents'))->merge(collect($errors->get('proof_documents.*'))->flatten())->unique() as $message)
+                                <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+                            @endforeach
+
+                            @if ($errors->any())
+                                <p data-reattach-notice class="text-xs text-muted-foreground">For your security, attached files are not kept when the form is returned. Please attach the principal's letter again.</p>
+                            @endif
+                        </div>
+                    </div>
+
 
                     <div class="ui-card p-6 md:p-8">
                         <h2 class="font-display text-lg font-bold text-primary">5. Declaration</h2>

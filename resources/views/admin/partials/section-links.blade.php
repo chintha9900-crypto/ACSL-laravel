@@ -12,6 +12,13 @@
         </a>
     @endcan
 
+    @can('viewAny', \App\Models\SchoolClubStudentBatch::class)
+        <a href="{{ route('admin.school-club-batches.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
+            <h2 class="font-display text-base font-semibold text-primary">School Club student batches</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Review student lists submitted by School Clubs.</p>
+        </a>
+    @endcan
+
     @can('viewAny', \App\Models\Payment::class)
         <a href="{{ route('admin.payments.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
             <h2 class="font-display text-base font-semibold text-primary">Payments</h2>

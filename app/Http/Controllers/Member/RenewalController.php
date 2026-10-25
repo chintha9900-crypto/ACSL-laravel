@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Member;
 
 use App\Actions\Membership\DeliverMemberNotification;
+use App\Actions\Membership\RenewSchoolClubMembership;
 use App\Actions\Membership\StartRenewal;
 use App\Actions\Payments\SubmitPaymentEvidence;
 use App\Exceptions\PaymentCannotBeSubmittedException;
@@ -22,9 +23,22 @@ class RenewalController extends Controller
      * comes only from the authenticated user's id; the request accepts no
      * membership id at all.
      */
-    public function store(Request $request, StartRenewal $startRenewal, DeliverMemberNotification $deliver): RedirectResponse
+    public function store(Request $request, StartRenewal $startRenewal, DeliverMemberNotification $deliver, RenewSchoolClubMembership $renewSchoolClub): RedirectResponse
     {
         $membership = $this->ownMembership($request);
+
+        // School Club memberships are free: renewed instantly, no payment.
+        if ($membership->isSchoolClub()) {
+            try {
+                $term = $renewSchoolClub->handle($membership);
+            } catch (RenewalCannotBeStartedException $exception) {
+                return redirect()->route('member.membership.show')->withErrors(['renewal' => $exception->getMessage()]);
+            }
+
+            return redirect()
+                ->route('member.membership.show')
+                ->with('status', 'Your School Club membership has been renewed free of charge until '.$term->expires_on->format('j F Y').'.');
+        }
 
         try {
             $term = $startRenewal->handle($membership);
@@ -75,7 +89,7 @@ class RenewalController extends Controller
 
     private function ownMembership(Request $request): Membership
     {
-        $membership = Membership::query()->where('user_id', $request->user()->id)->firstOrFail();
+        $membership = Membership::query()->where('user_id', $request->user()->id)->with('category')->firstOrFail();
 
         return $membership;
     }

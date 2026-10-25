@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PaymentReviewController;
 use App\Http\Controllers\Admin\ProductCategoryController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\SchoolClubStudentBatchController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
@@ -37,6 +38,7 @@ use App\Http\Controllers\Member\NotificationController;
 use App\Http\Controllers\Member\OrderController as MemberOrderController;
 use App\Http\Controllers\Member\ProfileController;
 use App\Http\Controllers\Member\RenewalController;
+use App\Http\Controllers\Member\SchoolClubStudentController;
 use App\Http\Controllers\Member\SecurityController;
 use App\Http\Controllers\Membership\ApplicationStatusController;
 use App\Http\Controllers\Membership\MembershipApplicationController;
@@ -211,6 +213,17 @@ Route::middleware(['auth', 'active', 'role:member'])->group(function () {
     Route::get('dashboard/documents/{document}', [MemberDocumentController::class, 'show'])
         ->name('member.documents.show');
 
+    // School Club — "Manage Student Members" (main School Club only; the
+    // controller and request enforce ownership).
+    Route::get('dashboard/school-club/students', [SchoolClubStudentController::class, 'index'])
+        ->name('member.school-club.students.index');
+    Route::post('dashboard/school-club/students', [SchoolClubStudentController::class, 'store'])
+        ->middleware('throttle:6,1')
+        ->name('member.school-club.students.store');
+    Route::post('dashboard/school-club/students/{batch}/resubmit', [SchoolClubStudentController::class, 'resubmit'])
+        ->middleware('throttle:6,1')
+        ->name('member.school-club.students.resubmit');
+
     Route::get('dashboard/security', [SecurityController::class, 'show'])
         ->name('member.security.show');
     // Same throttle as forgot-password/reset-password: a sensitive action that
@@ -271,6 +284,11 @@ Route::middleware(['auth', 'active', 'role:admin,editor'])->prefix('admin')->nam
     Route::get('payments', [PaymentReviewController::class, 'index'])->name('payments.index');
     Route::post('payments/{payment}/confirm', [PaymentReviewController::class, 'confirm'])->name('payments.confirm');
     Route::post('payments/{payment}/reject', [PaymentReviewController::class, 'reject'])->name('payments.reject');
+
+    // School Club student batches — review (Policy-gated: application review; approve also activation).
+    Route::get('school-club-batches', [SchoolClubStudentBatchController::class, 'index'])->name('school-club-batches.index');
+    Route::get('school-club-batches/{batch}', [SchoolClubStudentBatchController::class, 'show'])->name('school-club-batches.show');
+    Route::post('school-club-batches/{batch}/review', [SchoolClubStudentBatchController::class, 'review'])->name('school-club-batches.review');
 
     Route::controller(AdminBlogPostController::class)->prefix('blog')->name('blog.')->group(function () {
         Route::get('/', 'index')->name('index');
