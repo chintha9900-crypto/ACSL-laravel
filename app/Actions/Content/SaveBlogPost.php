@@ -3,41 +3,79 @@
 namespace App\Actions\Content;
 
 use App\Models\BlogPost;
+use App\Models\BlogTag;
 use App\Models\User;
 use App\Support\HtmlSanitizer;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
-/**
- * Creates/updates a post's editable fields only — title, slug, excerpt,
- * content, category. Publishing is a separate, explicit workflow action
- * (PublishBlogPost/UnpublishBlogPost, docs/frontend/05 §1: "workflow
- * buttons... no arbitrary status jumps"), never folded into a general field
- * edit, so this action never touches `status`/`published_at`. The featured
- * image is handled separately too (UpdateBlogFeaturedImage) since it is an
- * upload, not a plain field.
- */
 class SaveBlogPost
 {
     /**
-     * @param  array<string, mixed>  $data  Validated: title, slug, excerpt, content, blog_category_id, featured_image_alt.
+     * Create a post as a draft. Content is allow-list sanitised on save;
+     * `tags` (comma-separated names) are synced.
+     *
+     * @param  array<string, mixed>  $data
      */
     public function create(array $data, User $author): BlogPost
     {
-        $data['content'] = HtmlSanitizer::clean((string) ($data['content'] ?? ''));
-        $data['author_id'] = $author->id;
-        $data['status'] = BlogPost::STATUS_DRAFT;
+        return DB::transaction(function () use ($data, $author): BlogPost {
+            $data['content'] = HtmlSanitizer::clean((string) ($data['content'] ?? ''));
+            $data['author_id'] = $author->id;
+            $data['status'] = BlogPost::STATUS_DRAFT;
 
-        return BlogPost::create($data);
+            $post = BlogPost::create($data);
+            $this->syncTags($post, $data['tags'] ?? null);
+
+            return $post;
+        });
     }
 
     /**
+     * Update a post. With `is_featured` present, the post becomes (or stops
+     * being) the one featured post — any other featured post is cleared in the
+     * same transaction; the unique `featured_key` is the backstop.
+     *
      * @param  array<string, mixed>  $data
      */
     public function update(BlogPost $post, array $data): BlogPost
     {
-        $data['content'] = HtmlSanitizer::clean((string) ($data['content'] ?? ''));
+        return DB::transaction(function () use ($post, $data): BlogPost {
+            $data['content'] = HtmlSanitizer::clean((string) ($data['content'] ?? ''));
+            $post->fill($data)->save();
 
-        $post->fill($data)->save();
+            if (array_key_exists('is_featured', $data)) {
+                $featured = (bool) $data['is_featured'];
+                if ($featured) {
+                    BlogPost::query()->where('is_featured', true)->whereKeyNot($post->id)->update(['is_featured' => false]);
+                }
+                $post->forceFill(['is_featured' => $featured])->save();
+            }
 
-        return $post;
+            $this->syncTags($post, $data['tags'] ?? null);
+
+            return $post;
+        });
+    }
+
+    /**
+     * Comma-separated tag names → tags (created when new, matched by slug).
+     */
+    private function syncTags(BlogPost $post, mixed $tags): void
+    {
+        if ($tags === null) {
+            return;
+        }
+
+        $ids = collect(explode(',', (string) $tags))
+            ->map(fn (string $name): string => Str::limit(trim(preg_replace('/\s+/', ' ', $name) ?? ''), 60, ''))
+            ->filter(fn (string $name): bool => $name !== '' && Str::slug($name) !== '')
+            ->unique(fn (string $name): string => Str::slug($name))
+            ->take(15)
+            ->map(fn (string $name): int => BlogTag::query()->firstOrCreate(['slug' => Str::slug($name)], ['name' => $name])->id)
+            ->values()
+            ->all();
+
+        $post->tags()->sync($ids);
     }
 }

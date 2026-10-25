@@ -24,6 +24,22 @@
         </a>
     </div>
 
+    @can('moderate', \App\Models\BlogComment::class)
+        @php
+            $pendingComments = \App\Models\BlogComment::query()->where('status', \App\Models\BlogComment::STATUS_PENDING)->with(['user:id,name', 'post:id,title,slug'])->oldest()->limit(5)->get();
+            $pendingCommentCount = \App\Models\BlogComment::query()->where('status', \App\Models\BlogComment::STATUS_PENDING)->count();
+        @endphp
+        <section class="mt-6" aria-labelledby="pending-comments-heading">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 id="pending-comments-heading" class="font-display text-base font-semibold text-primary">Pending blog comments ({{ $pendingCommentCount }})</h3>
+                @if ($pendingCommentCount > $pendingComments->count())
+                    <a href="{{ route('admin.blog-comments.index') }}" class="text-sm text-primary underline underline-offset-2 hover:text-secondary">View all pending comments</a>
+                @endif
+            </div>
+            @include('admin.blog-comments._list', ['comments' => $pendingComments])
+        </section>
+    @endcan
+
     @can('invite', \App\Models\User::class)
         <section class="ui-card mt-6 max-w-xl p-6" aria-labelledby="invite-heading">
             <h3 id="invite-heading" class="font-display text-base font-semibold text-primary">Invite an editor</h3>

@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * docs/database/10_CONTENT_SCHEMA.md §3 / docs/architecture/10 §2. `content`
@@ -50,6 +52,7 @@ class BlogPost extends Model
     {
         return [
             'published_at' => 'datetime',
+            'is_featured' => 'boolean',
         ];
     }
 
@@ -77,6 +80,32 @@ class BlogPost extends Model
      *
      * @param  Builder<BlogPost>  $query
      */
+    /**
+     * @return BelongsToMany<BlogTag, $this>
+     */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(BlogTag::class, 'blog_post_tag')->orderBy('name');
+    }
+
+    /**
+     * @return HasMany<BlogComment, $this>
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(BlogComment::class);
+    }
+
+    /**
+     * The post shown at the top of `/blog`: the published post an admin marked
+     * Featured, otherwise the newest published post.
+     */
+    public static function forListing(): ?self
+    {
+        return self::query()->published()->where('is_featured', true)->first()
+            ?? self::query()->published()->orderByDesc('published_at')->orderByDesc('id')->first();
+    }
+
     public function scopePublished(Builder $query): void
     {
         $query->where('status', self::STATUS_PUBLISHED)->where('published_at', '<=', now());

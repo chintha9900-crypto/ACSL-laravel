@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\BlogCategoryController;
+use App\Http\Controllers\Admin\BlogCommentController as AdminBlogCommentController;
 use App\Http\Controllers\Admin\BlogPostController as AdminBlogPostController;
 use App\Http\Controllers\Admin\CommercialPartnerController as AdminCommercialPartnerController;
 use App\Http\Controllers\Admin\CsrController as AdminCsrController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\Admin\PaymentReviewController;
 use App\Http\Controllers\Admin\ProductCategoryController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\SchoolClubStudentBatchController;
+use App\Http\Controllers\BlogCommentController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
@@ -97,6 +99,11 @@ Route::controller(BlogController::class)->prefix('blog')->name('blog.')->group(f
     Route::get('/', 'index')->name('index');
     Route::get('{post:slug}', 'show')->name('show');
 });
+
+// Member comments (pending until an admin approves them).
+Route::post('blog/{post:slug}/comments', [BlogCommentController::class, 'store'])
+    ->middleware(['auth', 'active', 'role:member', 'throttle:10,1'])
+    ->name('blog.comments.store');
 
 // News & Events Stage 1 — public pages only (docs/database/10 §6-7).
 Route::controller(NewsController::class)->prefix('news')->name('news.')->group(function () {
@@ -264,6 +271,13 @@ Route::middleware(['auth', 'active', 'role:admin,editor'])->prefix('admin')->nam
     Route::post('editor-invitations', [EditorInvitationController::class, 'store'])
         ->middleware(['role:admin', 'throttle:10,1'])
         ->name('editor-invitations.store');
+
+    // Admin-only: blog comment moderation (BlogCommentPolicy::moderate).
+    Route::middleware('role:admin')->group(function () {
+        Route::get('blog-comments', [AdminBlogCommentController::class, 'index'])->name('blog-comments.index');
+        Route::post('blog-comments/{comment}/approve', [AdminBlogCommentController::class, 'approve'])->name('blog-comments.approve');
+        Route::post('blog-comments/{comment}/reject', [AdminBlogCommentController::class, 'reject'])->name('blog-comments.reject');
+    });
 
     // E-shop financial summary (read-only), gated like order management.
     Route::get('reports/eshop', [EshopReportController::class, 'show'])->name('reports.eshop');

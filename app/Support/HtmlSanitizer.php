@@ -22,7 +22,7 @@ class HtmlSanitizer
      * @var array<string, list<string>>
      */
     private const ALLOWED_TAGS = [
-        'p' => [],
+        'p' => ['style'],
         'br' => [],
         'strong' => [],
         'b' => [],
@@ -31,11 +31,11 @@ class HtmlSanitizer
         'u' => [],
         'ul' => [],
         'ol' => [],
-        'li' => [],
-        'blockquote' => [],
-        'h2' => [],
-        'h3' => [],
-        'h4' => [],
+        'li' => ['style'],
+        'blockquote' => ['style'],
+        'h2' => ['style'],
+        'h3' => ['style'],
+        'h4' => ['style'],
         'a' => ['href'],
     ];
 
@@ -128,7 +128,26 @@ class HtmlSanitizer
             if ($name === 'href' && ! self::isSafeUrl($attribute->value)) {
                 $element->removeAttribute($attribute->name);
             }
+
+            if ($name === 'style') {
+                $alignment = self::textAlignment($attribute->value);
+                $alignment === null
+                    ? $element->removeAttribute($attribute->name)
+                    : $element->setAttribute('style', 'text-align: '.$alignment.';');
+            }
         }
+    }
+
+    /**
+     * The only inline style ever kept: a `text-align` of left/center/right/
+     * justify (from the editor's alignment buttons). Everything else in the
+     * attribute is discarded, so no other CSS can be injected.
+     */
+    private static function textAlignment(string $style): ?string
+    {
+        return preg_match('/(?:^|;)\s*text-align\s*:\s*(left|center|right|justify)\s*(?:;|$)/i', $style, $match) === 1
+            ? strtolower($match[1])
+            : null;
     }
 
     /**

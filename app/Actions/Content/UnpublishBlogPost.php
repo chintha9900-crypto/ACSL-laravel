@@ -13,7 +13,7 @@ class UnpublishBlogPost
 {
     public function handle(BlogPost $post): BlogPost
     {
-        $post->forceFill(['status' => BlogPost::STATUS_DRAFT])->save();
+        $post->forceFill(['status' => BlogPost::STATUS_DRAFT, 'is_featured' => false])->save();
 
         return $post;
     }

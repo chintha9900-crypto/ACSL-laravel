@@ -29,6 +29,7 @@ class StoreBlogPostRequest extends FormRequest
             'content' => ['required', 'string'],
             'featured_image' => ['nullable', File::types($image['extensions'])->max($image['max_kb'])],
             'featured_image_alt' => ['nullable', 'string', 'max:255'],
+            'tags' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -37,7 +38,12 @@ class StoreBlogPostRequest extends FormRequest
      */
     public function messages(): array
     {
+        $maxMb = round(config('uploads.blog_featured_image.max_kb') / 1024, 1);
+
         return [
+            'featured_image.max' => "The featured image must not be larger than {$maxMb} MB.",
+            'featured_image.mimes' => 'The featured image must be a JPG or PNG file.',
+            'featured_image.uploaded' => "The featured image could not be uploaded. It may be larger than the {$maxMb} MB limit.",
             'slug.unique' => 'This slug is already used by another post. Please choose a different one.',
             'slug.alpha_dash' => 'The slug may only contain letters, numbers, dashes and underscores.',
         ];

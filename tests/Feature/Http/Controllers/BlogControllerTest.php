@@ -97,10 +97,12 @@ class BlogControllerTest extends MysqlTestCase
         BlogPost::factory()->published()->create(['title' => 'A News Post', 'blog_category_id' => $news->id]);
         BlogPost::factory()->published()->create(['title' => 'An Events Post', 'blog_category_id' => $events->id]);
 
-        $response = $this->get(route('blog.index', ['category' => 'news']))->assertOk();
+        $html = $this->get(route('blog.index', ['category' => 'news']))->assertOk()->getContent();
 
-        $response->assertSee('A News Post');
-        $response->assertDontSee('An Events Post');
+        // The feed only — the sidebar's site-wide "Popular posts" may list any post.
+        $feed = substr($html, 0, strpos($html, 'aria-label="Blog sidebar"'));
+        $this->assertStringContainsString('A News Post', $feed);
+        $this->assertStringNotContainsString('An Events Post', $feed);
     }
 
     public function test_the_listing_never_exposes_a_raw_post_id(): void
