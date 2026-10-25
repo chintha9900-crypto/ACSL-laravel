@@ -6,6 +6,8 @@ use App\Http\Controllers\Admin\CommercialPartnerController as AdminCommercialPar
 use App\Http\Controllers\Admin\CsrController as AdminCsrController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DocumentController;
+use App\Http\Controllers\Admin\EditorInvitationController;
+use App\Http\Controllers\Admin\EshopReportController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\MembershipActivationController;
@@ -23,6 +25,8 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CommercialPartnerController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CsrController;
+use App\Http\Controllers\Dev\DashboardController as DevDashboardController;
+use App\Http\Controllers\Editor\DashboardController as EditorDashboardController;
 use App\Http\Controllers\EshopController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\Member\DashboardController;
@@ -226,13 +230,30 @@ Route::middleware(['auth', 'active', 'role:member'])->group(function () {
         ->name('member.notifications.mark-read');
 });
 
-// RBAC foundation — admin/editor/dev all sign in through the one public
-// login page and land here; `role` is coarse, route-level defence in depth
-// (member and any unrecognised role never reach a single admin controller),
-// not a replacement for each action's own Policy check below, which is what
-// actually distinguishes what admin/editor/dev may each do here.
-Route::middleware(['auth', 'active', 'role:admin,editor,dev'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', [AdminDashboardController::class, 'show'])->name('dashboard');
+// Role dashboards — every staff role signs in through the one public login
+// page and lands on its own dashboard (RoleRedirect). Admin may open every one.
+Route::middleware(['auth', 'active', 'role:editor,admin'])->group(function () {
+    Route::get('editor', [EditorDashboardController::class, 'show'])->name('editor.dashboard');
+});
+
+Route::middleware(['auth', 'active', 'role:dev,admin'])->group(function () {
+    Route::get('dev', [DevDashboardController::class, 'show'])->name('dev.dashboard');
+});
+
+// The operational sections the admin and editor dashboards link to. `role` is
+// coarse, route-level defence in depth (member, dev and any unrecognised role
+// never reach a single controller here), not a replacement for each action's
+// own Policy check below, which is what distinguishes admin from editor.
+Route::middleware(['auth', 'active', 'role:admin,editor'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [AdminDashboardController::class, 'show'])->middleware('role:admin')->name('dashboard');
+
+    // Admin-only: invite an editor (one-time setup link, no password sent).
+    Route::post('editor-invitations', [EditorInvitationController::class, 'store'])
+        ->middleware(['role:admin', 'throttle:10,1'])
+        ->name('editor-invitations.store');
+
+    // E-shop financial summary (read-only), gated like order management.
+    Route::get('reports/eshop', [EshopReportController::class, 'show'])->name('reports.eshop');
 
     Route::get('membership-applications', [AdminMembershipApplicationController::class, 'index'])
         ->name('membership-applications.index');

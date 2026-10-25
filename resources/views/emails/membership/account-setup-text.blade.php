@@ -2,7 +2,11 @@ Aviation Club International
 
 Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
 
+@if ($editorInvitation ?? false)
+You have been invited to join Aviation Club International as an editor. To finish setting up your account, please create your password using the link below.
+@else
 Your Aviation Club International membership is now active. To finish setting up your account, please create your password using the link below.
+@endif
 
 {!! $url !!}
 

@@ -54,11 +54,12 @@ class RoleAuthorizationTest extends MysqlTestCase
 
     // --- editor ----------------------------------------------------------------
 
-    public function test_editor_can_reach_the_admin_dashboard_and_every_operational_route_family(): void
+    public function test_editor_can_reach_the_editor_dashboard_and_every_operational_route_family_but_not_the_admin_dashboard(): void
     {
         $editor = $this->editor();
 
-        $this->actingAs($editor)->get(route('admin.dashboard'))->assertOk();
+        $this->actingAs($editor)->get(route('editor.dashboard'))->assertOk();
+        $this->actingAs($editor)->get(route('admin.dashboard'))->assertForbidden();
         $this->actingAs($editor)->get(route('admin.products.index'))->assertOk();
         $this->actingAs($editor)->get(route('admin.blog.index'))->assertOk();
         $this->actingAs($editor)->get(route('admin.membership-applications.index'))->assertOk();
@@ -157,11 +158,12 @@ class RoleAuthorizationTest extends MysqlTestCase
 
     // --- dev ---------------------------------------------------------------
 
-    public function test_dev_can_reach_the_admin_dashboard_but_not_a_single_business_route(): void
+    public function test_dev_can_reach_the_dev_dashboard_but_not_the_admin_dashboard_or_a_single_business_route(): void
     {
         $dev = $this->dev();
 
-        $this->actingAs($dev)->get(route('admin.dashboard'))->assertOk();
+        $this->actingAs($dev)->get(route('dev.dashboard'))->assertOk();
+        $this->actingAs($dev)->get(route('admin.dashboard'))->assertForbidden();
         $this->actingAs($dev)->get(route('admin.products.index'))->assertForbidden();
         $this->actingAs($dev)->get(route('admin.blog.index'))->assertForbidden();
         $this->actingAs($dev)->get(route('admin.membership-applications.index'))->assertForbidden();

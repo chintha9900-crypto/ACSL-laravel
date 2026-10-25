@@ -16,8 +16,11 @@ class IssueAccountSetupToken
      * Returns the plaintext token, which must only ever be placed in the link
      * given to the member; the database keeps only its SHA-256 hash. Any earlier
      * live token for the same user is invalidated in the same transaction.
+     *
+     * `$membershipId` is null for an invited staff account (editor), which has
+     * no membership but completes setup through exactly the same token.
      */
-    public function handle(User $user, int $membershipId, ?User $issuedBy = null): string
+    public function handle(User $user, ?int $membershipId, ?User $issuedBy = null): string
     {
         if ($user->status !== 'pending_setup') {
             throw new LogicException('Account setup tokens can only be issued for a user pending setup.');

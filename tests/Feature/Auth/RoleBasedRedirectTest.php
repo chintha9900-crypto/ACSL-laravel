@@ -28,16 +28,16 @@ class RoleBasedRedirectTest extends MysqlTestCase
             ->assertRedirect(route('admin.dashboard'));
     }
 
-    public function test_editor_login_lands_on_the_admin_dashboard(): void
+    public function test_editor_login_lands_on_the_editor_dashboard(): void
     {
         $this->login(User::factory()->active()->editor()->create())
-            ->assertRedirect(route('admin.dashboard'));
+            ->assertRedirect(route('editor.dashboard'));
     }
 
-    public function test_dev_login_lands_on_the_admin_dashboard(): void
+    public function test_dev_login_lands_on_the_dev_dashboard(): void
     {
         $this->login(User::factory()->active()->dev()->create())
-            ->assertRedirect(route('admin.dashboard'));
+            ->assertRedirect(route('dev.dashboard'));
     }
 
     public function test_member_login_lands_on_the_member_dashboard(): void

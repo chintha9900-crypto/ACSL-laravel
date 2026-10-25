@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Membership;
 
+use App\Models\Role;
 use Carbon\CarbonInterface;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -41,7 +42,9 @@ class AccountSetup extends Notification
     {
         return [
             'title' => 'Set up your account',
-            'message' => 'Your Aviation Club International membership is active. Check your email for a link to create your password.',
+            'message' => $this->isEditorInvitation($notifiable)
+                ? 'You have been invited to Aviation Club International as an editor. Check your email for a link to create your password.'
+                : 'Your Aviation Club International membership is active. Check your email for a link to create your password.',
             'action_url' => null,
             'related_public_id' => null,
         ];
@@ -56,16 +59,30 @@ class AccountSetup extends Notification
     {
         $timezone = (string) config('membership.business_timezone');
 
+        $editorInvitation = $this->isEditorInvitation($notifiable);
+
         return (new MailMessage)
-            ->subject('Set up your Aviation Club International account')
+            ->subject($editorInvitation
+                ? 'You have been invited to Aviation Club International as an editor'
+                : 'Set up your Aviation Club International account')
             ->view(
                 ['emails.membership.account-setup', 'emails.membership.account-setup-text'],
                 [
                     'name' => $notifiable->name,
                     'url' => $this->setupUrl(),
                     'expiresAt' => $this->expiresAt->copy()->setTimezone($timezone)->format('j F Y, H:i').' ('.$timezone.')',
+                    'editorInvitation' => $editorInvitation,
                 ],
             );
+    }
+
+    /**
+     * The same one-time link also finishes an invited editor's account; only
+     * the wording differs (an editor has no membership).
+     */
+    private function isEditorInvitation(object $notifiable): bool
+    {
+        return ($notifiable->role ?? null) === Role::EDITOR;
     }
 
     /**

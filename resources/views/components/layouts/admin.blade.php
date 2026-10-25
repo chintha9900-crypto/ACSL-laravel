@@ -31,7 +31,7 @@
                         has no permission for is UX only, never the real gate.
                     --}}
                     <nav aria-label="Admin" class="flex flex-wrap items-center gap-4">
-                        <a href="{{ route('admin.dashboard') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Dashboard</a>
+                        <a href="{{ \App\Support\Authorization\RoleRedirect::homeRouteFor(auth()->user()) }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Dashboard</a>
                         @can('viewAny', \App\Models\MembershipApplication::class)
                             <a href="{{ route('admin.membership-applications.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Membership applications</a>
                         @endcan

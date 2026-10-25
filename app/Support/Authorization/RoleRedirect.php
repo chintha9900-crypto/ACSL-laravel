@@ -16,7 +16,9 @@ class RoleRedirect
     public static function homeRouteFor(User $user): string
     {
         return match ($user->role) {
-            Role::ADMIN, Role::EDITOR, Role::DEV => route('admin.dashboard'),
+            Role::ADMIN => route('admin.dashboard'),
+            Role::EDITOR => route('editor.dashboard'),
+            Role::DEV => route('dev.dashboard'),
             default => route('member.dashboard'),
         };
     }

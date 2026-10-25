@@ -1,8 +1,7 @@
 {{--
-    Lands admin, editor and dev here after sign-in (RBAC foundation). Each
-    card is wrapped in the same `@can` check the admin nav uses — hiding a
-    section a role has no permission for is UX only; the real gate is each
-    controller action's own Policy.
+    Admin's own dashboard (/admin, admin only). The operational section links
+    are shared with the editor dashboard; below them, admin-only system
+    administration: the role dashboards and editor invitations.
 --}}
 <x-layouts.admin title="Dashboard">
     <h1 class="font-display text-2xl font-bold text-primary md:text-3xl">Admin Dashboard</h1>
@@ -10,81 +9,51 @@
         Signed in as {{ auth()->user()->name }} &middot; {{ auth()->user()->roleModel?->label ?? auth()->user()->role }}
     </p>
 
-    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        @can('viewAny', \App\Models\MembershipApplication::class)
-            <a href="{{ route('admin.membership-applications.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
-                <h2 class="font-display text-base font-semibold text-primary">Membership applications</h2>
-                <p class="mt-1 text-sm text-muted-foreground">Review, approve, reject and activate.</p>
-            </a>
-        @endcan
+    @include('admin.partials.section-links')
 
-        @can('viewAny', \App\Models\Payment::class)
-            <a href="{{ route('admin.payments.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
-                <h2 class="font-display text-base font-semibold text-primary">Payments</h2>
-                <p class="mt-1 text-sm text-muted-foreground">Confirm or reject submitted payments.</p>
-            </a>
-        @endcan
+    <h2 class="mt-10 font-display text-lg font-bold text-primary">System administration</h2>
 
-        @can('viewAny', \App\Models\BlogPost::class)
-            <a href="{{ route('admin.blog.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
-                <h2 class="font-display text-base font-semibold text-primary">Blog</h2>
-                <p class="mt-1 text-sm text-muted-foreground">Write, edit and publish posts.</p>
-            </a>
-        @endcan
-
-        @can('viewAny', \App\Models\NewsItem::class)
-            <a href="{{ route('admin.news.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
-                <h2 class="font-display text-base font-semibold text-primary">News</h2>
-                <p class="mt-1 text-sm text-muted-foreground">Write, edit and publish news items.</p>
-            </a>
-        @endcan
-
-        @can('viewAny', \App\Models\EventListing::class)
-            <a href="{{ route('admin.events.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
-                <h2 class="font-display text-base font-semibold text-primary">Events</h2>
-                <p class="mt-1 text-sm text-muted-foreground">Write, edit and publish events.</p>
-            </a>
-        @endcan
-
-        @can('viewAny', \App\Models\CsrProject::class)
-            <a href="{{ route('admin.csr.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
-                <h2 class="font-display text-base font-semibold text-primary">CSR projects</h2>
-                <p class="mt-1 text-sm text-muted-foreground">Write, edit and publish CSR projects.</p>
-            </a>
-        @endcan
-
-        @can('viewAny', \App\Models\CommercialPartner::class)
-            <a href="{{ route('admin.commercial-partners.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
-                <h2 class="font-display text-base font-semibold text-primary">Commercial partners</h2>
-                <p class="mt-1 text-sm text-muted-foreground">Manage the public partner listing.</p>
-            </a>
-        @endcan
-
-        @can('viewAny', \App\Models\Product::class)
-            <a href="{{ route('admin.products.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
-                <h2 class="font-display text-base font-semibold text-primary">Products</h2>
-                <p class="mt-1 text-sm text-muted-foreground">Manage the e-shop catalogue.</p>
-            </a>
-        @endcan
-
-        @can('viewAny', \App\Models\Inventory::class)
-            <a href="{{ route('admin.inventory.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
-                <h2 class="font-display text-base font-semibold text-primary">Inventory</h2>
-                <p class="mt-1 text-sm text-muted-foreground">Stock levels and low-stock thresholds.</p>
-            </a>
-        @endcan
-
-        @can('viewAny', \App\Models\Order::class)
-            <a href="{{ route('admin.orders.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
-                <h2 class="font-display text-base font-semibold text-primary">Orders</h2>
-                <p class="mt-1 text-sm text-muted-foreground">View and update order status.</p>
-            </a>
-        @endcan
+    <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <a href="{{ route('editor.dashboard') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
+            <h3 class="font-display text-base font-semibold text-primary">Editor dashboard</h3>
+            <p class="mt-1 text-sm text-muted-foreground">See the dashboard editors use.</p>
+        </a>
+        <a href="{{ route('dev.dashboard') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
+            <h3 class="font-display text-base font-semibold text-primary">Dev dashboard</h3>
+            <p class="mt-1 text-sm text-muted-foreground">System health and audit log.</p>
+        </a>
     </div>
 
-    @if (auth()->user()->hasPermission(\App\Support\Authorization\Ability::ViewAuditLog) || auth()->user()->hasPermission(\App\Support\Authorization\Ability::ViewDiagnostics))
-        <p class="mt-8 text-sm text-muted-foreground">
-            Audit log and diagnostics access is granted but has no screen yet — out of scope for this phase.
-        </p>
-    @endif
+    @can('invite', \App\Models\User::class)
+        <section class="ui-card mt-6 max-w-xl p-6" aria-labelledby="invite-heading">
+            <h3 id="invite-heading" class="font-display text-base font-semibold text-primary">Invite an editor</h3>
+            <p class="mt-1 text-sm text-muted-foreground">
+                We email a secure, single-use link that expires. The editor creates their own password through it — no password is ever sent.
+            </p>
+
+            <form method="POST" action="{{ route('admin.editor-invitations.store') }}" class="mt-4 space-y-4">
+                @csrf
+
+                <div class="space-y-1.5">
+                    <label for="invite-email" class="block text-sm font-medium leading-none">Email address</label>
+                    <input id="invite-email" name="email" type="email" required maxlength="255" autocomplete="off" value="{{ old('email') }}" class="field-control" @error('email', 'invitation') aria-invalid="true" @enderror>
+                    @error('email', 'invitation')
+                        <p class="text-xs text-destructive">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="invite-role" class="block text-sm font-medium leading-none">Role</label>
+                    <select id="invite-role" name="role" required class="field-control">
+                        <option value="{{ \App\Models\Role::EDITOR }}" selected>Editor</option>
+                    </select>
+                    @error('role', 'invitation')
+                        <p class="text-xs text-destructive">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <button type="submit" class="btn btn-lg btn-brand">Send invitation</button>
+            </form>
+        </section>
+    @endcan
 </x-layouts.admin>
