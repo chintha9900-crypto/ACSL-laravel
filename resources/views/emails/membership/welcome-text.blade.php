@@ -5,7 +5,13 @@ Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
 Congratulations, and welcome to Aviation Club! You are now a member, and your membership is active.
 
 Membership number: {!! $number !!}
+@if ($schoolClubIdentity ?? null)
+Membership Category: {!! $category !!}
+School: {!! str_replace(["\r", "\n"], ' ', $schoolClubIdentity['school'] ?? '—') !!}
+School Club: {!! str_replace(["\r", "\n"], ' ', $schoolClubIdentity['club'] ?? '—') !!}
+@else
 Category: {!! $category !!}
+@endif
 @if ($months && $startsOn && $expiresOn)
 @if ($schoolClub ?? false)
 Free membership — no joining or renewal fees. Valid from {!! $startsOn !!} to {!! $expiresOn !!}, renewable free of charge.

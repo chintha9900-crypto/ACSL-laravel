@@ -45,6 +45,7 @@ class StudentBatchReviewed extends Notification
                     'submittedOn' => $this->batch->submitted_at->format('j F Y'),
                     'requestMessage' => $this->batch->request_message,
                     'url' => route('member.school-club.students.index'),
+                    'schoolClubIdentity' => $this->batch->membership->schoolClubDetails(),
                 ],
             );
     }

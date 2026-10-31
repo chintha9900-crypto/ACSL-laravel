@@ -16,7 +16,13 @@
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Congratulations, and welcome to Aviation Club! You are now a member, and your membership is active.</p>
 <p style="margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:15px;line-height:1.5;">
 Membership number: <strong>{{ $number }}</strong><br>
+@if ($schoolClubIdentity ?? null)
+Membership Category: {{ $category }}<br>
+School: {{ $schoolClubIdentity['school'] ?? '—' }}<br>
+School Club: {{ $schoolClubIdentity['club'] ?? '—' }}
+@else
 Category: {{ $category }}
+@endif
 @if ($months && $startsOn && $expiresOn)
 @if ($schoolClub ?? false)
 <br>Free membership — no joining or renewal fees. Valid from {{ $startsOn }} to {{ $expiresOn }}, renewable free of charge.

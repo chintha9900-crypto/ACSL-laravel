@@ -26,7 +26,7 @@ class MembershipCardController extends Controller
     {
         $membership = Membership::query()
             ->where('user_id', $request->user()->id)
-            ->with('terms')
+            ->with(['terms', 'category'])
             ->firstOrFail();
 
         Gate::authorize('view', $membership);
@@ -39,6 +39,7 @@ class MembershipCardController extends Controller
             'membership' => $membership,
             'isCurrentlyValid' => $currentTerm !== null,
             'validUntil' => $displayTerm?->expires_on,
+            'schoolClub' => $membership->schoolClubDetails(),
             'verificationUrl' => route('verification.show', ['token' => $membership->verification_token]),
         ]);
     }

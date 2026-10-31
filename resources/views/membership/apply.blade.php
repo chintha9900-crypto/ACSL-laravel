@@ -31,6 +31,7 @@
       <x-form.input>), because that component derives its `id` from `name`
       and two inputs sharing one `name` would collide on `id` too.
 --}}
+@use('App\Models\MembershipApplication')
 @use('App\Models\MembershipCategory')
 @use('App\Http\Controllers\Membership\MembershipApplicationController')
 
@@ -532,8 +533,13 @@
                             </div>
 
                             <div class="space-y-1.5">
-                                <label for="aviation_organisation_school_club" class="block text-sm font-medium leading-none">Position in the Aviation Club <span class="text-[#CC001F]" aria-hidden="true">*</span></label>
-                                <input id="aviation_organisation_school_club" name="aviation_organisation" type="text" value="{{ old('aviation_organisation') }}" maxlength="200" data-required-when-visible @if ($errors->has('aviation_organisation')) aria-invalid="true" @endif class="field-control">
+                                <label for="aviation_organisation_school_club" class="block text-sm font-medium leading-none">Position <span class="text-[#CC001F]" aria-hidden="true">*</span></label>
+                                <select id="aviation_organisation_school_club" name="aviation_organisation" data-required-when-visible @if ($errors->has('aviation_organisation')) aria-invalid="true" @endif class="field-control">
+                                    <option value="">Select your position</option>
+                                    @foreach (MembershipApplication::SCHOOL_CLUB_POSITIONS as $position)
+                                        <option value="{{ $position }}" @selected(old('aviation_organisation') === $position)>{{ $position }}</option>
+                                    @endforeach
+                                </select>
                                 @error('aviation_organisation')
                                     <p class="text-xs text-[#CC001F]">{{ $message }}</p>
                                 @enderror

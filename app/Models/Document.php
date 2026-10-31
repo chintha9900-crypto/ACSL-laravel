@@ -23,6 +23,11 @@ class Document extends Model
      */
     public const KIND_SCHOOL_CLUB_STUDENT_LIST = 'school_club_student_list';
 
+    /**
+     * The completed student template (Excel) a School Club student batch was built from.
+     */
+    public const KIND_SCHOOL_CLUB_STUDENT_SPREADSHEET = 'school_club_student_spreadsheet';
+
     public const DISK_PRIVATE = 'private';
 
     public const VISIBILITY_OWNER_AND_ADMIN = 'owner_and_admin';

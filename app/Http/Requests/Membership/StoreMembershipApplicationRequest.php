@@ -89,7 +89,7 @@ class StoreMembershipApplicationRequest extends FormRequest
             'mobile' => ['required', 'string', 'max:40', $this->internationalPhone('mobile number')],
             'address' => ['required', 'string', 'max:400'],
             'aviation_role' => ['required', 'string', 'max:160'],
-            'aviation_organisation' => ['required', 'string', 'max:200'],
+            'aviation_organisation' => ['required', 'string', 'max:200', ...($schoolClub ? [Rule::in(MembershipApplication::SCHOOL_CLUB_POSITIONS)] : [])],
             'study_start_date' => [$student, 'required', 'date'],
             'expected_completion_date' => [$student, 'required', 'date', 'after_or_equal:study_start_date'],
             'years_experience' => [$veteran, 'required', 'integer', 'between:0,80'],
@@ -324,7 +324,7 @@ class StoreMembershipApplicationRequest extends FormRequest
             MembershipCategory::CODE_STUDENT => 'training institute',
             MembershipCategory::CODE_VETERAN => 'most recent aviation employer',
             MembershipCategory::CODE_CORPORATE => 'representative position/designation',
-            MembershipCategory::CODE_SCHOOL_CLUB => 'position in the aviation club',
+            MembershipCategory::CODE_SCHOOL_CLUB => 'position',
             default => 'employer or organisation',
         };
     }

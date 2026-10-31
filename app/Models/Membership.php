@@ -105,6 +105,33 @@ class Membership extends Model
     }
 
     /**
+     * The School Club identity shown with any School Club membership (main or
+     * student), always taken from the main membership's approved application:
+     * the school (`company_name`), the club (`aviation_role`), and the
+     * representative and their position (`aviation_organisation`). A student
+     * reaches it through `parent`. Null for every other category.
+     *
+     * @return array{category: string, school: ?string, club: ?string, representative: ?string, position: ?string}|null
+     */
+    public function schoolClubDetails(): ?array
+    {
+        if (! $this->isSchoolClub()) {
+            return null;
+        }
+
+        $main = $this->isSchoolClubMain() ? $this : $this->parent;
+        $application = $main?->application;
+
+        return [
+            'category' => $this->category->name,
+            'school' => $application?->company_name,
+            'club' => $application?->aviation_role,
+            'representative' => $main?->user?->name ?? $application?->full_name,
+            'position' => $application?->aviation_organisation,
+        ];
+    }
+
+    /**
      * The term that is currently valid: `active` and today within its own
      * dates (docs/database/04 §8's derived-state definition). Never inferred
      * from a bare `status = active` alone — the daily expiry job may not have

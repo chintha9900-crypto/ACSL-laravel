@@ -24,8 +24,8 @@
                             'Email' => $application->email,
                             'Mobile' => $application->mobile,
                             'Address' => $application->address,
-                            ($isSchoolClub ? 'Aviation club name' : 'Aviation role') => $application->aviation_role,
-                            ($isSchoolClub ? 'Position in the aviation club' : 'Organisation') => $application->aviation_organisation,
+                            ($isSchoolClub ? 'School Club name' : 'Aviation role') => $application->aviation_role,
+                            ($isSchoolClub ? 'Representative position' : 'Organisation') => $application->aviation_organisation,
                         ];
 
                         // Corporate / School Club organisation details (School Club: the school).

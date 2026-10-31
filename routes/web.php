@@ -254,6 +254,13 @@ Route::middleware(['auth', 'active', 'role:member'])->group(function () {
     Route::post('dashboard/school-club/students/{batch}/resubmit', [SchoolClubStudentController::class, 'resubmit'])
         ->middleware('throttle:6,1')
         ->name('member.school-club.students.resubmit');
+    Route::get('dashboard/school-club/students/template', [SchoolClubStudentController::class, 'template'])
+        ->name('member.school-club.students.template');
+    Route::get('dashboard/school-club/students/{batch}/printable-list', [SchoolClubStudentController::class, 'printableList'])
+        ->name('member.school-club.students.printable');
+    Route::post('dashboard/school-club/students/{batch}/signed-list', [SchoolClubStudentController::class, 'submitSignedList'])
+        ->middleware('throttle:6,1')
+        ->name('member.school-club.students.signed');
 
     Route::get('dashboard/security', [SecurityController::class, 'show'])
         ->name('member.security.show');

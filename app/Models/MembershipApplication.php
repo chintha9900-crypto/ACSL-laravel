@@ -60,6 +60,24 @@ class MembershipApplication extends Model
     ];
 
     /**
+     * The School Club representative's position, chosen on the application
+     * and stored in `aviation_organisation` (the column School Club reuses).
+     *
+     * @var list<string>
+     */
+    public const SCHOOL_CLUB_POSITIONS = [
+        'Principal',
+        'Vice Principal',
+        'President',
+        'Vice President',
+        'Secretary',
+        'Treasurer',
+        'Teacher in Charge',
+        'School Administrator',
+        'Other',
+    ];
+
+    /**
      * Mirrors the database default so a new instance is `submitted`.
      *
      * @var array<string, string>

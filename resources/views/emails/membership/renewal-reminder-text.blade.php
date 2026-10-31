@@ -8,6 +8,7 @@ Your membership (number {!! $number !!}) expires in {!! $daysRemaining !!} day(s
 The renewal fee is {!! $fee !!}, payable by bank transfer.
 @endif
 
+@include('emails.membership.partials.school-club-identity-text')
 @if ($schoolClub ?? false)
 School Club membership is free. There is no automatic renewal — renew it free of charge from your membership page.
 @else

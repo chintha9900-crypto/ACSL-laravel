@@ -2,18 +2,24 @@
 
 namespace App\Support\SchoolClub;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
 use RuntimeException;
 use SimpleXMLElement;
 use ZipArchive;
 
 /**
- * Reads a School Club student list — CSV or Excel (.xlsx) — into rows of
- * `full_name` and `email`, using only PHP's bundled zip/XML extensions (no
- * spreadsheet package). The first row must be a header naming both columns
- * (case- and spacing-insensitive: "Full name", "full_name", "Email", …).
- * Blank rows are skipped. Throws a RuntimeException with a message safe to
- * show the representative when the file cannot be read.
+ * Reads a completed School Club student template — Excel (.xlsx) or CSV —
+ * using only PHP's bundled zip/XML extensions (no spreadsheet package).
+ *
+ * The first row must be exactly the template's headings, in order:
+ * First name | Surname | Email | DOB (surrounding spaces and letter case are
+ * ignored), with no other columns. Blank rows are skipped, and so is the
+ * template's unchanged sample row. Values are returned as entered (trimmed);
+ * an Excel date typed into the DOB column is turned back into DD/MM/YYYY.
+ * Row-level checks (required values, email, date) are the caller's job.
+ * Throws a RuntimeException with a message safe to show the representative
+ * when the file itself cannot be used.
  */
 class StudentListReader
 {
@@ -28,7 +34,7 @@ class StudentListReader
     private const MAX_XLSX_PART_BYTES = 10 * 1024 * 1024;
 
     /**
-     * @return list<array{row: int, full_name: string, email: string}>
+     * @return list<array{row: int, first_name: string, surname: string, email: string, date_of_birth: string, extra_columns: bool}>
      */
     public function read(UploadedFile $file): array
     {
@@ -41,7 +47,7 @@ class StudentListReader
 
     /**
      * @param  list<list<string>>  $rows
-     * @return list<array{row: int, full_name: string, email: string}>
+     * @return list<array{row: int, first_name: string, surname: string, email: string, date_of_birth: string, extra_columns: bool}>
      */
     private function mapRows(array $rows): array
     {
@@ -49,24 +55,41 @@ class StudentListReader
             throw new RuntimeException('The student list is empty.');
         }
 
-        $header = array_map(fn (string $cell): string => preg_replace('/[^a-z]/', '', strtolower($cell)) ?? '', $rows[0]);
-        $nameColumn = array_search('fullname', $header, true);
-        $emailColumn = array_search('email', $header, true);
-
-        if ($nameColumn === false || $emailColumn === false) {
-            throw new RuntimeException('The first row of the student list must contain the column headings "full_name" and "email".');
+        $header = array_map(fn (string $cell): string => $this->normalise($cell), $rows[0]);
+        while ($header !== [] && end($header) === '') {
+            array_pop($header);
         }
+
+        $expected = array_map(fn (string $heading): string => $this->normalise($heading), StudentListTemplate::HEADERS);
+        if ($header !== $expected) {
+            throw new RuntimeException('The first row must contain exactly these column headings, in this order: '.implode(' | ', StudentListTemplate::HEADERS).'. Please download the template and use it unchanged.');
+        }
+
+        $sample = array_map(fn (string $value): string => $this->normalise($value), StudentListTemplate::SAMPLE_ROW);
+        $columns = count(StudentListTemplate::HEADERS);
 
         $students = [];
         foreach (array_slice($rows, 1, null, true) as $index => $row) {
-            $name = trim((string) ($row[$nameColumn] ?? ''));
-            $email = trim((string) ($row[$emailColumn] ?? ''));
+            $values = array_map(fn ($cell): string => trim((string) $cell), array_pad(array_slice($row, 0, $columns), $columns, ''));
+            $extra = array_filter(array_slice($row, $columns), fn ($cell): bool => trim((string) $cell) !== '') !== [];
 
-            if ($name === '' && $email === '') {
+            if (! $extra && implode('', $values) === '') {
                 continue;
             }
 
-            $students[] = ['row' => $index + 1, 'full_name' => $name, 'email' => $email];
+            if (! $extra && array_map(fn (string $value): string => $this->normalise($value), $values) === $sample) {
+                continue; // the template's example row, left in place
+            }
+
+            [$firstName, $surname, $email, $dateOfBirth] = $values;
+            $students[] = [
+                'row' => $index + 1,
+                'first_name' => $firstName,
+                'surname' => $surname,
+                'email' => $email,
+                'date_of_birth' => $dateOfBirth,
+                'extra_columns' => $extra,
+            ];
 
             if (count($students) > self::MAX_ROWS) {
                 throw new RuntimeException('A student list can contain at most '.self::MAX_ROWS.' students.');
@@ -74,10 +97,15 @@ class StudentListReader
         }
 
         if ($students === []) {
-            throw new RuntimeException('The student list contains no students.');
+            throw new RuntimeException('The student list contains no students. Add one row per student below the headings (the John Perera example row is ignored).');
         }
 
         return $students;
+    }
+
+    private function normalise(string $value): string
+    {
+        return mb_strtolower(trim(preg_replace('/\s+/u', ' ', $value) ?? ''));
     }
 
     /**
@@ -137,6 +165,9 @@ class StudentListReader
                         'inlineStr' => $this->text($cell->is),
                         default => (string) $cell->v,
                     };
+                    if ($column === StudentListTemplate::DOB_COLUMN && in_array($type, ['', 'n', 'd'], true)) {
+                        $value = $this->excelDate($type, $value);
+                    }
                     $cells[$column] = $value;
                 }
                 $filled = [];
@@ -228,6 +259,24 @@ class StudentListReader
         }
 
         return $xml;
+    }
+
+    /**
+     * Excel stores a date typed into a cell as a serial day number (1900 date
+     * system) or, rarely, an ISO date cell; either becomes DD/MM/YYYY. Any
+     * other value is returned unchanged for validation to report.
+     */
+    private function excelDate(string $type, string $value): string
+    {
+        if ($type === 'd' && preg_match('/^(\d{4})-(\d{2})-(\d{2})/', $value, $match) === 1) {
+            return $match[3].'/'.$match[2].'/'.$match[1];
+        }
+
+        if (preg_match('/^\d{1,6}(\.\d+)?$/', $value) === 1 && (float) $value >= 61) {
+            return CarbonImmutable::create(1899, 12, 30)->addDays((int) floor((float) $value))->format('d/m/Y');
+        }
+
+        return $value;
     }
 
     /**

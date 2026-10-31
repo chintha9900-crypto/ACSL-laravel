@@ -3,6 +3,35 @@
 <x-layouts.member :title="'Dashboard'">
     <h1 class="font-display text-2xl font-bold text-primary md:text-3xl">Welcome, {{ $user->name }}</h1>
 
+    {{-- School Club identity: the representative also sees their position. --}}
+    @if ($schoolClub)
+        <dl class="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground" data-school-club-identity>
+            @if ($membership->isSchoolClubMain())
+                <div><dt class="inline font-medium text-foreground">Position:</dt> <dd class="inline">{{ $schoolClub['position'] ?? '—' }}</dd></div>
+            @endif
+            <div><dt class="inline font-medium text-foreground">School Club:</dt> <dd class="inline">{{ $schoolClub['club'] ?? '—' }}</dd></div>
+            <div><dt class="inline font-medium text-foreground">School:</dt> <dd class="inline">{{ $schoolClub['school'] ?? '—' }}</dd></div>
+        </dl>
+    @endif
+
+    {{-- Main School Club only: live figures for this club's students. --}}
+    @if ($studentStatistics)
+        <section class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Student membership statistics">
+            @foreach ([
+                'total' => ['Total Membership Count', 'Student memberships created'],
+                'active' => ['Active Memberships', 'Set up and currently valid'],
+                'notActivated' => ['Not Activated', 'Approved, account setup pending'],
+                'requests' => ['Total Requests', 'Students submitted for review'],
+            ] as $key => [$label, $hint])
+                <div class="ui-card p-4" data-statistic="{{ $key }}">
+                    <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">{{ $label }}</p>
+                    <p class="mt-2 font-display text-3xl font-bold text-primary">{{ number_format($studentStatistics[$key]) }}</p>
+                    <p class="mt-1 text-xs text-muted-foreground">{{ $hint }}</p>
+                </div>
+            @endforeach
+        </section>
+    @endif
+
     <div class="mt-6 grid gap-6 lg:grid-cols-2">
         <section class="ui-card p-6" aria-labelledby="membership-heading">
             <h2 id="membership-heading" class="font-display text-lg font-bold text-primary">Your membership</h2>
@@ -20,6 +49,26 @@
                     <dt class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Category</dt>
                     <dd class="mt-1">{{ $membership->category->name }}</dd>
                 </div>
+                @if ($schoolClub)
+                    <div>
+                        <dt class="text-xs font-medium uppercase tracking-wide text-muted-foreground">School</dt>
+                        <dd class="mt-1">{{ $schoolClub['school'] ?? '—' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-medium uppercase tracking-wide text-muted-foreground">School Club</dt>
+                        <dd class="mt-1">{{ $schoolClub['club'] ?? '—' }}</dd>
+                    </div>
+                    @if ($membership->isSchoolClubMain())
+                        <div>
+                            <dt class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Representative</dt>
+                            <dd class="mt-1">{{ $schoolClub['representative'] ?? '—' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Position</dt>
+                            <dd class="mt-1">{{ $schoolClub['position'] ?? '—' }}</dd>
+                        </div>
+                    @endif
+                @endif
                 <div>
                     <dt class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Membership status</dt>
                     <dd class="mt-1">

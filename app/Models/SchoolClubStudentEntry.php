@@ -12,6 +12,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SchoolClubStudentEntry extends Model
 {
     /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'date_of_birth' => 'date',
+        ];
+    }
+
+    /**
      * @return BelongsTo<SchoolClubStudentBatch, $this>
      */
     public function batch(): BelongsTo

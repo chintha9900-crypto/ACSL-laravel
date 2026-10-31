@@ -44,6 +44,7 @@ class RenewalReminder extends Notification
                     'fee' => $plan !== null ? $plan->currency.' '.number_format((float) $plan->fee_amount, 2) : null,
                     'url' => route('member.membership.show'),
                     'schoolClub' => $this->term->membership->isSchoolClub(),
+                    'schoolClubIdentity' => $this->term->membership->schoolClubDetails(),
                 ],
             );
     }

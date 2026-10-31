@@ -1,10 +1,8 @@
-@use('App\Models\SchoolClubStudentBatch')
-
 <x-layouts.admin title="School Club student batches">
     <h1 class="font-display text-2xl font-bold text-primary md:text-3xl">School Club student batches</h1>
 
     <nav class="mt-4 flex flex-wrap gap-2" aria-label="Filter by status">
-        @foreach ([null => 'All'] + SchoolClubStudentBatch::STATUS_LABELS as $value => $label)
+        @foreach ([null => 'All'] + $statusLabels as $value => $label)
             @php($active = ($status ?? null) === ($value ?: null))
             <a href="{{ route('admin.school-club-batches.index', $value ? ['status' => $value] : []) }}"
                 @if ($active) aria-current="true" @endif
@@ -22,6 +20,7 @@
                 <tr>
                     <th scope="col" class="px-4 py-3 font-medium">Reference</th>
                     <th scope="col" class="px-4 py-3 font-medium">School</th>
+                    <th scope="col" class="px-4 py-3 font-medium">School Club</th>
                     <th scope="col" class="px-4 py-3 font-medium">School Club number</th>
                     <th scope="col" class="px-4 py-3 font-medium">Students</th>
                     <th scope="col" class="px-4 py-3 font-medium">Submitted</th>
@@ -35,6 +34,7 @@
                             <a href="{{ route('admin.school-club-batches.show', $batch) }}" class="text-primary underline underline-offset-2 hover:text-secondary">{{ $batch->public_id }}</a>
                         </td>
                         <td class="px-4 py-3">{{ $batch->membership->application?->company_name ?? '—' }}</td>
+                        <td class="px-4 py-3">{{ $batch->membership->application?->aviation_role ?? '—' }}</td>
                         <td class="px-4 py-3 font-mono text-xs">{{ $batch->membership->membership_number }}</td>
                         <td class="px-4 py-3">{{ $batch->students_count }}</td>
                         <td class="px-4 py-3 whitespace-nowrap">{{ $batch->submitted_at->format('j M Y') }}</td>
@@ -42,7 +42,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-6 text-center text-muted-foreground">No student batches.</td>
+                        <td colspan="7" class="px-4 py-6 text-center text-muted-foreground">No student batches.</td>
                     </tr>
                 @endforelse
             </tbody>

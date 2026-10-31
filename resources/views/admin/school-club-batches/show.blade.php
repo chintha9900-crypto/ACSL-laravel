@@ -9,10 +9,15 @@
         <div class="space-y-6 lg:col-span-2">
             <section class="ui-card p-6" aria-labelledby="school-heading">
                 <h2 id="school-heading" class="font-display text-lg font-bold text-primary">School Club</h2>
+                @php($club = $batch->membership->schoolClubDetails())
                 <dl class="mt-4 grid gap-x-6 gap-y-4 text-sm md:grid-cols-2">
                     @foreach ([
-                        'School' => $batch->membership->application?->company_name ?? '—',
+                        'Membership Category' => $club['category'] ?? '—',
+                        'School' => $club['school'] ?? '—',
+                        'School Club' => $club['club'] ?? '—',
                         'School Club number' => $batch->membership->membership_number,
+                        'Representative' => $club['representative'] ?? '—',
+                        'Representative position' => $club['position'] ?? '—',
                         'Submitted by' => $batch->submittedBy?->name.' ('.$batch->submittedBy?->email.')',
                         'Submitted' => $batch->submitted_at->format('j F Y, H:i').' UTC',
                         'Students' => $batch->students_count,
@@ -28,12 +33,24 @@
                     </div>
                 </dl>
 
-                @if ($batch->studentList)
-                    <p class="mt-4 text-sm">
+                <ul class="mt-4 space-y-1 text-sm">
+                    <li>
+                        Uploaded Excel list:
+                        @if ($batch->spreadsheet)
+                            <a href="{{ route('admin.documents.show', $batch->spreadsheet) }}" class="text-primary underline underline-offset-2 hover:text-secondary">{{ $batch->spreadsheet->original_filename }}</a>
+                        @else
+                            <span class="text-muted-foreground">— (submitted before Excel lists were kept)</span>
+                        @endif
+                    </li>
+                    <li>
                         Principal-signed student list:
-                        <a href="{{ route('admin.documents.show', $batch->studentList) }}" class="text-primary underline underline-offset-2 hover:text-secondary">{{ $batch->studentList->original_filename }}</a>
-                    </p>
-                @endif
+                        @if ($batch->studentList)
+                            <a href="{{ route('admin.documents.show', $batch->studentList) }}" class="text-primary underline underline-offset-2 hover:text-secondary">{{ $batch->studentList->original_filename }}</a>
+                        @else
+                            <span class="text-muted-foreground">Not uploaded yet</span>
+                        @endif
+                    </li>
+                </ul>
 
                 @if ($batch->request_message && $batch->status === SchoolClubStudentBatch::STATUS_MORE_DETAILS_REQUIRED)
                     <p class="mt-4 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm"><span class="font-semibold">Requested from the school:</span> {{ $batch->request_message }}</p>
@@ -45,22 +62,46 @@
 
             <section class="ui-card overflow-x-auto p-6" aria-labelledby="students-heading">
                 <h2 id="students-heading" class="font-display text-lg font-bold text-primary">Students</h2>
-                <table class="mt-4 w-full min-w-[30rem] text-left text-sm">
+                @php($approvedEntries = $batch->entries->filter(fn ($entry) => $entry->membership !== null))
+                @if ($approvedEntries->isNotEmpty())
+                    <p class="mt-2 text-sm text-muted-foreground" data-student-activation-summary>
+                        {{ $approvedEntries->filter(fn ($entry) => $entry->membership->user?->status === 'active' && $entry->membership->hasCurrentTerm())->count() }} active
+                        &middot; {{ $approvedEntries->filter(fn ($entry) => $entry->membership->user?->status === 'pending_setup')->count() }} not activated (account setup pending)
+                    </p>
+                @endif
+                <table class="mt-4 w-full min-w-[44rem] text-left text-sm">
                     <thead class="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
                         <tr>
                             <th scope="col" class="py-2 pr-4 font-medium">#</th>
-                            <th scope="col" class="py-2 pr-4 font-medium">Full name</th>
+                            <th scope="col" class="py-2 pr-4 font-medium">First name</th>
+                            <th scope="col" class="py-2 pr-4 font-medium">Surname</th>
                             <th scope="col" class="py-2 pr-4 font-medium">Email</th>
-                            <th scope="col" class="py-2 font-medium">Membership number</th>
+                            <th scope="col" class="py-2 pr-4 font-medium">DOB</th>
+                            <th scope="col" class="py-2 pr-4 font-medium">Membership number</th>
+                            <th scope="col" class="py-2 font-medium">Account</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border">
                         @foreach ($batch->entries as $entry)
                             <tr>
                                 <td class="py-2 pr-4">{{ $loop->iteration }}</td>
-                                <td class="py-2 pr-4">{{ $entry->full_name }}</td>
+                                {{-- Lists from before the template kept only a full name. --}}
+                                <td class="py-2 pr-4">{{ $entry->first_name ?? $entry->full_name }}</td>
+                                <td class="py-2 pr-4">{{ $entry->surname ?? '—' }}</td>
                                 <td class="py-2 pr-4 break-all">{{ $entry->email }}</td>
-                                <td class="py-2 font-mono text-xs">{{ $entry->membership?->membership_number ?? '—' }}</td>
+                                <td class="py-2 pr-4 whitespace-nowrap">{{ $entry->date_of_birth?->format('d/m/Y') ?? '—' }}</td>
+                                <td class="py-2 pr-4 font-mono text-xs">{{ $entry->membership?->membership_number ?? '—' }}</td>
+                                <td class="py-2 whitespace-nowrap">
+                                    @if ($entry->membership === null)
+                                        —
+                                    @elseif ($entry->membership->user?->status === 'pending_setup')
+                                        Not activated
+                                    @elseif ($entry->membership->user?->status === 'active' && $entry->membership->hasCurrentTerm())
+                                        Active
+                                    @else
+                                        Inactive
+                                    @endif
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -119,7 +160,7 @@
                     <button type="submit" class="btn btn-lg btn-gradient w-full">Record decision</button>
                 </form>
             @else
-                <p class="mt-3 text-sm text-muted-foreground">{{ $batch->status === SchoolClubStudentBatch::STATUS_MORE_DETAILS_REQUIRED ? 'Waiting for the school to resubmit.' : 'This batch has been decided.' }}</p>
+                <p class="mt-3 text-sm text-muted-foreground">{{ in_array($batch->status, [SchoolClubStudentBatch::STATUS_MORE_DETAILS_REQUIRED, SchoolClubStudentBatch::STATUS_AWAITING_SIGNED_LIST], true) ? 'Waiting for the school to resubmit.' : 'This batch has been decided.' }}</p>
             @endif
         </section>
     </div>

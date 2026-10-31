@@ -42,6 +42,7 @@ class Welcome extends Notification
                     'category' => $this->membership->category->name,
                     'months' => $term?->duration_months,
                     'schoolClub' => $this->membership->isSchoolClub(),
+                    'schoolClubIdentity' => $this->membership->schoolClubDetails(),
                     'startsOn' => $term?->starts_on?->format('j F Y'),
                     'expiresOn' => $term?->expires_on?->format('j F Y'),
                 ],

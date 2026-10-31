@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Member;
 
 use App\Http\Controllers\Controller;
 use App\Models\Membership;
+use App\Models\SchoolClubStudentBatch;
+use App\Models\SchoolClubStudentEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -52,6 +54,41 @@ class DashboardController extends Controller
             'user' => $request->user(),
             'membership' => $membership,
             'currentTerm' => $currentTerm,
+            'schoolClub' => $membership->schoolClubDetails(),
+            'studentStatistics' => $membership->isSchoolClubMain() ? $this->studentStatistics($membership) : null,
         ]);
+    }
+
+    /**
+     * Live student figures for a main School Club, scoped to that club only:
+     *
+     * - total: every student membership created under this club (approved
+     *   students; each has a `parent_membership_id` of this club);
+     * - active: of those, ones with a currently valid term whose student has
+     *   finished account setup (`users.status = active`);
+     * - notActivated: approved students who have not yet set their password
+     *   (`users.status = pending_setup`);
+     * - requests: every student submitted for review on this club's lists —
+     *   awaiting review, returned for more details, approved or declined.
+     *   Lists still waiting for the principal-signed PDF are not yet
+     *   submitted, so are not counted. A resubmitted list replaces its own
+     *   entries, so nobody is counted twice.
+     *
+     * @return array{total: int, active: int, notActivated: int, requests: int}
+     */
+    private function studentStatistics(Membership $membership): array
+    {
+        $students = $membership->students()->with(['terms', 'user:id,status'])->get();
+
+        return [
+            'total' => $students->count(),
+            'active' => $students->filter(fn (Membership $student): bool => $student->user?->status === 'active' && $student->hasCurrentTerm())->count(),
+            'notActivated' => $students->filter(fn (Membership $student): bool => $student->user?->status === 'pending_setup')->count(),
+            'requests' => SchoolClubStudentEntry::query()
+                ->whereHas('batch', fn ($query) => $query
+                    ->where('membership_id', $membership->id)
+                    ->where('status', '!=', SchoolClubStudentBatch::STATUS_AWAITING_SIGNED_LIST))
+                ->count(),
+        ];
     }
 }

@@ -14,6 +14,7 @@
 <h1 style="margin:0 0 20px;font-size:20px;color:#0b2a4a;">Aviation Club</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Hello {{ $name }},</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Congratulations — your {{ $category }} membership application has been approved.</p>
+@include('emails.membership.partials.school-club-identity')
 @if ($schoolClub ?? false)
 <p style="margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:15px;line-height:1.5;">School Club membership is free — there are no joining or renewal fees. It runs for {{ $months }} {{ Str::plural('month', $months) }} at a time and can be renewed free of charge.</p>
 @else

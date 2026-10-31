@@ -17,6 +17,7 @@
 @if ($fee)
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">The renewal fee is {{ $fee }}, payable by bank transfer.</p>
 @endif
+@include('emails.membership.partials.school-club-identity')
 @if ($schoolClub ?? false)
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">School Club membership is free. There is no automatic renewal — renew it free of charge from your membership page.</p>
 @else

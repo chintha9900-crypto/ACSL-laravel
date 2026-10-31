@@ -2,6 +2,7 @@ Aviation Club
 
 Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
 
+@include('emails.membership.partials.school-club-identity-text')
 @if ($status === 'approved')
 The student list you submitted on {!! $submittedOn !!} has been approved. {!! $count !!} student member(s) have been added to your School Club.
 

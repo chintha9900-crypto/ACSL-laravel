@@ -36,8 +36,9 @@ class DocumentPolicy
             return true;
         }
 
-        // The principal-signed list is what a School Club student batch review is of.
-        if ($document->kind === Document::KIND_SCHOOL_CLUB_STUDENT_LIST && $user->hasPermission(Ability::ReviewMembershipApplications)) {
+        // The principal-signed list and its Excel are what a School Club student batch review is of.
+        if (in_array($document->kind, [Document::KIND_SCHOOL_CLUB_STUDENT_LIST, Document::KIND_SCHOOL_CLUB_STUDENT_SPREADSHEET], true)
+            && $user->hasPermission(Ability::ReviewMembershipApplications)) {
             return true;
         }
 

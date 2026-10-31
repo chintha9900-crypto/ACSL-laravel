@@ -46,7 +46,7 @@ class SchoolClubMembershipTest extends MysqlTestCase
             'full_name' => 'Rep Person',
             'email' => 'rep.person@example-college.test',
             'mobile' => '+94 77 123 4567',
-            'aviation_organisation' => 'Club coordinator',
+            'aviation_organisation' => 'Teacher in Charge',
             'proof_documents' => [$this->pdfUpload('principal-letter.pdf')],
             'declaration' => '1',
             ...$overrides,
@@ -95,7 +95,7 @@ class SchoolClubMembershipTest extends MysqlTestCase
 
         $this->assertStringContainsString('value="SC"', $html);
         $this->assertMatchesRegularExpression('/value="SC"\s+checked/', $html);
-        foreach (['2. School Details', 'School Name', 'School Email', 'School Phone', 'Aviation Club Name', 'Position in the Aviation Club', "4. Principal's Request Letter", 'Accepted: PDF only.'] as $text) {
+        foreach (['2. School Details', 'School Name', 'School Email', 'School Phone', 'Aviation Club Name', 'Position', "4. Principal's Request Letter", 'Accepted: PDF only.'] as $text) {
             $this->assertStringContainsString($text, $html);
         }
         $this->assertStringContainsString('id="proof_documents_school_club"', $html);
@@ -112,7 +112,7 @@ class SchoolClubMembershipTest extends MysqlTestCase
         $this->assertSame('office@example-college.test', $application->company_email);
         $this->assertSame('+94112345678', $application->company_phone);
         $this->assertSame('https://www.example-college.test', $application->company_website);
-        $this->assertSame('Club coordinator', $application->aviation_organisation);
+        $this->assertSame('Teacher in Charge', $application->aviation_organisation);
         $this->assertSame('rep.person@example-college.test', $application->email);
         $this->assertSame(1, $application->documents()->count());
     }
@@ -164,7 +164,7 @@ class SchoolClubMembershipTest extends MysqlTestCase
         $this->actingAs($this->editor())->get(route('admin.membership-applications.show', $application))
             ->assertOk()
             ->assertSee('School name')->assertSee('Example College')
-            ->assertSee('Position in the aviation club')->assertSee('Club coordinator');
+            ->assertSee('Representative position')->assertSee('Teacher in Charge');
     }
 
     // --- admin decisions, numbering, free membership ---------------------------

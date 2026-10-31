@@ -32,6 +32,30 @@
         <p class="mt-6 text-lg font-semibold">{{ $user->name }}</p>
         <p class="mt-1 font-mono text-sm tracking-wide text-primary-foreground/80">{{ $membership->membership_number }}</p>
 
+        {{-- School Club cards (main and student) carry the school identity. --}}
+        @if ($schoolClub)
+            <dl class="mt-4 grid grid-cols-2 gap-4 text-xs text-primary-foreground/80" data-school-club-card>
+                @if ($membership->isSchoolClubMain())
+                    <div>
+                        <dt class="uppercase tracking-wide">Position</dt>
+                        <dd class="mt-1 text-sm font-medium text-primary-foreground">{{ $schoolClub['position'] ?? '—' }}</dd>
+                    </div>
+                @endif
+                <div>
+                    <dt class="uppercase tracking-wide">Category</dt>
+                    <dd class="mt-1 text-sm font-medium text-primary-foreground">{{ $membership->category->name }}</dd>
+                </div>
+                <div>
+                    <dt class="uppercase tracking-wide">School</dt>
+                    <dd class="mt-1 text-sm font-medium text-primary-foreground">{{ $schoolClub['school'] ?? '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="uppercase tracking-wide">School Club</dt>
+                    <dd class="mt-1 text-sm font-medium text-primary-foreground">{{ $schoolClub['club'] ?? '—' }}</dd>
+                </div>
+            </dl>
+        @endif
+
         <div class="mt-4 grid grid-cols-2 gap-4 text-xs text-primary-foreground/80">
             <div>
                 <p class="uppercase tracking-wide">Joined</p>

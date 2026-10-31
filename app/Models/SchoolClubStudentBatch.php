@@ -17,6 +17,12 @@ class SchoolClubStudentBatch extends Model
 {
     use HasUlids;
 
+    /**
+     * The Excel list has been uploaded; the principal-signed PDF has not. Not
+     * yet visible to admin review.
+     */
+    public const STATUS_AWAITING_SIGNED_LIST = 'awaiting_signed_list';
+
     public const STATUS_SUBMITTED = 'submitted';
 
     public const STATUS_MORE_DETAILS_REQUIRED = 'more_details_required';
@@ -36,6 +42,7 @@ class SchoolClubStudentBatch extends Model
      * @var array<string, string>
      */
     public const STATUS_LABELS = [
+        self::STATUS_AWAITING_SIGNED_LIST => 'Awaiting principal-signed list',
         self::STATUS_SUBMITTED => 'Awaiting review',
         self::STATUS_MORE_DETAILS_REQUIRED => 'More details required',
         self::STATUS_APPROVED => 'Approved',
@@ -100,8 +107,18 @@ class SchoolClubStudentBatch extends Model
     public function studentList(): HasOne
     {
         return $this->hasOne(Document::class)
-            ->where('kind', Document::KIND_SCHOOL_CLUB_STUDENT_LIST)
-            ->latestOfMany();
+            ->ofMany(['id' => 'max'], fn ($query) => $query->where('kind', Document::KIND_SCHOOL_CLUB_STUDENT_LIST));
+    }
+
+    /**
+     * The completed Excel template the entries were read from (latest upload).
+     *
+     * @return HasOne<Document, $this>
+     */
+    public function spreadsheet(): HasOne
+    {
+        return $this->hasOne(Document::class)
+            ->ofMany(['id' => 'max'], fn ($query) => $query->where('kind', Document::KIND_SCHOOL_CLUB_STUDENT_SPREADSHEET));
     }
 
     public function isOpen(): bool

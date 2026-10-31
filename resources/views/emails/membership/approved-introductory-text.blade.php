@@ -4,6 +4,7 @@ Hello {!! str_replace(["\r", "\n"], ' ', $name) !!},
 
 Congratulations — your {!! $category !!} membership application has been approved.
 
+@include('emails.membership.partials.school-club-identity-text')
 @if ($schoolClub ?? false)
 School Club membership is free — there are no joining or renewal fees. It runs for {!! $months !!} month(s) at a time and can be renewed free of charge.
 @else

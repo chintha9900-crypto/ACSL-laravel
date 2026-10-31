@@ -36,10 +36,24 @@ class StudentBatchTest extends MysqlTestCase
         Storage::fake('private');
     }
 
+    /**
+     * The whole representative flow: upload the completed template, then (if
+     * it was accepted) the principal-signed PDF. Returns the last response.
+     */
     private function submit(Membership $club, UploadedFile $list, ?UploadedFile $pdf = null): TestResponse
     {
-        return $this->actingAs($club->user)->post(route('member.school-club.students.store'), [
-            'students_file' => $list,
+        $response = $this->actingAs($club->user)->post(route('member.school-club.students.store'), ['students_file' => $list]);
+        if (session('errors')?->isNotEmpty()) {
+            return $response;
+        }
+
+        $batch = SchoolClubStudentBatch::query()
+            ->where('membership_id', $club->id)
+            ->where('status', SchoolClubStudentBatch::STATUS_AWAITING_SIGNED_LIST)
+            ->latest('id')
+            ->firstOrFail();
+
+        return $this->actingAs($club->user)->post(route('member.school-club.students.signed', $batch), [
             'principal_list' => $pdf ?? $this->pdfUpload('signed-list.pdf'),
         ]);
     }
@@ -73,7 +87,8 @@ class StudentBatchTest extends MysqlTestCase
         $member->user->forceFill(['status' => 'active'])->save();
         $this->actingAs($member->user)->get(route('member.dashboard'))->assertOk()->assertDontSee('Manage Student Members');
         $this->actingAs($member->user)->get(route('member.school-club.students.index'))->assertForbidden();
-        $this->actingAs($member->user)->post(route('member.school-club.students.store'), ['students_file' => $this->studentCsv([['A', 'a@example.test']]), 'principal_list' => $this->pdfUpload()])->assertForbidden();
+        $this->actingAs($member->user)->post(route('member.school-club.students.store'), ['students_file' => $this->studentCsv([['A', 'a@example.test']])])->assertForbidden();
+        $this->actingAs($member->user)->get(route('member.school-club.students.template'))->assertForbidden();
 
         // Staff and guests.
         foreach ([$this->admin(), $this->editor(), $this->dev()] as $staff) {
@@ -103,8 +118,11 @@ class StudentBatchTest extends MysqlTestCase
         DB::table('school_club_student_batches')->where('id', $theirBatch->id)->update(['status' => 'more_details_required', 'request_message' => 'x']);
 
         $this->actingAs($mine->user)
-            ->post(route('member.school-club.students.resubmit', $theirBatch), ['students_file' => $this->studentCsv([['Hijack', 'hijack@example.test']]), 'principal_list' => $this->pdfUpload()])
+            ->post(route('member.school-club.students.resubmit', $theirBatch), ['students_file' => $this->studentCsv([['Hijack', 'hijack@example.test']])])
             ->assertNotFound();
+        $this->actingAs($mine->user)->post(route('member.school-club.students.signed', $theirBatch), ['principal_list' => $this->pdfUpload()])->assertNotFound();
+        $this->actingAs($mine->user)->get(route('member.school-club.students.printable', $theirBatch))->assertNotFound();
+        $this->actingAs($mine->user)->get(route('member.documents.show', $theirBatch->spreadsheet))->assertForbidden();
         $this->assertSame(1, $theirBatch->entries()->count());
 
         $this->actingAs($mine->user)->get(route('member.documents.show', $theirBatch->studentList))->assertForbidden();
@@ -128,10 +146,12 @@ class StudentBatchTest extends MysqlTestCase
         $this->assertSame(['ann.one@example.test', 'ben.two@example.test'], $batch->entries->pluck('email')->all());
         $this->assertNull($batch->entries->first()->membership_id);
 
-        $document = $batch->studentList;
-        $this->assertSame(Document::KIND_SCHOOL_CLUB_STUDENT_LIST, $document->kind);
-        $this->assertSame('private', $document->disk);
-        Storage::disk('private')->assertExists($document->storage_path);
+        foreach ([Document::KIND_SCHOOL_CLUB_STUDENT_LIST => $batch->studentList, Document::KIND_SCHOOL_CLUB_STUDENT_SPREADSHEET => $batch->spreadsheet] as $kind => $document) {
+            $this->assertSame($kind, $document->kind);
+            $this->assertSame('private', $document->disk);
+            $this->assertSame(Document::VISIBILITY_OWNER_AND_ADMIN, $document->visibility);
+            Storage::disk('private')->assertExists($document->storage_path);
+        }
 
         $this->assertSame(0, User::query()->whereIn('email', ['ann.one@example.test', 'ben.two@example.test'])->count());
         $this->assertSame(0, Membership::query()->whereNotNull('parent_membership_id')->count());
@@ -163,7 +183,8 @@ class StudentBatchTest extends MysqlTestCase
 
         $errors = session('errors')->get('students_file');
         $this->assertContains('Row 3: ann@example.test appears more than once (first on row 2). Each student needs a unique email address.', $errors);
-        $this->assertContains("Row 4: enter the student's full name (up to 160 characters).", $errors);
+        $this->assertContains("Row 4: enter the student's first name.", $errors);
+        $this->assertContains("Row 4: enter the student's surname.", $errors);
         $this->assertContains('Row 5: "not-an-email" is not a valid email address.', $errors);
         $this->assertContains('Row 6: taken@example.test is already registered or already submitted. Each student needs their own unused email address.', $errors);
         $this->assertSame(0, SchoolClubStudentBatch::query()->count());
@@ -185,15 +206,20 @@ class StudentBatchTest extends MysqlTestCase
         $club = $this->schoolClub();
 
         $this->submit($club, $this->studentCsv([['A', 'a@example.test']], 'name,mail'))
-            ->assertSessionHasErrors(['students_file' => 'The first row of the student list must contain the column headings "full_name" and "email".']);
+            ->assertSessionHasErrors(['students_file' => 'The first row must contain exactly these column headings, in this order: First name | Surname | Email | DOB. Please download the template and use it unchanged.']);
         $this->submit($club, $this->pdfUpload('students.pdf'))
-            ->assertSessionHasErrors(['students_file' => 'The student list must be a CSV or Excel (.xlsx) file.']);
+            ->assertSessionHasErrors(['students_file' => 'The student list must be the Excel (.xlsx) template, or a CSV file with the same columns.']);
+        $this->assertSame(0, SchoolClubStudentBatch::query()->count());
+
         $this->submit($club, $this->studentCsv([['A', 'a@example.test']]), $this->pngUpload('list.png'))
             ->assertSessionHasErrors(['principal_list' => 'The principal-signed student list must be a PDF file.']);
-        $this->actingAs($club->user)->post(route('member.school-club.students.store'), ['students_file' => $this->studentCsv([['A', 'a@example.test']])])
-            ->assertSessionHasErrors(['principal_list' => 'Please attach the principal-signed student list (PDF).']);
+        $batch = SchoolClubStudentBatch::query()->sole();
+        $this->actingAs($club->user)->post(route('member.school-club.students.signed', $batch))
+            ->assertSessionHasErrors(['principal_list' => 'Please attach the student list signed by the principal (scanned PDF).']);
 
-        $this->assertSame(0, SchoolClubStudentBatch::query()->count());
+        // The list stays waiting for its signed PDF: nothing reaches review.
+        $this->assertSame(SchoolClubStudentBatch::STATUS_AWAITING_SIGNED_LIST, $batch->fresh()->status);
+        $this->assertNull($batch->studentList);
     }
 
     // --- admin review, notifications, numbering --------------------------------
@@ -323,12 +349,16 @@ class StudentBatchTest extends MysqlTestCase
 
             return str_contains($html, 'Please include the signature page.') && ! str_contains($html, 'internal only');
         });
-        $this->actingAs($club->user)->get(route('member.school-club.students.index'))->assertSee('Please include the signature page.')->assertSee('Resubmit');
+        $this->actingAs($club->user)->get(route('member.school-club.students.index'))->assertSee('Please include the signature page.')->assertSee('Upload corrected list');
 
         $this->actingAs($club->user)->post(route('member.school-club.students.resubmit', $batch), [
             'students_file' => $this->studentCsv([['A', 'a@example.test'], ['B', 'b@example.test']]),
-            'principal_list' => $this->pdfUpload('signed-v2.pdf'),
         ])->assertSessionHasNoErrors();
+        $this->assertSame(SchoolClubStudentBatch::STATUS_AWAITING_SIGNED_LIST, $batch->fresh()->status);
+        $this->actingAs($club->user)->get(route('member.school-club.students.index'))->assertSee('Please include the signature page.')->assertSee('Download printable list (PDF)');
+
+        $this->actingAs($club->user)->post(route('member.school-club.students.signed', $batch), ['principal_list' => $this->pdfUpload('signed-v2.pdf')])
+            ->assertSessionHasNoErrors();
         $this->assertSame('submitted', $batch->fresh()->status);
         $this->assertSame(2, $batch->fresh()->entries()->count());
 

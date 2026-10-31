@@ -12,6 +12,7 @@
 <tr><td>
 <h1 style="margin:0 0 20px;font-size:20px;color:#0b2a4a;">Aviation Club</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Hello {{ $name }},</p>
+@include('emails.membership.partials.school-club-identity')
 @if ($status === 'approved')
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">The student list you submitted on {{ $submittedOn }} has been approved. {{ $count }} student {{ $count === 1 ? 'member has' : 'members have' }} been added to your School Club.</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Each student will receive their own email with a secure, one-time link to create their password. Their membership is free — there are no joining or renewal fees.</p>

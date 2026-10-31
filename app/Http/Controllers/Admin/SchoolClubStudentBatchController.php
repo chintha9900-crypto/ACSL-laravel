@@ -22,17 +22,22 @@ class SchoolClubStudentBatchController extends Controller
     {
         Gate::authorize('viewAny', SchoolClubStudentBatch::class);
 
+        // A list still waiting for its principal-signed PDF has not been sent for review.
+        $labels = array_diff_key(SchoolClubStudentBatch::STATUS_LABELS, [SchoolClubStudentBatch::STATUS_AWAITING_SIGNED_LIST => true]);
+
         $status = $request->query('status');
-        $status = array_key_exists((string) $status, SchoolClubStudentBatch::STATUS_LABELS) ? $status : null;
+        $status = array_key_exists((string) $status, $labels) ? $status : null;
 
         return view('admin.school-club-batches.index', [
             'batches' => SchoolClubStudentBatch::query()
-                ->with('membership.application:id,company_name')
+                ->with('membership.application:id,company_name,aviation_role')
+                ->where('status', '!=', SchoolClubStudentBatch::STATUS_AWAITING_SIGNED_LIST)
                 ->when($status, fn ($query) => $query->where('status', $status))
                 ->latest('submitted_at')
                 ->paginate(25)
                 ->withQueryString(),
             'status' => $status,
+            'statusLabels' => $labels,
         ]);
     }
 
@@ -40,7 +45,16 @@ class SchoolClubStudentBatchController extends Controller
     {
         Gate::authorize('view', $batch);
 
-        $batch->load(['membership.application:id,company_name', 'entries.membership:id,membership_number', 'studentList', 'submittedBy:id,name,email']);
+        $batch->load([
+            'membership.category',
+            'membership.application',
+            'membership.user:id,name',
+            'entries.membership.terms',
+            'entries.membership.user:id,status',
+            'studentList',
+            'spreadsheet',
+            'submittedBy:id,name,email',
+        ]);
 
         return view('admin.school-club-batches.show', ['batch' => $batch]);
     }

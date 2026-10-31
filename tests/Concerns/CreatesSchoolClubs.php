@@ -9,7 +9,8 @@ use ZipArchive;
 
 /**
  * School Club fixtures: an activated main School Club membership (through the
- * real activation action) and student list uploads (CSV and genuine .xlsx).
+ * real activation action) and completed student templates (CSV and genuine
+ * .xlsx) with the First name | Surname | Email | DOB columns.
  * Requires `CreatesReviewableApplications` and `CreatesUploads`.
  */
 trait CreatesSchoolClubs
@@ -25,7 +26,7 @@ trait CreatesSchoolClubs
             'company_email' => 'office@example-college.test',
             'company_phone' => '+94112345678',
             'aviation_role' => 'Example College Aviation Club',
-            'aviation_organisation' => 'Club coordinator',
+            'aviation_organisation' => 'Teacher in Charge',
             ...$applicationAttributes,
         ], 'SC');
 
@@ -36,31 +37,58 @@ trait CreatesSchoolClubs
     }
 
     /**
-     * @param  list<array{0: string, 1: string}>  $students  [full name, email]
+     * A student row as the template expects it. The shorthand [full name, email]
+     * splits the name at its first space (a one-word name gets the surname
+     * "Student") and uses a valid date of birth.
+     *
+     * @param  list<string>  $student  [first name, surname, email, DOB] or [full name, email]
+     * @return list<string>
      */
-    protected function studentCsv(array $students, string $header = 'full_name,email'): UploadedFile
+    protected function studentRow(array $student): array
+    {
+        if (count($student) !== 2) {
+            return $student;
+        }
+
+        [$name, $email] = $student;
+        $parts = explode(' ', $name, 2);
+
+        return [$parts[0], $parts[1] ?? ($name === '' ? '' : 'Student'), $email, '15/04/2010'];
+    }
+
+    /**
+     * @param  list<list<string>>  $students
+     */
+    protected function studentCsv(array $students, string $header = 'First name,Surname,Email,DOB'): UploadedFile
     {
         $lines = [$header];
-        foreach ($students as [$name, $email]) {
-            $lines[] = '"'.str_replace('"', '""', $name).'",'.$email;
+        foreach ($students as $student) {
+            $lines[] = implode(',', array_map(fn (string $value): string => '"'.str_replace('"', '""', $value).'"', $this->studentRow($student)));
         }
 
         return $this->realUpload('students.csv', implode("\n", $lines)."\n", 'text/csv');
     }
 
     /**
-     * A minimal but genuine .xlsx workbook (shared strings, first sheet).
+     * A minimal but genuine .xlsx workbook (shared strings, first sheet). A
+     * numeric DOB (an Excel date serial) is written as a number cell.
      *
-     * @param  list<array{0: string, 1: string}>  $students
+     * @param  list<list<string|int>>  $students
+     * @param  list<string>  $header
      */
-    protected function studentXlsx(array $students): UploadedFile
+    protected function studentXlsx(array $students, array $header = ['First name', 'Surname', 'Email', 'DOB']): UploadedFile
     {
-        $rows = [['full_name', 'email'], ...$students];
+        $rows = [$header, ...array_map(fn (array $student): array => $this->studentRow($student), $students)];
         $strings = [];
         $sheetRows = '';
         foreach ($rows as $r => $row) {
             $cells = '';
             foreach ($row as $c => $value) {
+                if (is_int($value)) {
+                    $cells .= '<c r="'.chr(65 + $c).($r + 1).'"><v>'.$value.'</v></c>';
+
+                    continue;
+                }
                 $strings[] = htmlspecialchars($value, ENT_XML1);
                 $cells .= '<c r="'.chr(65 + $c).($r + 1).'" t="s"><v>'.(count($strings) - 1).'</v></c>';
             }

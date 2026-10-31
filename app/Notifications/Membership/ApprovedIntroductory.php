@@ -44,6 +44,7 @@ class ApprovedIntroductory extends Notification
                     'category' => $this->application->category->name,
                     'months' => $months,
                     'schoolClub' => $schoolClub,
+                    'schoolClubIdentity' => $schoolClub ? ['category' => $this->application->category->name, 'school' => $this->application->company_name, 'club' => $this->application->aviation_role] : null,
                 ],
             );
     }
