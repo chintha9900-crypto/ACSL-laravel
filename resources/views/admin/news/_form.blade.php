@@ -20,8 +20,7 @@
     <x-form.input name="excerpt" label="Excerpt" type="textarea" rows="3" :required="false" :value="old('excerpt', $news->excerpt ?? '')" maxlength="2000"
         hint="A short summary shown on the news listing page." />
 
-    <x-form.input name="content" label="Content" type="textarea" rows="12" :value="old('content', $news->content ?? '')"
-        hint="Basic HTML is allowed (paragraphs, headings, lists, bold/italic, links) — anything else is stripped when you save." />
+    @include('admin.partials.rich-text-editor', ['content' => $news->content ?? ''])
 
     <div class="space-y-1.5">
         <label for="image" class="block text-sm font-medium leading-none">Image</label>

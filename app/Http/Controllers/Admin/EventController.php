@@ -18,8 +18,7 @@ use Illuminate\View\View;
 
 /**
  * Admin Events CRUD — mirrors Admin\NewsController, adapted for
- * EventListing's two extra fields (`starts_at`, `location`) and its
- * plain-text (not sanitised-HTML) `content` field.
+ * EventListing's two extra fields (`starts_at`, `location`).
  */
 class EventController extends Controller
 {

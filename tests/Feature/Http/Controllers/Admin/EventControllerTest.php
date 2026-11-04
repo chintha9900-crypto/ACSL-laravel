@@ -158,14 +158,14 @@ class EventControllerTest extends MysqlTestCase
             ->assertSessionHasErrors(['title', 'slug', 'content', 'starts_at']);
     }
 
-    public function test_content_is_stored_as_plain_text_without_sanitisation_or_escaping_on_save(): void
+    public function test_content_is_sanitised_on_save(): void
     {
         $this->actingAs($this->admin())->post(route('admin.events.store'), $this->payload([
-            'content' => 'Line one <not-a-real-tag> line two',
+            'content' => '<p>Safe</p><script>alert(1)</script>',
         ]));
 
         $event = EventListing::query()->firstOrFail();
-        $this->assertSame('Line one <not-a-real-tag> line two', $event->content, 'Content is plain text, stored exactly as submitted — escaping happens only at render time.');
+        $this->assertSame('<p>Safe</p>', $event->content);
     }
 
     public function test_an_image_can_be_uploaded_on_create(): void

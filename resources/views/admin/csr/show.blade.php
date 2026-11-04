@@ -1,3 +1,4 @@
+@use('App\Support\HtmlSanitizer')
 @use('Illuminate\Support\Facades\Storage')
 <x-layouts.admin :title="$project->title">
     <div class="flex flex-wrap items-center justify-between gap-4">
@@ -38,7 +39,7 @@
             </div>
             <div>
                 <dt class="font-medium text-muted-foreground">Content</dt>
-                <dd class="text-sm leading-relaxed text-foreground/85 [&_a]:font-semibold [&_a]:text-[#CC001F] [&_a]:underline [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:font-display [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-primary [&_li]:mb-1 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5">{!! $project->content !!}</dd>
+                <dd class="text-sm leading-relaxed text-foreground/85 [&_a]:font-semibold [&_a]:text-[#CC001F] [&_a]:underline [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:font-display [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-primary [&_li]:mb-1 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5">{!! HtmlSanitizer::forDisplay((string) $project->content) !!}</dd>
             </div>
         </dl>
     </div>

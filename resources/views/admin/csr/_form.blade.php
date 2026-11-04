@@ -18,8 +18,7 @@
     <x-form.input name="slug" label="Slug" :value="old('slug', $project->slug ?? '')" data-slug-field maxlength="255"
         hint="Used in the project's URL. Letters, numbers, dashes and underscores only." />
 
-    <x-form.input name="content" label="Content" type="textarea" rows="12" :value="old('content', $project->content ?? '')"
-        hint="Basic HTML is allowed (paragraphs, headings, lists, bold/italic, links) — anything else is stripped when you save." />
+    @include('admin.partials.rich-text-editor', ['content' => $project->content ?? ''])
 
     <div class="space-y-1.5">
         <label for="image" class="block text-sm font-medium leading-none">Image</label>

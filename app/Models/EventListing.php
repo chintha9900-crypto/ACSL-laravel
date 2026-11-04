@@ -9,10 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * docs/database/10_CONTENT_SCHEMA.md §7. `content` rendering (plain text vs.
- * HTML) is an open decision (architecture `10` §4, OD #19) — the reference
- * app rendered it as plain preformatted text, so the article view follows
- * that literally rather than guessing at HTML support.
+ * docs/database/10_CONTENT_SCHEMA.md §7. `content` is sanitised HTML from the
+ * rich-text editor (App\Support\HtmlSanitizer); older events hold plain text,
+ * which `HtmlSanitizer::forDisplay()` keeps readable.
  *
  * Past events are not filtered out of the public listing: whether to show
  * only upcoming events is explicitly an unresolved query-level concern

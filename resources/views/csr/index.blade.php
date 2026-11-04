@@ -1,3 +1,4 @@
+@use('App\Support\HtmlSanitizer')
 @use('Illuminate\Support\Facades\Storage')
 {{--
     CSR listing — one column, each project shown one after another with its
@@ -48,8 +49,8 @@
                                         <a href="{{ route('csr.show', $project->slug) }}" class="btn btn-lg btn-brand">View More</a>
                                     </div>
                                 @else
-                                    <div class="mt-4 text-sm leading-relaxed text-muted-foreground [&_a]:font-semibold [&_a]:text-[#CC001F] [&_a]:underline [&_li]:mb-1 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-4 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5">
-                                        {!! $project->content !!}
+                                    <div class="mt-4 text-sm leading-relaxed text-muted-foreground [&_blockquote]:mb-4 [&_blockquote]:border-l-4 [&_blockquote]:border-[#666666]/40 [&_blockquote]:pl-4 [&_blockquote]:italic [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:font-display [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-primary [&_h3]:mt-3 [&_h3]:mb-2 [&_h3]:font-display [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-primary [&_a]:font-semibold [&_a]:text-[#CC001F] [&_a]:underline [&_li]:mb-1 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-4 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5">
+                                        {!! HtmlSanitizer::forDisplay((string) $project->content) !!}
                                     </div>
                                 @endif
                             </div>

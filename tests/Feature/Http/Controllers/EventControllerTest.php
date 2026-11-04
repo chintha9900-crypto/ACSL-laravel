@@ -127,16 +127,16 @@ class EventControllerTest extends MysqlTestCase
      * bracket in stored content must show up literally, not be parsed as a
      * tag (docs/architecture/10 §4, OD #19).
      */
-    public function test_event_content_is_rendered_as_plain_text_not_html(): void
+    public function test_event_content_is_rendered_as_sanitised_rich_text(): void
     {
         $event = EventListing::factory()->published()->create([
-            'content' => 'Line one <b>not bold</b>.',
+            'content' => 'Line one <b>bold</b>.<script>alert(1)</script>',
         ]);
 
         $response = $this->get(route('events.show', $event->slug))->assertOk();
 
-        $response->assertSee('Line one <b>not bold</b>.');
-        $response->assertDontSee('<b>not bold</b>', false);
+        $response->assertSee('Line one <b>bold</b>.', false);
+        $response->assertDontSee('alert(1)', false);
     }
 
     public function test_a_draft_event_404s_like_a_nonexistent_slug(): void

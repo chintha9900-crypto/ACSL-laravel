@@ -1,11 +1,9 @@
+@use('App\Support\HtmlSanitizer')
 @use('Illuminate\Support\Facades\Storage')
 {{--
     Event article — docs/frontend/03_PUBLIC_PAGES.md §A12. `$event->content`
-    is rendered as plain preformatted text ({{ }}, auto-escaped, with
-    `whitespace-pre-line` to keep line breaks) — the reference app rendered
-    event content as plain text and HTML-vs-plain is an open decision
-    (docs/architecture/10 §4, OD #19), so this stage follows the reference
-    literally instead of guessing at HTML support.
+    is sanitised rich text; older plain-text events keep their line breaks
+    (`HtmlSanitizer::forDisplay()`).
 --}}
 <x-layouts.public :title="$event->title">
     <div class="border-b border-border bg-muted/50">
@@ -31,6 +29,6 @@
             <p class="mb-6 text-lg font-medium leading-relaxed text-foreground/85">{{ $event->excerpt }}</p>
         @endif
 
-        <div class="whitespace-pre-line text-base leading-relaxed text-foreground/85">{{ $event->content }}</div>
+        <div class="blog-content">{!! HtmlSanitizer::forDisplay((string) $event->content) !!}</div>
     </div>
 </x-layouts.public>

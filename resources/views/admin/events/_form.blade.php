@@ -31,8 +31,7 @@
     <x-form.input name="excerpt" label="Excerpt" type="textarea" rows="3" :required="false" :value="old('excerpt', $event->excerpt ?? '')" maxlength="2000"
         hint="A short summary shown on the events listing page." />
 
-    <x-form.input name="content" label="Content" type="textarea" rows="12" :value="old('content', $event->content ?? '')"
-        hint="Plain text only — line breaks are preserved, but HTML tags are not rendered." />
+    @include('admin.partials.rich-text-editor', ['content' => $event->content ?? ''])
 
     <div class="space-y-1.5">
         <label for="image" class="block text-sm font-medium leading-none">Image</label>

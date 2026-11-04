@@ -76,6 +76,29 @@ class HtmlSanitizer
         return trim($output);
     }
 
+    /**
+     * Safe HTML for showing or re-editing content that may predate the rich-text
+     * editor. Content with allow-listed tags is simply cleaned. Anything else is
+     * plain text: `<`/`>` stay literal, and blank lines and line breaks become
+     * paragraphs and `<br>`, which would otherwise collapse as HTML.
+     */
+    public static function forDisplay(string $content): string
+    {
+        $content = trim($content);
+        $tags = implode('|', array_keys(self::ALLOWED_TAGS));
+
+        if (preg_match('/<\/?(?:'.$tags.')(?:\s+[a-z-]+\s*=[^<>]*)?\s*\/?>/i', $content) === 1) {
+            return self::clean($content);
+        }
+
+        $paragraphs = preg_split('/\R\s*\R/u', str_replace(['<', '>'], ['&lt;', '&gt;'], $content)) ?: [];
+
+        return self::clean(implode('', array_map(
+            fn (string $paragraph): string => $paragraph === '' ? '' : '<p>'.nl2br($paragraph, false).'</p>',
+            $paragraphs,
+        )));
+    }
+
     private static function sanitizeChildren(DOMNode $node, DOMDocument $dom): void
     {
         foreach (iterator_to_array($node->childNodes) as $child) {

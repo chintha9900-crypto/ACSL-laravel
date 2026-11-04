@@ -91,8 +91,8 @@ class CsrProject extends Model
      */
     public function previewLines(int $lines = 10): string
     {
-        $plain = str_replace(['</p>', '<br>', '<br/>', '<br />'], "\n", $this->content);
-        $plain = trim(strip_tags($plain));
+        $plain = preg_replace('#</(?:p|h[2-4]|li|blockquote)>|<br\s*/?>#i', "\n", $this->content) ?? '';
+        $plain = trim(html_entity_decode(strip_tags($plain), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 
         $allLines = array_values(array_filter(
             preg_split('/\r\n|\r|\n/', $plain),

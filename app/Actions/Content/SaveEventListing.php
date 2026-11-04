@@ -4,6 +4,7 @@ namespace App\Actions\Content;
 
 use App\Models\EventListing;
 use App\Models\User;
+use App\Support\HtmlSanitizer;
 
 /**
  * Mirrors SaveNewsItem/SaveBlogPost: creates/updates an event's editable
@@ -12,13 +13,7 @@ use App\Models\User;
  * UnpublishEventListing), never folded into a general field edit, so this
  * action never touches `status`/`published_at`. The image is handled
  * separately too (UpdateEventImage) since it is an upload, not a plain
- * field.
- *
- * Unlike BlogPost/NewsItem, `content` here is NOT run through
- * HtmlSanitizer — EventListing::class's own docblock documents that its
- * `content` is rendered as plain text (`{{ }}`, not `{!! !!}`, in
- * events/show.blade.php), an explicit, already-settled design decision this
- * CRUD preserves rather than second-guesses.
+ * field. `content` is allow-list sanitised on save, same as Blog/News.
  */
 class SaveEventListing
 {
@@ -27,6 +22,7 @@ class SaveEventListing
      */
     public function create(array $data, User $creator): EventListing
     {
+        $data['content'] = HtmlSanitizer::clean((string) ($data['content'] ?? ''));
         $data['created_by_user_id'] = $creator->id;
         $data['status'] = EventListing::STATUS_DRAFT;
 
@@ -38,6 +34,7 @@ class SaveEventListing
      */
     public function update(EventListing $event, array $data): EventListing
     {
+        $data['content'] = HtmlSanitizer::clean((string) ($data['content'] ?? ''));
         $event->fill($data)->save();
 
         return $event;

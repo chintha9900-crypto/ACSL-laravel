@@ -1,3 +1,4 @@
+@use('App\Support\HtmlSanitizer')
 @use('Illuminate\Support\Facades\Storage')
 <x-layouts.admin :title="$event->title">
     <div class="flex flex-wrap items-center justify-between gap-4">
@@ -52,7 +53,7 @@
             @endif
             <div>
                 <dt class="font-medium text-muted-foreground">Content</dt>
-                <dd class="whitespace-pre-line">{{ $event->content }}</dd>
+                <dd class="blog-content">{!! HtmlSanitizer::forDisplay((string) $event->content) !!}</dd>
             </div>
         </dl>
     </div>
