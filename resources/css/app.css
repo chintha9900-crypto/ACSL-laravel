@@ -6,14 +6,14 @@
 @source '../**/*.js';
 
 /*
- * ACI design tokens — Navy + Sky Blue + White. Headings: Sora | Body: Plus Jakarta Sans.
+ * ACI design tokens — Navy + Sky Blue + White. All text: Calibri.
  * Provisional starting point from the reference application (docs/frontend/02); the final
  * palette and logo are controlled brand assets supplied by ACI (docs/frontend/08 C-02).
  */
 @theme inline {
-    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
-    --font-display: 'Sora', ui-sans-serif, system-ui, sans-serif;
+    --font-sans: Calibri, Carlito, 'Segoe UI', Arial, sans-serif;
+    --font-display: Calibri, Carlito, 'Segoe UI', Arial, sans-serif;
+    --font-mono: Calibri, Carlito, 'Segoe UI', Arial, sans-serif;
 
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);

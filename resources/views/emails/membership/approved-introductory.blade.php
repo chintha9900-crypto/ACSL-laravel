@@ -6,21 +6,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Your Aviation Club application has been approved</title>
 </head>
-<body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:24px 12px;">
-<tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:8px;padding:32px;">
-<tr><td>
-<h1 style="margin:0 0 20px;font-size:20px;color:#0b2a4a;">Aviation Club</h1>
-<p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Hello {{ $name }},</p>
-<p style="margin:0 0 16px;font-size:15px;line-height:1.5;">Congratulations — your {{ $category }} membership application has been approved.</p>
+<body style="margin:0;padding:0;background:#f4f5f7;font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;color:#1f2937;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;background:#f4f5f7;padding:24px 12px;">
+<tr><td align="center" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;max-width:560px;background:#ffffff;border-radius:8px;padding:32px;">
+<tr><td style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;">
+<h1 style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 20px;font-size:20px;color:#0b2a4a;">Aviation Club</h1>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:15px;line-height:1.5;">Hello {{ $name }},</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:15px;line-height:1.5;">Congratulations — your {{ $category }} membership application has been approved.</p>
 @if ($schoolClub ?? false)
-<p style="margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:15px;line-height:1.5;">School Club membership is free — there are no joining or renewal fees. It runs for {{ $months }} {{ Str::plural('month', $months) }} at a time and can be renewed free of charge.</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:15px;line-height:1.5;">School Club membership is free — there are no joining or renewal fees. It runs for {{ $months }} {{ Str::plural('month', $months) }} at a time and can be renewed free of charge.</p>
 @else
-<p style="margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:15px;line-height:1.5;">As a new member, your first {{ $months }} {{ Str::plural('month', $months) }} of membership are free of charge — no payment required.</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:15px;line-height:1.5;">As a new member, your first {{ $months }} {{ Str::plural('month', $months) }} of membership are free of charge — no payment required.</p>
 @endif
-<p style="margin:0 0 16px;font-size:15px;line-height:1.5;">We will be in touch shortly to activate your membership and send you your membership number and account details.</p>
-<p style="margin:24px 0 0;font-size:14px;line-height:1.5;">Aviation Club</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:15px;line-height:1.5;">We will be in touch shortly to activate your membership and send you your membership number and account details.</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:24px 0 0;font-size:14px;line-height:1.5;">Aviation Club</p>
 </td></tr>
 </table>
 </td></tr>
