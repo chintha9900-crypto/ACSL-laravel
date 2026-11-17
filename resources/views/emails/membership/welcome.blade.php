@@ -11,10 +11,10 @@
 <tr><td align="center" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;max-width:560px;background:#ffffff;border-radius:8px;padding:32px;">
 <tr><td style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;">
-<h1 style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 20px;font-size:20px;color:#0b2a4a;">Aviation Club</h1>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:15px;line-height:1.5;">Hello {{ $name }},</p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:15px;line-height:1.5;">Congratulations, and welcome to Aviation Club! You are now a member, and your membership is active.</p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:15px;line-height:1.5;">
+<h1 style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 20px;font-size:22px;color:#0b2a4a;">Aviation Club</h1>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:17px;line-height:1.5;">Hello {{ $name }},</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:17px;line-height:1.5;">Congratulations, and welcome to Aviation Club! You are now a member, and your membership is active.</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:17px;line-height:1.5;">
 Membership number: <strong>{{ $number }}</strong><br>
 Category: {{ $category }}
 @if ($months && $startsOn && $expiresOn)
@@ -25,10 +25,10 @@ Category: {{ $category }}
 @endif
 @endif
 </p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:15px;line-height:1.5;">Your digital membership card, with a QR code you can use to verify your membership, is available on your membership page once you have signed in.</p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:15px;line-height:1.5;">Check your email for a separate message with a secure, one-time link to create your account password.</p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:15px;line-height:1.5;">Once you have created your password, sign in to the member portal at <a href="{{ $loginUrl }}" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;color:#0b2a4a;word-break:break-all;">{{ $loginUrl }}</a> using your registered email address, <strong>{{ $email }}</strong>, as your username.</p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:24px 0 0;font-size:14px;line-height:1.5;">Aviation Club</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:17px;line-height:1.5;">Your digital membership card, with a QR code you can use to verify your membership, is available on your membership page once you have signed in.</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:17px;line-height:1.5;">Check your email for a separate message with a secure, one-time link to create your account password.</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:17px;line-height:1.5;">Once you have created your password, sign in to the member portal at <a href="{{ $loginUrl }}" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;color:#0b2a4a;word-break:break-all;">{{ $loginUrl }}</a> using your registered email address, <strong>{{ $email }}</strong>, as your username.</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:24px 0 0;font-size:16px;line-height:1.5;">Aviation Club</p>
 </td></tr>
 </table>
 </td></tr>

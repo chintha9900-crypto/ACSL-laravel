@@ -240,12 +240,12 @@
                                                 <div class="mt-3 rounded-lg bg-white/10 p-3.5">
                                                     <div class="flex items-start justify-between gap-3">
                                                         <div>
-                                                            <p class="text-[10px] font-bold uppercase tracking-wider text-[#CC001F]">{{ $tier['eyebrow'] }}</p>
+                                                            <p class="text-[12px] font-bold uppercase tracking-wider text-[#CC001F]">{{ $tier['eyebrow'] }}</p>
                                                             <p class="font-display text-base font-bold">{{ $tier['title'] }}</p>
                                                         </div>
                                                         <div class="shrink-0 text-right">
                                                             <p class="font-display text-lg font-bold">LKR {{ $tier['amount'] }}</p>
-                                                            <p class="text-[10px] text-white/60">{{ $tier['period'] }}</p>
+                                                            <p class="text-[12px] text-white/60">{{ $tier['period'] }}</p>
                                                         </div>
                                                     </div>
                                                     <ul class="mt-2.5 space-y-1.5 text-xs text-white/85">

@@ -80,7 +80,7 @@
 
                                     <div class="flex flex-1 flex-col p-5">
                                         @if ($product->access_type === 'MEMBER_ONLY')
-                                            <span class="mb-2 inline-flex w-fit items-center rounded-md border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Members only</span>
+                                            <span class="mb-2 inline-flex w-fit items-center rounded-md border border-border bg-muted px-2 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Members only</span>
                                         @endif
 
                                         <h3 class="line-clamp-2 font-display text-lg font-bold text-primary">
@@ -129,7 +129,7 @@
 
                                     <div class="flex flex-1 flex-col p-5">
                                         @if ($placeholder['access'] === 'MEMBER_ONLY')
-                                            <span class="mb-2 inline-flex w-fit items-center rounded-md border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Members only</span>
+                                            <span class="mb-2 inline-flex w-fit items-center rounded-md border border-border bg-muted px-2 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Members only</span>
                                         @endif
 
                                         <h3 class="line-clamp-2 font-display text-lg font-bold text-primary">{{ $placeholder['name'] }}</h3>

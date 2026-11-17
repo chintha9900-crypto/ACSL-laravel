@@ -10,20 +10,20 @@
 <tr><td align="center" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;max-width:560px;background:#ffffff;border-radius:8px;padding:32px;">
 <tr><td style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;">
-<h1 style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 20px;font-size:20px;color:#0b2a4a;">Aviation Club</h1>
+<h1 style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 20px;font-size:22px;color:#0b2a4a;">Aviation Club</h1>
 @if (! empty($isTest))
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;padding:8px 12px;border:1px solid #CC001F;color:#CC001F;font-size:14px;font-weight:bold;">TEST ORDER — simulated Dummy / Test Payment (Development Only). No money was taken. This is not a valid receipt.</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;padding:8px 12px;border:1px solid #CC001F;color:#CC001F;font-size:16px;font-weight:bold;">TEST ORDER — simulated Dummy / Test Payment (Development Only). No money was taken. This is not a valid receipt.</p>
 @endif
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:15px;line-height:1.5;">Hello {{ $customerName }},</p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:15px;line-height:1.5;">Thank you for your order — your payment has been confirmed. Here is your receipt.</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:17px;line-height:1.5;">Hello {{ $customerName }},</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:17px;line-height:1.5;">Thank you for your order — your payment has been confirmed. Here is your receipt.</p>
 
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:15px;line-height:1.5;">
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:17px;line-height:1.5;">
 Order number: <strong>{{ $orderNumber }}</strong><br>
 Order date: {{ $orderDate }}<br>
 Payment status: <strong>Paid</strong>
 </p>
 
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;font-size:13px;margin:0 0 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;font-size:15px;margin:0 0 16px;">
 <tr style="border-bottom:1px solid #e5e7eb;text-align:left;color:#6b7280;">
 <th style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;padding:6px 4px;">Product</th>
 <th style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;padding:6px 4px;">SKU</th>
@@ -52,7 +52,7 @@ Payment status: <strong>Paid</strong>
 </tr>
 </table>
 
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:24px 0 0;font-size:14px;line-height:1.5;">Aviation Club</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:24px 0 0;font-size:16px;line-height:1.5;">Aviation Club</p>
 </td></tr>
 </table>
 </td></tr>

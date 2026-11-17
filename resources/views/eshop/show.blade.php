@@ -59,7 +59,7 @@
 
                 <div>
                     @if ($product->access_type === 'MEMBER_ONLY')
-                        <span class="mb-3 inline-flex w-fit items-center rounded-md border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Members only</span>
+                        <span class="mb-3 inline-flex w-fit items-center rounded-md border border-border bg-muted px-2 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Members only</span>
                     @endif
 
                     <h1 class="font-display text-3xl font-bold text-primary md:text-4xl">{{ $product->name }}</h1>

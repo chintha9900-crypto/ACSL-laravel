@@ -56,7 +56,7 @@
 
                                 <div class="flex flex-1 flex-col p-5">
                                     @if ($post->category)
-                                        <span class="inline-flex w-fit items-center rounded-md border border-[#666666]/40 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#4D4D4D]">{{ $post->category->name }}</span>
+                                        <span class="inline-flex w-fit items-center rounded-md border border-[#666666]/40 px-2 py-0.5 text-[13px] font-semibold uppercase tracking-wide text-[#4D4D4D]">{{ $post->category->name }}</span>
                                     @endif
 
                                     <h2 class="mt-3 line-clamp-2 font-display text-lg font-bold text-primary">

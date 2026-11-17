@@ -48,7 +48,7 @@
                                 <span class="block text-xs text-muted-foreground" data-review-age>Waiting {{ $payment->submitted_at->diffForHumans(null, \Carbon\CarbonInterface::DIFF_ABSOLUTE) }}</span>
                             @endif
                             @if ($payment->order->expires_at?->isPast())
-                                <span class="mt-1 inline-block rounded border border-[#CC001F]/50 px-1.5 text-[11px] font-semibold text-[#CC001F]" data-review-overdue>Past payment deadline ({{ $payment->order->expires_at->copy()->setTimezone(config('membership.business_timezone'))->format('j M, g:ia') }}) — not auto-expired while under review</span>
+                                <span class="mt-1 inline-block rounded border border-[#CC001F]/50 px-1.5 text-[13px] font-semibold text-[#CC001F]" data-review-overdue>Past payment deadline ({{ $payment->order->expires_at->copy()->setTimezone(config('membership.business_timezone'))->format('j M, g:ia') }}) — not auto-expired while under review</span>
                             @endif
                         </td>
                         <td class="px-4 py-3">

@@ -10,12 +10,12 @@
 <tr><td align="center" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;max-width:560px;background:#ffffff;border-radius:8px;padding:32px;">
 <tr><td style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;">
-<h1 style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 20px;font-size:20px;color:#0b2a4a;">Aviation Club</h1>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:15px;line-height:1.5;">Hello {{ $name }},</p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:15px;line-height:1.5;">It's time to renew your membership (number <strong>{{ $number }}</strong>) for another {{ $months }} months.</p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:15px;line-height:1.5;">Amount due: <strong>{{ $currency }} {{ $amount }}</strong></p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 8px;font-size:15px;line-height:1.5;">Please pay by bank transfer to:</p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:14px;line-height:1.6;">
+<h1 style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 20px;font-size:22px;color:#0b2a4a;">Aviation Club</h1>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:17px;line-height:1.5;">Hello {{ $name }},</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:17px;line-height:1.5;">It's time to renew your membership (number <strong>{{ $number }}</strong>) for another {{ $months }} months.</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:17px;line-height:1.5;">Amount due: <strong>{{ $currency }} {{ $amount }}</strong></p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 8px;font-size:17px;line-height:1.5;">Please pay by bank transfer to:</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;padding:12px 16px;background:#f4f5f7;border-radius:6px;font-size:16px;line-height:1.6;">
 {{ $bank->bank_name }}<br>
 Account name: {{ $bank->account_name }}<br>
 Account number: {{ $bank->account_number }}<br>
@@ -25,9 +25,9 @@ Account number: {{ $bank->account_number }}<br>
 @if ($bank->swift_bic)SWIFT/BIC: {{ $bank->swift_bic }}<br>@endif
 @if ($bank->instructions)<br>{{ $bank->instructions }}@endif
 </p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:15px;line-height:1.5;">Once you have paid, submit your payment reference and evidence on your membership page. There is no automatic renewal — your membership will not renew unless you pay and an admin confirms it.</p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:24px 0;text-align:center;"><a href="{{ $url }}" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;display:inline-block;background:#0b2a4a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:12px 24px;border-radius:6px;">Go to your membership</a></p>
-<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:24px 0 0;font-size:14px;line-height:1.5;">Aviation Club</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:0 0 16px;font-size:17px;line-height:1.5;">Once you have paid, submit your payment reference and evidence on your membership page. There is no automatic renewal — your membership will not renew unless you pay and an admin confirms it.</p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:24px 0;text-align:center;"><a href="{{ $url }}" style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;display:inline-block;background:#0b2a4a;color:#ffffff;text-decoration:none;font-size:17px;font-weight:bold;padding:12px 24px;border-radius:6px;">Go to your membership</a></p>
+<p style="font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;margin:24px 0 0;font-size:16px;line-height:1.5;">Aviation Club</p>
 </td></tr>
 </table>
 </td></tr>

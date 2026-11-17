@@ -38,35 +38,35 @@ a img {
 
 h1 {
     color: #18181b;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: bold;
     margin-top: 0;
     text-align: start;
 }
 
 h2 {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: bold;
     margin-top: 0;
     text-align: start;
 }
 
 h3 {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: bold;
     margin-top: 0;
     text-align: left;
 }
 
 p {
-    font-size: 16px;
+    font-size: 18px;
     line-height: 1.5em;
     margin-top: 0;
     text-align: left;
 }
 
 p.sub {
-    font-size: 12px;
+    font-size: 14px;
 }
 
 img {
@@ -103,7 +103,7 @@ img {
 
 .header a {
     color: #18181b;
-    font-size: 19px;
+    font-size: 21px;
     font-weight: bold;
     text-decoration: none;
 }
@@ -159,7 +159,7 @@ img {
 }
 
 .subcopy p {
-    font-size: 14px;
+    font-size: 16px;
 }
 
 /* Footer */
@@ -176,7 +176,7 @@ img {
 
 .footer p {
     color: #a1a1aa;
-    font-size: 12px;
+    font-size: 14px;
     text-align: center;
 }
 
@@ -203,7 +203,7 @@ img {
 
 .table td {
     color: #52525b;
-    font-size: 15px;
+    font-size: 17px;
     line-height: 18px;
     margin: 0;
     padding: 10px 0;
