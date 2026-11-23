@@ -28,6 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Job listings past their deadline date (Asia/Colombo). Public pages
         // already hide them by date; this keeps the stored status accurate.
         $schedule->command('jobs:expire')->hourly()->withoutOverlapping();
+
+        // Education inline images no article uses and older than 24 hours.
+        $schedule->command('education:prune-inline-images')->daily()->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // PayHere's server-to-server callback cannot carry a CSRF token; it is

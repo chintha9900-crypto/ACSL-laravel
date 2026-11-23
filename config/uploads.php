@@ -116,4 +116,20 @@ return [
         'extensions' => ['jpg', 'jpeg', 'png'],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Education article images (Education module), on the public disk: the
+    | optional featured image, and images inserted into article content.
+    |--------------------------------------------------------------------------
+    */
+    'education_image' => [
+        'max_kb' => 3072,
+        'extensions' => ['jpg', 'jpeg', 'png'],
+    ],
+
+    'education_inline_image' => [
+        'max_kb' => 3072,
+        'extensions' => ['jpg', 'jpeg', 'png'],
+    ],
+
 ];

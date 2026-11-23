@@ -49,7 +49,15 @@ class HtmlSanitizer
         'input', 'button', 'svg', 'math', 'link', 'meta', 'noscript',
     ];
 
-    public static function clean(string $html): string
+    /**
+     * @param  string|null  $allowImagesUnder  Opt-in (Education only): a URL path prefix such as
+     *                                         `/storage/education/inline/`. When given, `<img>` is kept only
+     *                                         if its source is a file directly under that prefix on this site
+     *                                         (rewritten to the bare path) and only `src`/`alt` survive.
+     *                                         Any other image is removed. When null (the default, used by
+     *                                         every other caller) behaviour is exactly as before: no images.
+     */
+    public static function clean(string $html, ?string $allowImagesUnder = null): string
     {
         if (trim($html) === '') {
             return '';
@@ -66,7 +74,7 @@ class HtmlSanitizer
             return '';
         }
 
-        self::sanitizeChildren($body, $dom);
+        self::sanitizeChildren($body, $dom, $allowImagesUnder);
 
         $output = '';
         foreach (iterator_to_array($body->childNodes) as $child) {
@@ -82,13 +90,13 @@ class HtmlSanitizer
      * plain text: `<`/`>` stay literal, and blank lines and line breaks become
      * paragraphs and `<br>`, which would otherwise collapse as HTML.
      */
-    public static function forDisplay(string $content): string
+    public static function forDisplay(string $content, ?string $allowImagesUnder = null): string
     {
         $content = trim($content);
-        $tags = implode('|', array_keys(self::ALLOWED_TAGS));
+        $tags = implode('|', array_keys(self::ALLOWED_TAGS)).($allowImagesUnder !== null ? '|img' : '');
 
         if (preg_match('/<\/?(?:'.$tags.')(?:\s+[a-z-]+\s*=[^<>]*)?\s*\/?>/i', $content) === 1) {
-            return self::clean($content);
+            return self::clean($content, $allowImagesUnder);
         }
 
         $paragraphs = preg_split('/\R\s*\R/u', str_replace(['<', '>'], ['&lt;', '&gt;'], $content)) ?: [];
@@ -99,7 +107,7 @@ class HtmlSanitizer
         )));
     }
 
-    private static function sanitizeChildren(DOMNode $node, DOMDocument $dom): void
+    private static function sanitizeChildren(DOMNode $node, DOMDocument $dom, ?string $allowImagesUnder = null): void
     {
         foreach (iterator_to_array($node->childNodes) as $child) {
             if ($child instanceof DOMElement) {
@@ -111,11 +119,17 @@ class HtmlSanitizer
                     continue;
                 }
 
+                if ($tag === 'img' && $allowImagesUnder !== null) {
+                    self::keepLocalImageOrRemove($child, $node, $allowImagesUnder);
+
+                    continue;
+                }
+
                 if (! array_key_exists($tag, self::ALLOWED_TAGS)) {
                     // Not on the allow-list, but not inherently dangerous
                     // either (e.g. <div>, <span>, <table>): unwrap it —
                     // sanitise and keep its children, drop the tag itself.
-                    self::sanitizeChildren($child, $dom);
+                    self::sanitizeChildren($child, $dom, $allowImagesUnder);
 
                     while ($child->firstChild !== null) {
                         $node->insertBefore($child->firstChild, $child);
@@ -127,11 +141,69 @@ class HtmlSanitizer
                 }
 
                 self::stripDisallowedAttributes($child, self::ALLOWED_TAGS[$tag]);
-                self::sanitizeChildren($child, $dom);
+                self::sanitizeChildren($child, $dom, $allowImagesUnder);
             } elseif ($child->nodeType === XML_COMMENT_NODE) {
                 $node->removeChild($child);
             }
         }
+    }
+
+    /**
+     * Keeps an `<img>` only when its source is a file directly under the
+     * allowed path prefix on this site — relative, or absolute http(s) on
+     * the app's own host — with a plain file name (no query, fragment or
+     * sub-folder). The source is rewritten to that bare path, and only `src`
+     * and a plain-text `alt` (max 255 characters) remain. Anything else —
+     * external hosts, `data:`, `javascript:`, other folders — is removed.
+     */
+    private static function keepLocalImageOrRemove(DOMElement $image, DOMNode $parent, string $allowImagesUnder): void
+    {
+        $path = self::localImagePath(trim($image->getAttribute('src')), $allowImagesUnder);
+
+        if ($path === null) {
+            $parent->removeChild($image);
+
+            return;
+        }
+
+        $alt = mb_substr(trim(preg_replace('/\s+/u', ' ', $image->getAttribute('alt')) ?? ''), 0, 255);
+
+        foreach (iterator_to_array($image->attributes ?? []) as $attribute) {
+            $image->removeAttribute($attribute->name);
+        }
+
+        while ($image->firstChild !== null) {
+            $image->removeChild($image->firstChild);
+        }
+
+        $image->setAttribute('src', $path);
+        $image->setAttribute('alt', $alt);
+    }
+
+    private static function localImagePath(string $src, string $allowImagesUnder): ?string
+    {
+        $parts = parse_url($src);
+
+        if ($src === '' || $parts === false || isset($parts['query']) || isset($parts['fragment']) || isset($parts['user']) || isset($parts['pass'])) {
+            return null;
+        }
+
+        if (isset($parts['host']) || isset($parts['scheme'])) {
+            $scheme = strtolower($parts['scheme'] ?? '');
+            $host = strtolower($parts['host'] ?? '');
+            $ownHosts = array_filter([
+                strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST)),
+                app()->bound('request') ? strtolower(request()->getHost()) : '',
+            ]);
+
+            if (! in_array($scheme, ['http', 'https'], true) || ! in_array($host, $ownHosts, true)) {
+                return null;
+            }
+        }
+
+        $path = $parts['path'] ?? '';
+
+        return preg_match('#^'.preg_quote($allowImagesUnder, '#').'[0-9a-z]{26}\.(?:jpg|png)$#', $path) === 1 ? $path : null;
     }
 
     /**

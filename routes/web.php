@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\CsrController as AdminCsrController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\EditorInvitationController;
+use App\Http\Controllers\Admin\EducationArticleController as AdminEducationArticleController;
 use App\Http\Controllers\Admin\EshopReportController;
 use App\Http\Controllers\Admin\EshopSettingsController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
@@ -37,6 +38,7 @@ use App\Http\Controllers\CsrController;
 use App\Http\Controllers\Dev\DashboardController as DevDashboardController;
 use App\Http\Controllers\DummyPaymentController;
 use App\Http\Controllers\Editor\DashboardController as EditorDashboardController;
+use App\Http\Controllers\EducationController;
 use App\Http\Controllers\EshopController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\JobListingController;
@@ -83,8 +85,9 @@ Route::get('rules', function () {
     return view('rules');
 })->name('rules');
 
-// Static information page linked from the red secondary navigation strip.
-Route::view('education', 'education')->name('education');
+// Education page and its articles: published articles only.
+Route::get('education', [EducationController::class, 'index'])->name('education');
+Route::get('education/{article:slug}', [EducationController::class, 'show'])->name('education.show');
 
 // Public job board: only publicly visible jobs (JobListing::scopePubliclyVisible()).
 Route::get('jobs', [JobListingController::class, 'index'])->name('jobs');
@@ -422,6 +425,20 @@ Route::middleware(['auth', 'active', 'role:admin,editor'])->prefix('admin')->nam
         Route::delete('{job}', 'destroy')->name('destroy');
         Route::post('{job}/publish', 'publish')->name('publish');
         Route::post('{job}/unpublish', 'unpublish')->name('unpublish');
+    });
+
+    // Education management (admin and editor); `show` is the draft-safe preview.
+    Route::controller(AdminEducationArticleController::class)->prefix('education')->name('education.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::post('images', 'uploadImage')->middleware('throttle:30,1')->name('images.store');
+        Route::get('{article}/edit', 'edit')->name('edit');
+        Route::get('{article}', 'show')->name('show');
+        Route::patch('{article}', 'update')->name('update');
+        Route::delete('{article}', 'destroy')->name('destroy');
+        Route::post('{article}/publish', 'publish')->name('publish');
+        Route::post('{article}/unpublish', 'unpublish')->name('unpublish');
     });
 
     Route::controller(AdminCommercialPartnerController::class)->prefix('commercial-partners')->name('commercial-partners.')->group(function () {

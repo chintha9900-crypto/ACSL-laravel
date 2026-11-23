@@ -67,6 +67,9 @@
                         @can('viewAny', \App\Models\JobListing::class)
                             <a href="{{ route('admin.jobs.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Jobs</a>
                         @endcan
+                        @can('viewAny', \App\Models\EducationArticle::class)
+                            <a href="{{ route('admin.education.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Education</a>
+                        @endcan
                         @can('viewAny', \App\Models\CommercialPartner::class)
                             <a href="{{ route('admin.commercial-partners.index') }}" class="text-sm font-medium text-primary-foreground/85 hover:text-secondary">Commercial partners</a>
                         @endcan

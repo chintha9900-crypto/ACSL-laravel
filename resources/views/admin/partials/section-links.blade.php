@@ -61,6 +61,13 @@
         </a>
     @endcan
 
+    @can('viewAny', \App\Models\EducationArticle::class)
+        <a href="{{ route('admin.education.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
+            <h2 class="font-display text-base font-semibold text-primary">Education</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Write, order and publish Education page articles.</p>
+        </a>
+    @endcan
+
     @can('viewAny', \App\Models\CommercialPartner::class)
         <a href="{{ route('admin.commercial-partners.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
             <h2 class="font-display text-base font-semibold text-primary">Commercial partners</h2>

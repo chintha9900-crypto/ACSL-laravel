@@ -14,16 +14,25 @@
     @param  string  $field  The textarea name (default "content").
     @param  string  $fieldLabel  The visible label (default "Content").
     @param  bool  $fieldRequired  Whether the field is required (default true).
+    @param  string|null  $imageUploadUrl  Opt-in (Education only): adds an "Image" button that uploads to
+                                         this URL and inserts the returned image. Null (the default) renders
+                                         nothing extra, so every other caller's output is unchanged.
+    @param  string|null  $imageUrlPrefix  With $imageUploadUrl: the only image path prefix the cleaner keeps.
+    @param  int|null  $imageMaxKb  With $imageUploadUrl: the upload size limit, checked before uploading.
 --}}
 @php
     $rteField = $field ?? 'content';
     $rteLabel = $fieldLabel ?? 'Content';
     $rteRequired = $fieldRequired ?? true;
     $rteEditorId = str_replace(['[', ']', '.'], '_', $rteField).'-editor';
+    $rteImageUploadUrl = $imageUploadUrl ?? null;
+    $rteImageUrlPrefix = $rteImageUploadUrl ? ($imageUrlPrefix ?? null) : null;
 @endphp
 <div class="space-y-1.5" data-rte-root="{{ $rteField }}">
-    <x-form.input :name="$rteField" :label="$rteLabel" :required="$rteRequired" type="textarea" rows="12" :value="HtmlSanitizer::forDisplay((string) old($rteField, $content ?? ''))"
-        hint="Formatting: headings, bold, italic, underline, lists, quotes, links and text alignment. Anything else is removed when you save." />
+    <x-form.input :name="$rteField" :label="$rteLabel" :required="$rteRequired" type="textarea" rows="12" :value="HtmlSanitizer::forDisplay((string) old($rteField, $content ?? ''), $rteImageUrlPrefix)"
+        :hint="$rteImageUploadUrl
+            ? 'Formatting: headings, bold, italic, underline, lists, quotes, links, text alignment and images (JPG or PNG, added with the Image button; double-click an image to change its description, or select it and press Delete to remove it). Anything else is removed when you save.'
+            : 'Formatting: headings, bold, italic, underline, lists, quotes, links and text alignment. Anything else is removed when you save.'" />
 
     <div data-rte-toolbar hidden role="toolbar" aria-label="Formatting" aria-controls="{{ $rteEditorId }}" class="flex flex-wrap gap-1 rounded-t-md border border-b-0 border-input bg-muted/40 p-1.5">
         @foreach ([
@@ -46,6 +55,11 @@
             <button type="button" data-rte-command="{{ $command }}" @if ($value) data-rte-value="{{ $value }}" @endif title="{{ $title }}" aria-label="{{ $title }}"
                 class="rounded border border-transparent px-2 py-1 text-xs font-semibold text-foreground hover:border-input hover:bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">{{ $label }}</button>
         @endforeach
+        @if ($rteImageUploadUrl)
+            <button type="button" data-rte-image data-rte-image-url="{{ $rteImageUploadUrl }}" data-rte-image-max-bytes="{{ (int) ($imageMaxKb ?? 3072) * 1024 }}" data-rte-csrf="{{ csrf_token() }}" title="Insert image" aria-label="Insert image"
+                class="rounded border border-transparent px-2 py-1 text-xs font-semibold text-foreground hover:border-input hover:bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">Image</button>
+            <input type="file" data-rte-image-input accept=".jpg,.jpeg,.png,image/jpeg,image/png" hidden tabindex="-1" aria-hidden="true">
+        @endif
     </div>
     <div id="{{ $rteEditorId }}" data-rte-editor hidden contenteditable="true" role="textbox" aria-multiline="true" aria-label="{{ $rteLabel }}"
         class="blog-content min-h-[16rem] w-full rounded-b-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"></div>
@@ -107,5 +121,69 @@
         });
         editor.addEventListener('input', sync);
         textarea.form.addEventListener('submit', function () { normalize(); sync(); });
+@if ($rteImageUploadUrl)
+
+        // Image button (Education only): upload the chosen file, ask for alt
+        // text, and insert it as its own paragraph after the current block.
+        // The element is built with the DOM API (no HTML strings); the server
+        // keeps only images from its own upload folder anyway.
+        var imageButton = toolbar.querySelector('[data-rte-image]');
+        var imageInput = toolbar.querySelector('[data-rte-image-input]');
+        var savedRange = null;
+
+        imageButton.addEventListener('click', function () {
+            var selection = window.getSelection();
+            savedRange = selection.rangeCount && editor.contains(selection.anchorNode) ? selection.getRangeAt(0).cloneRange() : null;
+            imageInput.value = '';
+            imageInput.click();
+        });
+
+        imageInput.addEventListener('change', function () {
+            var file = imageInput.files[0];
+            if (!file) { return; }
+            if (['image/jpeg', 'image/png'].indexOf(file.type) === -1) { window.alert('Please choose a JPG or PNG image.'); return; }
+            if (file.size > Number(imageButton.getAttribute('data-rte-image-max-bytes'))) { window.alert('This image is too large. Please choose a smaller image.'); return; }
+
+            var data = new FormData();
+            data.append('image', file);
+            imageButton.disabled = true;
+            imageButton.textContent = 'Uploading…';
+
+            fetch(imageButton.getAttribute('data-rte-image-url'), {
+                method: 'POST', body: data, credentials: 'same-origin',
+                headers: { 'X-CSRF-TOKEN': imageButton.getAttribute('data-rte-csrf'), 'Accept': 'application/json' },
+            })
+                .then(function (response) {
+                    return response.json().catch(function () { return {}; }).then(function (json) {
+                        if (!response.ok || typeof json.url !== 'string') {
+                            throw new Error((json.errors && json.errors.image && json.errors.image[0]) || 'The image could not be uploaded.');
+                        }
+                        return json;
+                    });
+                })
+                .then(function (json) {
+                    var image = document.createElement('img');
+                    image.src = json.url;
+                    image.alt = (window.prompt('Describe this image for people who cannot see it (alt text):', '') || '').trim();
+                    var paragraph = document.createElement('p');
+                    paragraph.appendChild(image);
+
+                    var block = savedRange ? savedRange.startContainer : null;
+                    while (block && block.parentNode !== editor) { block = block.parentNode; }
+                    if (block) { editor.insertBefore(paragraph, block.nextSibling); } else { editor.appendChild(paragraph); }
+                    sync();
+                })
+                .catch(function (error) { window.alert(error.message); })
+                .finally(function () { imageButton.disabled = false; imageButton.textContent = 'Image'; });
+        });
+
+        editor.addEventListener('dblclick', function (event) {
+            if (event.target.tagName !== 'IMG') { return; }
+            var alt = window.prompt('Describe this image for people who cannot see it (alt text):', event.target.alt);
+            if (alt === null) { return; }
+            event.target.alt = alt.trim();
+            sync();
+        });
+@endif
     })(@json($rteField));
 </script>
