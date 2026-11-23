@@ -1,5 +1,5 @@
 <x-layouts.public title="Membership verification">
-    <div class="container mx-auto max-w-md px-4 py-16 text-center">
+    <div class="site-container content-narrow py-16 text-center">
         @if ($isValid)
             <div class="ui-card p-8">
                 <div class="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-secondary/15 text-secondary">

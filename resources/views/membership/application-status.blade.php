@@ -37,7 +37,7 @@
         Track your <span class="text-gradient">application.</span>
     </x-public.hero>
 
-    <section class="container mx-auto max-w-5xl px-4 py-16 md:py-20 lg:px-8">
+    <section class="site-container content-narrow py-16 md:py-20">
         <div class="ui-card p-6 md:p-8">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <h2 class="font-display text-2xl font-bold text-primary">Your application</h2>

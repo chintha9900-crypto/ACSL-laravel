@@ -105,4 +105,15 @@ return [
         'extensions' => ['jpg', 'jpeg', 'png'],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Job listing employer logo (Jobs module). Stored on the public disk, same
+    | convention as the commercial partner logo.
+    |--------------------------------------------------------------------------
+    */
+    'job_logo' => [
+        'max_kb' => 2048,
+        'extensions' => ['jpg', 'jpeg', 'png'],
+    ],
+
 ];

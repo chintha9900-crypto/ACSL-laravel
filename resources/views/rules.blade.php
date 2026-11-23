@@ -18,7 +18,7 @@
     </x-public.hero>
 
     <section class="border-t border-border">
-        <div class="container mx-auto max-w-3xl px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container content-reading py-16 md:py-20">
             <div class="space-y-6">
                 <div class="ui-card p-6 md:p-8">
                     <h2 class="font-display text-xl font-bold text-primary">Eligibility</h2>

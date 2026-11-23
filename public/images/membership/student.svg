@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800">
+  <!-- Temporary placeholder for the Student card: a graduation cap and a training aircraft's flight path. Replace with approved photography. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#132f63"/>
+      <stop offset="1" stop-color="#5b9be0"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="800" fill="url(#sky)"/>
+  <g fill="#ffffff" opacity="0.15">
+    <ellipse cx="460" cy="160" rx="140" ry="26"/>
+    <ellipse cx="110" cy="640" rx="170" ry="30"/>
+  </g>
+  <path d="M70 560 C 150 420, 330 470, 420 300 S 520 140, 560 110" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"/>
+  <g transform="translate(300 320)" fill="#ffffff">
+    <path d="M0 -70 L 170 0 L 0 70 L -170 0 Z"/>
+    <path d="M-100 40 L -100 110 C -60 145 60 145 100 110 L 100 40 L 0 82 Z" opacity="0.85"/>
+    <path d="M150 8 L 150 120" stroke="#ffffff" stroke-width="7"/>
+    <rect x="138" y="118" width="24" height="44" rx="6"/>
+  </g>
+  <g transform="translate(520 120) rotate(-35) scale(0.22)" fill="#ffffff">
+    <path d="M0 20 C 0 8 20 0 40 0 L 260 0 C 285 0 300 10 300 20 C 300 30 285 40 260 40 L 40 40 C 20 40 0 32 0 20 Z"/>
+    <path d="M10 2 L -10 -60 L 30 -60 L 70 2 Z"/>
+    <path d="M120 26 L 60 112 L 96 112 L 190 28 Z"/>
+  </g>
+</svg>

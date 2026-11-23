@@ -36,7 +36,7 @@
 
     {{-- Categories --}}
     <section class="border-t border-border">
-        <div class="container mx-auto px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container py-16 md:py-20">
             @if ($categories->isEmpty())
                 <p class="mx-auto max-w-md rounded-lg border border-border bg-muted px-4 py-3 text-center text-sm text-foreground" role="status">
                     Membership categories are not published yet. Please check back soon.
@@ -208,7 +208,7 @@
                          Enthusiast/Student row stays compact and its two cards share
                          one height. While an eligibility check is open, cards keep
                          their natural height so only the opened card grows. --}}
-                    <div class="mx-auto mt-8 grid max-w-5xl gap-4 lg:grid-cols-2 lg:has-[details[open]]:items-start lg:has-[details[open]]:*:h-auto">
+                    <div class="mx-auto mt-8 grid gap-4 lg:grid-cols-2 lg:has-[details[open]]:items-start lg:has-[details[open]]:*:h-auto">
                         @foreach ($individualCategories as $category)
                             @php
                                 $content = $cardContent[$category->code] ?? null;
@@ -464,7 +464,7 @@
                     {{-- Same grid width/columns as the Individual section
                          above so this reads as its row 3: Corporate in the
                          left cell, the right cell intentionally left empty. --}}
-                    <div class="mx-auto mt-8 grid max-w-5xl gap-4 lg:grid-cols-2">
+                    <div class="mx-auto mt-8 grid gap-4 lg:grid-cols-2">
                         @if ($corporate)
                         @php
                             $content = $cardContent['C'];
@@ -574,7 +574,7 @@
 
     {{-- Application process --}}
     <section class="border-t border-border bg-muted/50">
-        <div class="container mx-auto px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container py-16 md:py-20">
             <div class="mx-auto max-w-2xl text-center">
                 <h2 class="font-display text-3xl font-bold tracking-tight text-primary md:text-4xl">Application Process</h2>
                 <p class="mt-3 text-lg text-muted-foreground">A few easy steps to becoming a member.</p>
@@ -591,7 +591,7 @@
                 ];
             @endphp
 
-            <div class="mx-auto mt-10 max-w-6xl rounded-xl bg-[#4D4D4D] p-6 shadow-card md:p-10">
+            <div class="mx-auto mt-10 rounded-xl bg-[#4D4D4D] p-6 shadow-card md:p-10">
                 <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:flex lg:items-start lg:gap-0">
                     @foreach ($steps as $index => $step)
                         <div class="flex flex-1 flex-col px-2 text-left text-white">

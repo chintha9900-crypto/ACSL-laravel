@@ -19,7 +19,7 @@
     </x-public.hero>
 
     <section class="border-t border-border">
-        <div class="container mx-auto px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container py-16 md:py-20">
             <div class="grid gap-12 lg:grid-cols-2 lg:gap-8">
                 {{-- News column --}}
                 <div class="lg:border-r lg:border-border lg:pr-8">

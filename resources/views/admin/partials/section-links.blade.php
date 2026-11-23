@@ -54,6 +54,13 @@
         </a>
     @endcan
 
+    @can('viewAny', \App\Models\JobListing::class)
+        <a href="{{ route('admin.jobs.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
+            <h2 class="font-display text-base font-semibold text-primary">Jobs</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Add, edit, publish and expire job vacancies.</p>
+        </a>
+    @endcan
+
     @can('viewAny', \App\Models\CommercialPartner::class)
         <a href="{{ route('admin.commercial-partners.index') }}" class="ui-card block p-5 transition-colors hover:border-primary/60">
             <h2 class="font-display text-base font-semibold text-primary">Commercial partners</h2>

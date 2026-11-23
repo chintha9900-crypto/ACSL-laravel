@@ -183,35 +183,32 @@
     opacity: 0.9;
 }
 
-/*
- * Public site header/footer inner-content spacing only — moves the logo
- * ~4% in from the left edge and the nav/"Join Now" area (header) and the
- * footer columns ~4% in from the right edge. Deliberately NOT applied to
- * every `.theme-public .container` (that was the previous, too-broad
- * version of this rule): scoping to `header`/`footer` descendants means
- * every ordinary page's own `<main>` content — which uses the identical
- * `container mx-auto px-4 ... lg:px-8` pattern — is completely untouched,
- * since `<main>` is a sibling of `<header>`/`<footer>`, never their
- * ancestor or descendant. The compound selector (both `.container` and the
- * padding utility required) also leaves every unrelated `px-4`/`lg:px-8`
- * use (buttons, cards, etc.) alone, and the media query mirrors Tailwind's
- * own `lg` breakpoint so responsive behaviour, header/footer height, logo
- * size and nav behaviour are all unchanged — only the inner padding widens.
- */
-.theme-public header .container.px-4,
-.theme-public footer .container.px-4 {
-    padding-inline: 1.04rem;
-}
-
-@media (min-width: 1024px) {
-    .theme-public header .container.px-4.lg\:px-8,
-    .theme-public footer .container.px-4.lg\:px-8 {
-        padding-inline: 2.08rem;
-    }
-}
-
 /* Reusable pieces matching the reference's shadcn Card, Input/Textarea and Button. */
 @layer components {
+    /*
+     * Standard public-site width, shared by the header, footer, homepage hero
+     * and every public page: fluid below 1200px, at most 1200px wide (padding
+     * included) and centred above it.
+     */
+    .site-container {
+        @apply mx-auto w-full max-w-[1200px] px-[1.04rem] lg:px-[2.08rem];
+    }
+
+    /*
+     * Narrower, centred content inside a .site-container whose outer edges stay
+     * unchanged: 48rem for long-form reading, 40rem for confirmation/status
+     * screens. A child's own max-width or margin utilities still take priority.
+     */
+    .content-reading > * {
+        max-width: 48rem;
+        margin-inline: auto;
+    }
+
+    .content-narrow > * {
+        max-width: 40rem;
+        margin-inline: auto;
+    }
+
     .ui-card {
         @apply rounded-xl border border-border/60 bg-card text-card-foreground shadow-card;
     }

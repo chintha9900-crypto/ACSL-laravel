@@ -15,7 +15,7 @@
     </x-public.hero>
 
     <section class="border-t border-border">
-        <div class="container mx-auto grid gap-8 px-4 py-16 md:py-20 lg:grid-cols-3 lg:px-8">
+        <div class="site-container grid gap-8 py-16 md:py-20 lg:grid-cols-3">
             <div class="min-w-0 lg:col-span-2">
                 @if ($filtering)
                     <div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm" role="status">

@@ -26,7 +26,7 @@
     </x-public.hero>
 
     <section class="border-t border-border">
-        <div class="container mx-auto px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container py-16 md:py-20">
             @if ($partners->isEmpty())
                 <p class="rounded-lg border border-border bg-muted px-4 py-8 text-center text-sm text-muted-foreground" role="status">
                     No commercial partners are listed right now. Please check back soon.
@@ -72,9 +72,7 @@
                 </ul>
             @endif
 
-            <div class="mt-10 flex justify-center">
-                <a href="{{ route('membership.apply') }}" class="btn btn-lg btn-brand">Become a Member</a>
-            </div>
+            
         </div>
     </section>
 </x-layouts.public>

@@ -17,7 +17,7 @@
     </x-public.hero>
 
     <section class="border-t border-border">
-        <div class="container mx-auto max-w-3xl px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container content-reading py-16 md:py-20">
             <p class="rounded-lg border border-[#666666]/30 bg-muted px-4 py-3 text-sm text-[#4D4D4D]" role="status">
                 This Privacy Policy is being finalised by Aviation Club. The sections below outline what it will cover; full content will be published here once approved.
             </p>

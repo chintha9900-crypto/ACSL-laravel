@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800">
+  <!-- Temporary placeholder for the Aviation Enthusiast card: an airliner climbing at sunrise. Replace with approved photography. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b2a4a"/>
+      <stop offset="0.55" stop-color="#3f7fb8"/>
+      <stop offset="1" stop-color="#f2b872"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff4d6"/>
+      <stop offset="1" stop-color="#fff4d6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="800" fill="url(#sky)"/>
+  <circle cx="430" cy="610" r="190" fill="url(#sun)"/>
+  <g fill="#ffffff" opacity="0.18">
+    <ellipse cx="120" cy="560" rx="150" ry="28"/>
+    <ellipse cx="470" cy="470" rx="130" ry="22"/>
+    <ellipse cx="300" cy="700" rx="260" ry="40"/>
+  </g>
+  <path d="M40 520 C 160 470, 250 400, 330 330" fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="6" stroke-linecap="round"/>
+  <g transform="translate(300 300) rotate(-28) scale(0.8)" fill="#ffffff">
+    <path d="M0 20 C 0 8 20 0 40 0 L 260 0 C 285 0 300 10 300 20 C 300 30 285 40 260 40 L 40 40 C 20 40 0 32 0 20 Z"/>
+    <path d="M10 2 L -10 -60 L 30 -60 L 70 2 Z"/>
+    <path d="M20 22 L -15 40 L 12 42 L 60 26 Z"/>
+    <path d="M120 26 L 60 112 L 96 112 L 190 28 Z"/>
+    <rect x="100" y="58" width="52" height="18" rx="9"/>
+  </g>
+</svg>

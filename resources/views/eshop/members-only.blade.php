@@ -5,7 +5,7 @@
 --}}
 <x-layouts.public title="Members-only product">
     <section class="border-t border-border">
-        <div class="container mx-auto px-4 py-16 lg:px-8">
+        <div class="site-container py-16">
             <a href="{{ route('eshop.index') }}" class="text-sm font-semibold text-[#CC001F] hover:underline">&larr; Back to shop</a>
 
             <div class="ui-card mt-6 max-w-xl p-6 md:p-8">

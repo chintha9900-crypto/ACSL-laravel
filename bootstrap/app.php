@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Unpaid e-shop orders: PayHere deadlines are 30 minutes, so check often.
         $schedule->command('orders:expire-unpaid')->everyFiveMinutes()->withoutOverlapping();
+
+        // Job listings past their deadline date (Asia/Colombo). Public pages
+        // already hide them by date; this keeps the stored status accurate.
+        $schedule->command('jobs:expire')->hourly()->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // PayHere's server-to-server callback cannot carry a CSRF token; it is

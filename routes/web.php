@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\EshopReportController;
 use App\Http\Controllers\Admin\EshopSettingsController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\InventoryController;
+use App\Http\Controllers\Admin\JobListingController as AdminJobListingController;
 use App\Http\Controllers\Admin\MembershipActivationController;
 use App\Http\Controllers\Admin\MembershipApplicationController as AdminMembershipApplicationController;
 use App\Http\Controllers\Admin\MembershipApplicationReviewController;
@@ -38,6 +39,7 @@ use App\Http\Controllers\DummyPaymentController;
 use App\Http\Controllers\Editor\DashboardController as EditorDashboardController;
 use App\Http\Controllers\EshopController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\JobListingController;
 use App\Http\Controllers\Member\DashboardController;
 use App\Http\Controllers\Member\DocumentController as MemberDocumentController;
 use App\Http\Controllers\Member\MembershipCardController;
@@ -80,6 +82,13 @@ Route::get('commercial-partners', [CommercialPartnerController::class, 'show'])-
 Route::get('rules', function () {
     return view('rules');
 })->name('rules');
+
+// Static information page linked from the red secondary navigation strip.
+Route::view('education', 'education')->name('education');
+
+// Public job board: only publicly visible jobs (JobListing::scopePubliclyVisible()).
+Route::get('jobs', [JobListingController::class, 'index'])->name('jobs');
+Route::get('jobs/{job:slug}', [JobListingController::class, 'show'])->name('jobs.show');
 
 // Static Q&A content today; the one dynamic fact (the introductory period's
 // length) is read from membership settings, never hard-coded.
@@ -400,6 +409,19 @@ Route::middleware(['auth', 'active', 'role:admin,editor'])->prefix('admin')->nam
         Route::delete('{project}', 'destroy')->name('destroy');
         Route::post('{project}/publish', 'publish')->name('publish');
         Route::post('{project}/unpublish', 'unpublish')->name('unpublish');
+    });
+
+    // Jobs management (admin and editor). No public job routes in this stage.
+    Route::controller(AdminJobListingController::class)->prefix('jobs')->name('jobs.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('{job}/edit', 'edit')->name('edit');
+        Route::get('{job}', 'show')->name('show');
+        Route::patch('{job}', 'update')->name('update');
+        Route::delete('{job}', 'destroy')->name('destroy');
+        Route::post('{job}/publish', 'publish')->name('publish');
+        Route::post('{job}/unpublish', 'unpublish')->name('unpublish');
     });
 
     Route::controller(AdminCommercialPartnerController::class)->prefix('commercial-partners')->name('commercial-partners.')->group(function () {

@@ -10,7 +10,7 @@
 --}}
 <x-layouts.public :title="$post->title">
     <div class="border-b border-border bg-muted/50">
-        <div class="container mx-auto px-4 py-10 lg:px-8">
+        <div class="site-container py-10">
             <a href="{{ route('blog.index') }}" class="text-sm font-semibold text-[#CC001F] hover:underline">&larr; Back to blog</a>
 
             @if ($post->category)
@@ -25,9 +25,9 @@
         </div>
     </div>
 
-    <div class="container mx-auto grid gap-8 px-4 py-10 lg:grid-cols-3 lg:px-8">
+    <div class="site-container grid gap-8 py-10 lg:grid-cols-3">
         <div class="min-w-0 lg:col-span-2">
-            <article>
+            <article class="max-w-3xl">
                 @if ($post->featured_image_path)
                     <img data-fallback src="{{ Storage::disk('public')->url($post->featured_image_path) }}" alt="{{ $post->featured_image_alt ?: $post->title }}" class="mb-8 aspect-[16/8] w-full rounded-xl object-cover shadow-elegant">
                 @endif

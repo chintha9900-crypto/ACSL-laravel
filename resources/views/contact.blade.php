@@ -28,7 +28,7 @@
     </x-public.hero>
 
     <section class="border-t border-border">
-        <div class="container mx-auto max-w-5xl px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container py-16 md:py-20">
             <div class="grid gap-8 lg:grid-cols-5 lg:gap-10">
                 {{-- Contact details --}}
                 <div class="space-y-5 lg:col-span-2">

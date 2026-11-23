@@ -5,14 +5,14 @@
 @php($hasLogo = file_exists(public_path('images/aci-logo.png')))
 {{--
     Every page these link to already exists as a real route — no nav entry
-    ever points at an unbuilt page (Jobs isn't linked because it doesn't
-    exist yet). The red "Join Now" button still covers "Become a Member" as
-    a persistent call to action; it also now appears again inside the
-    Membership dropdown/submenu below, which is a deliberate, explicitly
-    requested exception to not repeating it in the flat nav.
+    ever points at an unbuilt page (Jobs and Education live in the red strip,
+    not here). The red strip's "Sign Up" link covers "Become a Member" as
+    a persistent call to action; it also appears inside the Membership
+    dropdown/submenu below, which is a deliberate, explicitly requested
+    exception to not repeating it in the flat nav.
 
-    An item with a `children` array (currently "Membership", "E-Shop" and
-    "Contact") is a dropdown/disclosure, not a direct link only: the desktop
+    An item with a `children` array (currently "Membership" and "E-Shop")
+    is a dropdown/disclosure, not a direct link only: the desktop
     nav renders it as a click-to-open `<details>` panel, the mobile menu as a
     nested `<details>` accordion — one shared source of navigation, not two.
     The footer is deliberately different: it shows Membership as a single
@@ -30,10 +30,9 @@
     `eshop.index`, the same single-plain-link behaviour Membership gets via
     its own `footerRoute`.
 
-    Main-site nav update — "Contact" uses the exact same "route + children"
-    shape as "E-Shop": its own label still navigates to `contact`, with
-    "About" and "CSR" as children, moved here (no longer separate top-level
-    items) so they are never duplicated elsewhere in the nav. "Membership
+    Main-site nav update — "About" is a top-level item directly before
+    "Contact", which is a plain link; CSR is reached from the red strip only,
+    so neither is duplicated elsewhere in the nav. "Membership
     Benefits" is relabelled "Membership Types" (same `membership.benefits`
     route — only the displayed text changed), and "Commercial Partners" (a
     new, content-free template page — `commercial-partners`) joins it as a
@@ -61,14 +60,11 @@
     ],
     ['route' => 'blog.index', 'label' => 'Blog'],
     ['route' => 'news-events', 'label' => 'News & Events'],
-    [
-        'route' => 'contact',
-        'label' => 'Contact',
-        'children' => [
-            ['route' => 'about', 'label' => 'About'],
-            ['route' => 'csr.index', 'label' => 'CSR'],
-        ],
-    ],
+    // About sits directly before Contact; CSR lives only in the red strip, so
+    // Contact has no dropdown children left and is a plain link. About stays
+    // out of the footer, which never listed it.
+    ['route' => 'about', 'label' => 'About', 'inFooter' => false],
+    ['route' => 'contact', 'label' => 'Contact'],
 ])
 {{-- Privacy/Terms are legal boilerplate, conventionally footer-only links —
      not repeated in the main nav (matches the reference footer's own
@@ -94,8 +90,8 @@
             Skip to content
         </a>
 
-        <header id="site-header" class="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-sm transition-shadow data-[scrolled=true]:shadow-card">
-            <div class="container mx-auto flex h-16 items-center justify-between px-4 lg:h-20 lg:px-8">
+        <header id="site-header" class="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-sm transition-shadow data-[scrolled=true]:shadow-card">
+            <div class="site-container flex h-16 items-center justify-between lg:h-20">
                 <a href="{{ url('/') }}" class="flex items-center gap-2">
                     @if ($hasLogo)
                         <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club" width="473" height="155" class="h-11 w-auto lg:h-14">
@@ -104,7 +100,7 @@
                     @endif
                 </a>
 
-                <nav class="hidden items-center gap-1 lg:flex" aria-label="Main">
+                <nav class="hidden items-center gap-1 uppercase lg:flex" aria-label="Main">
                     @foreach ($navLinks as $link)
                         @if (isset($link['children']))
                             @php($isActive = request()->routeIs(...array_filter([$link['route'] ?? null, ...array_column($link['children'], 'route')])))
@@ -142,11 +138,6 @@
                     @endforeach
                 </nav>
 
-                <div class="hidden items-center gap-3 lg:flex">
-                    <a href="{{ route('login') }}" class="btn btn-sm btn-ghost">Sign In</a>
-                    <a href="{{ route('membership.apply') }}" class="btn btn-sm btn-brand">Join Now</a>
-                </div>
-
                 {{-- Mobile menu: a native disclosure, so it works without JavaScript. --}}
                 <details class="group lg:hidden">
                     <summary class="flex cursor-pointer list-none items-center rounded-md p-2 text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [&::-webkit-details-marker]:hidden" aria-label="Toggle menu">
@@ -154,8 +145,8 @@
                         <svg class="hidden h-6 w-6 group-open:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     </summary>
 
-                    <div class="absolute inset-x-0 top-16 border-t border-border bg-background">
-                        <div class="container mx-auto flex flex-col gap-1 px-4 py-3">
+                    <div class="absolute inset-x-0 top-full border-t border-border bg-background">
+                        <div class="site-container flex flex-col gap-1 py-3 uppercase">
                             @foreach ($navLinks as $link)
                                 @if (isset($link['children']))
                                     @php($isActive = request()->routeIs(...array_filter([$link['route'] ?? null, ...array_column($link['children'], 'route')])))
@@ -184,14 +175,21 @@
                                     <a href="{{ route($link['route']) }}" @if ($isActive) aria-current="page" @endif class="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted {{ $isActive ? 'bg-muted text-primary' : '' }}">{{ $link['label'] }}</a>
                                 @endif
                             @endforeach
-                            <div class="mt-2 flex gap-2 border-t border-border pt-2">
-                                <a href="{{ route('login') }}" class="btn btn-sm flex-1 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground">Sign In</a>
-                                <a href="{{ route('membership.apply') }}" class="btn btn-sm btn-brand flex-1">Join Now</a>
-                            </div>
                         </div>
                     </div>
                 </details>
             </div>
+
+            {{-- Secondary red strip: part of the same sticky header, so both rows stick together. --}}
+            <nav class="bg-[#CC001F] text-white" aria-label="Secondary">
+                <ul class="site-container flex h-10 items-center justify-end gap-x-4 text-xs font-normal uppercase tracking-wide sm:gap-x-8 sm:text-sm">
+                    <li><a href="{{ route('jobs') }}" @if (request()->routeIs('jobs', 'jobs.show')) aria-current="page" @endif class="hover:underline aria-[current=page]:font-bold">Jobs</a></li>
+                    <li><a href="{{ route('education') }}" @if (request()->routeIs('education')) aria-current="page" @endif class="hover:underline aria-[current=page]:font-bold">Education</a></li>
+                    <li><a href="{{ route('csr.index') }}" @if (request()->routeIs('csr.*')) aria-current="page" @endif class="hover:underline aria-[current=page]:font-bold">CSR</a></li>
+                    <li><a href="{{ route('login') }}" @if (request()->routeIs('login')) aria-current="page" @endif class="hover:underline aria-[current=page]:font-bold">Login</a></li>
+                    <li><a href="{{ route('membership.apply') }}" @if (request()->routeIs('membership.apply')) aria-current="page" @endif class="hover:underline aria-[current=page]:font-bold">Sign Up</a></li>
+                </ul>
+            </nav>
         </header>
 
         <main id="main" class="flex-1">
@@ -203,7 +201,7 @@
              `primary-foreground` (white) is unaffected, so the existing
              `text-primary-foreground/*` classes below still read correctly. --}}
         <footer class="mt-20 bg-[#CC001F] text-primary-foreground">
-            <div class="container mx-auto grid gap-10 px-4 py-14 md:grid-cols-2 lg:grid-cols-5 lg:px-8">
+            <div class="site-container grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-5">
                 <div class="lg:col-span-2">
                     <a href="{{ url('/') }}" class="mb-4 inline-flex items-center gap-2">
                         @if ($hasLogo)
@@ -230,20 +228,22 @@
                          the hover state legible against the brand-red background. "Home" is
                          left out here only — the logo above already links there, matching
                          the approved reference footer's own layout. --}}
-                    <ul class="space-y-2 text-sm text-primary-foreground/75">
+                    <ul class="space-y-2 text-sm uppercase text-primary-foreground/75">
                         @foreach ($navLinks as $link)
-                            @continue(($link['route'] ?? null) === 'home')
+                            @continue(($link['route'] ?? null) === 'home' || ($link['inFooter'] ?? true) === false)
                             {{-- The footer has no dropdown affordance: Membership shows as
                                  one normal link (`footerRoute`), not its four children. --}}
                             <li><a href="{{ route($link['footerRoute'] ?? $link['route']) }}" class="hover:text-white">{{ $link['label'] }}</a></li>
                         @endforeach
+                        <li><a href="{{ route('education') }}" class="hover:text-white">Education</a></li>
+                        <li><a href="{{ route('jobs') }}" class="hover:text-white">Jobs</a></li>
                         <li><a href="{{ route('login') }}" class="hover:text-white">Sign In</a></li>
                     </ul>
                 </div>
 
                 <div>
                     <h4 class="mb-4 font-display text-base font-semibold">Legal</h4>
-                    <ul class="space-y-2 text-sm text-primary-foreground/75">
+                    <ul class="space-y-2 text-sm uppercase text-primary-foreground/75">
                         @foreach ($legalLinks as $link)
                             <li><a href="{{ route($link['route']) }}" class="hover:text-white">{{ $link['label'] }}</a></li>
                         @endforeach
@@ -256,14 +256,14 @@
                      contact form rather than inventing any of those details. --}}
                 <div>
                     <h4 class="mb-4 font-display text-base font-semibold">Get in Touch</h4>
-                    <ul class="space-y-2 text-sm text-primary-foreground/75">
+                    <ul class="space-y-2 text-sm uppercase text-primary-foreground/75">
                         <li><a href="{{ route('contact') }}" class="hover:text-white">Contact Us</a></li>
                     </ul>
                 </div>
             </div>
 
             <div class="border-t border-white/10">
-                <div class="container mx-auto flex flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-primary-foreground/60 md:flex-row lg:px-8">
+                <div class="site-container flex flex-col items-center justify-between gap-2 py-5 text-xs text-primary-foreground/60 md:flex-row">
                     <p>&copy; {{ date('Y') }} Aviation Club. All rights reserved.</p>
                     <p>Built for the global aviation community.</p>
                 </div>

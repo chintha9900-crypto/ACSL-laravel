@@ -7,7 +7,7 @@
 --}}
 <x-layouts.public :title="$event->title">
     <div class="border-b border-border bg-muted/50">
-        <div class="container mx-auto max-w-3xl px-4 py-10 lg:px-8">
+        <div class="site-container content-reading py-10">
             <a href="{{ route('events.index') }}" class="text-sm font-semibold text-[#CC001F] hover:underline">&larr; Back to Events</a>
 
             <h1 class="mt-3 font-display text-3xl font-bold text-primary md:text-4xl">{{ $event->title }}</h1>
@@ -20,7 +20,7 @@
         </div>
     </div>
 
-    <div class="container mx-auto max-w-3xl px-4 py-10 lg:px-8">
+    <div class="site-container content-reading py-10">
         @if ($event->image_path)
             <img data-fallback src="{{ Storage::disk('public')->url($event->image_path) }}" alt="{{ $event->title }}" class="mb-8 aspect-[16/8] w-full rounded-xl object-cover shadow-elegant">
         @endif

@@ -13,7 +13,7 @@
         : $application->category->name;
 @endphp
 <x-layouts.public title="Application received">
-    <section class="container mx-auto max-w-2xl px-4 py-24 text-center md:py-32 lg:px-8">
+    <section class="site-container content-narrow py-24 text-center md:py-32">
         <h1 class="font-display text-xl font-semibold text-primary md:text-2xl" role="status">
             Your application for {{ $categoryName }} membership has been successfully submitted. The Aviation Club team will get back to you soon.
         </h1>

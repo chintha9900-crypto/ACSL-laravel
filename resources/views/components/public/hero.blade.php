@@ -2,7 +2,7 @@
 
 <section class="relative bg-primary text-primary-foreground">
     <div class="gradient-hero absolute inset-0 opacity-95"></div>
-    <div class="container relative mx-auto px-4 py-20 text-center md:py-24 lg:px-8">
+    <div class="site-container relative py-20 text-center md:py-24">
         <span class="mb-5 inline-flex items-center rounded-md border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs font-semibold">
             {{ $badge }}
         </span>

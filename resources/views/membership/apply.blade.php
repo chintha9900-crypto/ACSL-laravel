@@ -46,7 +46,7 @@
         Join the <span class="text-[#CC001F]">community.</span>
     </x-public.hero>
 
-    <section class="container mx-auto max-w-5xl px-4 py-16 md:py-20 lg:px-8">
+    <section class="site-container py-16 md:py-20">
         <div class="space-y-8">
             <div class="ui-card border-l-4 border-[#CC001F] p-6 md:p-8">
                 <h2 class="font-display text-2xl font-bold text-primary">Before you apply</h2>

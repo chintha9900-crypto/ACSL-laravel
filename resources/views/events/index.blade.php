@@ -18,7 +18,7 @@
     </x-public.hero>
 
     <section class="border-t border-border">
-        <div class="container mx-auto px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container py-16 md:py-20">
             @if ($events->isEmpty())
                 <p class="rounded-lg border border-border bg-muted px-4 py-8 text-center text-sm text-muted-foreground" role="status">
                     No upcoming events.

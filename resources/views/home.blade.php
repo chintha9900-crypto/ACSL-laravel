@@ -80,20 +80,20 @@
         </script>
         <div class="absolute inset-0 -z-10 bg-background/35 lg:bg-transparent lg:bg-gradient-to-r lg:from-background/95 lg:via-background/85 lg:to-background/10" aria-hidden="true"></div>
 
-        <div class="container mx-auto grid min-h-[26rem] gap-10 px-4 py-16 md:min-h-[30rem] md:py-20 lg:min-h-[34rem] lg:grid-cols-2 lg:items-center lg:gap-16 lg:px-8 lg:py-28">
+        <div class="site-container grid min-h-[26rem] gap-10 py-16 md:min-h-[30rem] md:py-20 lg:min-h-[34rem] lg:grid-cols-2 lg:items-center lg:gap-16 lg:py-28">
             <div class="relative text-center lg:text-left">
                 <div class="pointer-events-none absolute -inset-x-10 -inset-y-10 -z-10 rounded-[3rem] bg-background/85 blur-xl lg:hidden" aria-hidden="true"></div>
 
                 <span class="inline-flex items-center rounded-md border border-[#666666]/40 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-[#4D4D4D]">
-                    International Aviation Community
+                     Aviation Community
                 </span>
 
                 <h1 class="mt-5 font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-primary md:text-5xl lg:text-6xl">
-                    One Community. One Passion. <span class="text-[#CC001F]">Aviation.</span>
+                   Where Aviation People Connect. <span class="text-[#CC001F]">Grow and Belong.</span>
                 </h1>
 
                 <p class="mx-auto mt-5 max-w-xl text-lg text-muted-foreground lg:mx-0">
-                    For people who work, study or take part in aviation.
+                    Beyond the Skies, Beyond Boundaries, One aviation Club.
                 </p>
 
                 <div class="mt-8 flex justify-center lg:justify-start">
@@ -106,28 +106,194 @@
     </section>
 
     {{-- 2. About --}}
-    <section class="border-t border-border">
-        <div class="container mx-auto max-w-3xl px-4 py-16 md:py-20 lg:px-8">
-            <x-ui.section-heading badge="About ACI">
-                Connecting the Global Aviation Community
-            </x-ui.section-heading>
+   <section class="border-t border-border">
+    <div class="site-container py-16 md:py-20">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
 
-            <div class="mt-6 space-y-4 text-base leading-relaxed text-muted-foreground">
-                <p>Aviation Club brings together people from every sector of the aviation industry under one professional community — built on connection, knowledge, experience and continuous learning.</p>
-                <p>Members can build professional networks, access aviation resources, and connect with experienced people from across the industry.</p>
-                <p>From aspiring aviation professionals to experienced specialists, Aviation Club supports every stage of the aviation journey.</p>
+            <!-- LEFT COLUMN: TEXT CONTENT -->
+            <div>
+                <x-ui.section-heading badge="About THE AVIATION CLUB">
+                    Connecting the Global Aviation Community
+                </x-ui.section-heading>
+
+                <div class="mt-6 space-y-4 text-base leading-relaxed text-muted-foreground">
+                    <p>
+                        Aviation Club brings together people from every sector of the aviation industry under one professional community — built on connection, knowledge, experience and continuous learning.
+                    </p>
+
+                    <p>
+                        Members can build professional networks, access aviation resources, and connect with experienced people from across the industry.
+                    </p>
+
+                    <p>
+                        From aspiring aviation professionals to experienced specialists, Aviation Club supports every stage of the aviation journey.
+                    </p>
+                </div>
             </div>
+
+            {{--
+                RIGHT COLUMN: membership categories carousel. Names match the
+                membership_categories records shown on the application form.
+                Images are temporary placeholders in public/images/membership/;
+                replace a file (or its path here) with approved photography.
+                One card is visible below `sm`, two from `sm` up. Autoplay loops
+                through clones of the first two cards, pauses on hover, focus or
+                the pause button, and is off when reduced motion is preferred.
+            --}}
+            @php
+                $memberCategories = [
+                    ['name' => 'Aviation Enthusiast', 'image' => 'images/membership/enthusiast.svg'],
+                    ['name' => 'Student', 'image' => 'images/membership/student.svg'],
+                    ['name' => 'Professional', 'image' => 'images/membership/professional.svg'],
+                    ['name' => 'Veteran', 'image' => 'images/membership/veteran.svg'],
+                    ['name' => 'Corporate', 'image' => 'images/membership/corporate.svg'],
+                    ['name' => 'School Club', 'image' => 'images/membership/school-club.svg'],
+                ];
+            @endphp
+            <div class="w-full min-w-0" data-member-carousel>
+                <h3 id="member-carousel-heading" class="font-display text-2xl font-bold text-primary md:text-3xl">Who Can Be a Member?</h3>
+
+                <div class="mt-6" role="region" aria-roledescription="carousel" aria-labelledby="member-carousel-heading">
+                    <div class="overflow-x-auto rounded-2xl [--per-view:1] sm:[--per-view:2]" style="touch-action: pan-y;" data-carousel-viewport>
+                        <ul class="flex gap-4 transition-transform duration-700 ease-in-out motion-reduce:transition-none" data-carousel-track>
+                            @foreach ($memberCategories as $category)
+                                <li class="relative aspect-[3/4] shrink-0 overflow-hidden rounded-2xl bg-muted shadow-card" style="width: calc((100% - (var(--per-view) - 1) * 1rem) / var(--per-view));"
+                                    role="group" aria-roledescription="slide" aria-label="{{ $loop->iteration }} of {{ count($memberCategories) }}: {{ $category['name'] }}" data-carousel-slide>
+                                    <img src="{{ asset($category['image']) }}" alt="" class="absolute inset-0 h-full w-full object-cover" loading="lazy" draggable="false">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                                    <p class="absolute inset-x-0 bottom-0 p-5 font-display text-2xl font-bold leading-tight text-white md:text-3xl">{{ $category['name'] }}</p>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+
+                    <div class="mt-4 flex items-center justify-between gap-4" hidden data-carousel-controls>
+                        <div class="flex items-center gap-2">
+                            @foreach ($memberCategories as $category)
+                                <button type="button" class="h-2.5 w-2.5 rounded-full bg-muted-foreground/30 transition-colors aria-[current=true]:bg-[#CC001F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Show {{ $category['name'] }}" data-carousel-dot="{{ $loop->index }}"></button>
+                            @endforeach
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" class="btn btn-ghost h-9 w-9 border border-border p-0" aria-label="Previous category" data-carousel-prev>&larr;</button>
+                            <button type="button" class="btn btn-ghost h-9 w-9 border border-border p-0" aria-label="Pause automatic rotation" data-carousel-toggle>&#10073;&#10073;</button>
+                            <button type="button" class="btn btn-ghost h-9 w-9 border border-border p-0" aria-label="Next category" data-carousel-next>&rarr;</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                (function () {
+                    var root = document.querySelector('[data-member-carousel]');
+                    if (!root) { return; }
+                    var viewport = root.querySelector('[data-carousel-viewport]');
+                    var track = root.querySelector('[data-carousel-track]');
+                    var slides = Array.prototype.slice.call(track.querySelectorAll('[data-carousel-slide]'));
+                    var dots = Array.prototype.slice.call(root.querySelectorAll('[data-carousel-dot]'));
+                    var toggle = root.querySelector('[data-carousel-toggle]');
+                    var total = slides.length;
+                    var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    var index = 0;
+                    var timer = null;
+                    var stoppedByUser = reducedMotion;
+                    var hovered = false;
+                    var focused = false;
+
+                    // Clones of the first two cards let the track run on past the
+                    // last category and then reset invisibly to the first.
+                    slides.slice(0, 2).forEach(function (slide) {
+                        var clone = slide.cloneNode(true);
+                        clone.setAttribute('aria-hidden', 'true');
+                        clone.removeAttribute('aria-label');
+                        clone.removeAttribute('data-carousel-slide');
+                        track.appendChild(clone);
+                    });
+                    viewport.style.overflow = 'hidden';
+                    root.querySelector('[data-carousel-controls]').hidden = false;
+
+                    function step() { return track.children[1].offsetLeft - track.children[0].offsetLeft; }
+
+                    function render(animate) {
+                        track.style.transition = animate && !reducedMotion ? '' : 'none';
+                        track.style.transform = 'translateX(' + (-index * step()) + 'px)';
+                        dots.forEach(function (dot, i) { dot.setAttribute('aria-current', i === index % total ? 'true' : 'false'); });
+                    }
+
+                    function goTo(target) {
+                        // A reset to the first card can still be pending when the next move starts.
+                        if (index >= total) {
+                            index -= total;
+                            target -= total;
+                            render(false);
+                            void track.offsetWidth;
+                        }
+                        if (target < 0) {
+                            index = total;
+                            render(false);
+                            void track.offsetWidth;
+                            target = total - 1;
+                        }
+                        index = target;
+                        render(true);
+                        if (reducedMotion && index >= total) { index = 0; render(false); }
+                    }
+
+                    track.addEventListener('transitionend', function (event) {
+                        if (event.target === track && index >= total) { index = 0; render(false); }
+                    });
+
+                    function schedule() {
+                        clearInterval(timer);
+                        timer = null;
+                        if (!stoppedByUser && !hovered && !focused) {
+                            timer = setInterval(function () { goTo(index + 1); }, 4000);
+                        }
+                    }
+
+                    function updateToggle() {
+                        toggle.setAttribute('aria-label', stoppedByUser ? 'Start automatic rotation' : 'Pause automatic rotation');
+                        toggle.innerHTML = stoppedByUser ? '&#9654;' : '&#10073;&#10073;';
+                    }
+
+                    root.querySelector('[data-carousel-prev]').addEventListener('click', function () { goTo(index - 1); });
+                    root.querySelector('[data-carousel-next]').addEventListener('click', function () { goTo(index + 1); });
+                    dots.forEach(function (dot, i) { dot.addEventListener('click', function () { goTo(i); }); });
+                    toggle.addEventListener('click', function () { stoppedByUser = !stoppedByUser; updateToggle(); schedule(); });
+
+                    root.addEventListener('mouseenter', function () { hovered = true; schedule(); });
+                    root.addEventListener('mouseleave', function () { hovered = false; schedule(); });
+                    root.addEventListener('focusin', function () { focused = true; schedule(); });
+                    root.addEventListener('focusout', function (event) { if (!root.contains(event.relatedTarget)) { focused = false; schedule(); } });
+
+                    var startX = null;
+                    viewport.addEventListener('pointerdown', function (event) { startX = event.clientX; });
+                    viewport.addEventListener('pointerup', function (event) {
+                        if (startX === null) { return; }
+                        var distance = event.clientX - startX;
+                        startX = null;
+                        if (Math.abs(distance) > 40) { goTo(distance < 0 ? index + 1 : index - 1); schedule(); }
+                    });
+                    viewport.addEventListener('pointercancel', function () { startX = null; });
+
+                    window.addEventListener('resize', function () { render(false); });
+                    updateToggle();
+                    render(false);
+                    schedule();
+                })();
+            </script>
+
         </div>
-    </section>
+    </div>
+</section>
 
     {{-- 3. Benefits --}}
     <section class="border-y border-border bg-muted/50">
-        <div class="container mx-auto px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container py-16 md:py-20">
             <x-ui.section-heading badge="Membership Benefits">
                 Everything you need to grow.
             </x-ui.section-heading>
 
-            <div class="mx-auto mt-10 grid max-w-5xl gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="mx-auto mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 @php
                     $benefits = [
                         ['title' => 'Networking', 'text' => 'Connect with pilots, engineers and other professionals across the aviation industry.', 'path' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'],
@@ -155,7 +321,7 @@
 
     {{-- 4. Latest from the club (blog module does not exist yet — empty state only) --}}
     <section>
-        <div class="container mx-auto max-w-3xl px-4 py-16 text-center md:py-20 lg:px-8">
+        <div class="site-container py-16 text-center md:py-20">
             <x-ui.section-heading badge="From the Club">
                 Insights &amp; stories
             </x-ui.section-heading>

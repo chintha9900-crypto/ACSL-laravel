@@ -7,7 +7,7 @@
 --}}
 <x-layouts.public title="Checkout">
     <section class="border-t border-border">
-        <div class="container mx-auto px-4 py-12 lg:px-8">
+        <div class="site-container py-12">
             <h1 class="font-display text-3xl font-bold text-primary md:text-4xl">Checkout</h1>
 
             @if ($errors->any())

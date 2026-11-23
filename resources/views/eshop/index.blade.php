@@ -26,7 +26,7 @@
     </x-public.hero>
 
     <section class="border-t border-border">
-        <div class="container mx-auto px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container py-16 md:py-20">
             <div class="lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start lg:gap-10">
                 {{-- Mobile/tablet: filters collapse into one disclosure button, same
                      native <details> pattern (no JavaScript) the site nav already uses. --}}

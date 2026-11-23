@@ -180,7 +180,21 @@ class HomePageTest extends TestCase
         $response = $this->get(route('home'))->assertOk();
 
         $response->assertSee('href="'.route('login').'"', false);
-        $response->assertSee('Sign In');
+        $response->assertSee('Login');
+    }
+
+    /**
+     * The red secondary strip, in its required order, links CSR, Login and
+     * Sign Up to their existing routes; Join Now is gone from the header.
+     */
+    public function test_the_public_secondary_strip_lists_its_items_in_order(): void
+    {
+        $response = $this->get(route('home'))->assertOk();
+
+        $response->assertSeeInOrder(['Jobs', 'Education', 'CSR', 'Login', 'Sign Up']);
+        $response->assertSee('href="'.route('csr.index').'"', false);
+        $response->assertSee('href="'.route('membership.apply').'"', false);
+        $response->assertDontSee('Join Now');
     }
 
     /**
@@ -272,12 +286,12 @@ class HomePageTest extends TestCase
 
     /**
      * The desktop nav: "Membership" is a native, click-to-open `<details>`
-     * dropdown (not a hover-only panel), Rules, FAQ, About and CSR are no
-     * longer standalone top-level links (About/CSR moved under "Contact" —
-     * main-site nav update), and the other items are unchanged, direct
+     * dropdown (not a hover-only panel), Rules, FAQ and CSR are not
+     * standalone top-level links (CSR is in the red strip only; About is
+     * top-level, directly before Contact), and the other items are direct
      * `<a>` children of `<nav>`.
      */
-    public function test_membership_is_a_desktop_click_dropdown_and_rules_faq_about_csr_are_no_longer_top_level(): void
+    public function test_membership_is_a_desktop_click_dropdown_and_rules_faq_csr_are_not_top_level(): void
     {
         $response = $this->get(route('home'))->assertOk();
         $xpath = $this->xpath($response->getContent());
@@ -292,8 +306,8 @@ class HomePageTest extends TestCase
 
         $this->assertNotContains(route('rules'), $topLevelHrefs, 'Rules must not be a standalone top-level desktop nav link.');
         $this->assertNotContains(route('faq'), $topLevelHrefs, 'FAQ must not be a standalone top-level desktop nav link.');
-        $this->assertNotContains(route('about'), $topLevelHrefs, 'About must not be a standalone top-level desktop nav link — it is now a Contact dropdown child.');
-        $this->assertNotContains(route('csr.index'), $topLevelHrefs, 'CSR must not be a standalone top-level desktop nav link — it is now a Contact dropdown child.');
+        $this->assertContains(route('about'), $topLevelHrefs, 'About is a top-level desktop nav link, directly before Contact.');
+        $this->assertNotContains(route('csr.index'), $topLevelHrefs, 'CSR must not be in the desktop nav — it is in the red strip only.');
         $this->assertContains(route('home'), $topLevelHrefs);
         $this->assertContains(route('blog.index'), $topLevelHrefs);
         $this->assertContains(route('news-events'), $topLevelHrefs);
@@ -449,74 +463,35 @@ class HomePageTest extends TestCase
     }
 
     /**
-     * Main-site nav update — desktop nav: "Contact" is a native
-     * click-to-open `<details>` dropdown, same pattern as "E-Shop", and its
-     * own trigger label is still a real link to `contact`.
+     * Contact is a plain top-level link (no dropdown) and About sits
+     * immediately before it, in both the desktop nav and the mobile menu.
      */
-    public function test_contact_is_a_desktop_dropdown_whose_own_label_still_links_to_contact(): void
+    public function test_about_is_a_top_level_item_immediately_before_a_plain_contact_link(): void
     {
         $response = $this->get(route('home'))->assertOk();
         $xpath = $this->xpath($response->getContent());
 
-        $triggers = $xpath->query('//nav[@aria-label="Main"]/details[contains(@class, "group")]/summary[contains(., "Contact")]');
-        $this->assertSame(1, $triggers->length, 'Contact must be exactly one native <details> dropdown trigger in the desktop nav.');
+        $this->assertSame(0, $xpath->query('//nav[@aria-label="Main"]/details/summary[contains(., "Contact")]')->length, 'Contact must no longer be a desktop dropdown.');
+        $this->assertSame(0, $xpath->query('//details[contains(@class, "group/submenu")]/summary[contains(., "Contact")]')->length, 'Contact must no longer be a mobile accordion.');
 
-        $triggerLink = $xpath->query('.//a[contains(., "Contact")]', $triggers->item(0));
-        $this->assertSame(1, $triggerLink->length, 'The Contact trigger\'s own label must still be a real link, not just a dropdown toggle.');
-        $this->assertSame(route('contact'), $triggerLink->item(0)->getAttribute('href'));
-    }
-
-    /**
-     * The desktop Contact dropdown panel contains exactly "About" and
-     * "CSR", each linking to its existing, unchanged route.
-     */
-    public function test_the_desktop_contact_dropdown_contains_about_and_csr(): void
-    {
-        $response = $this->get(route('home'))->assertOk();
-        $xpath = $this->xpath($response->getContent());
-
-        $trigger = $xpath->query('//nav[@aria-label="Main"]/details[contains(@class, "group")]/summary[contains(., "Contact")]')->item(0);
-        $this->assertNotNull($trigger, 'The Contact desktop dropdown trigger must exist.');
-
-        $items = [];
-        foreach ($xpath->query('./following-sibling::div[@role="menu"][1]/a', $trigger) as $link) {
-            $items[trim($link->textContent)] = $link->getAttribute('href');
+        $desktop = [];
+        foreach ($xpath->query('//nav[@aria-label="Main"]/a') as $link) {
+            $desktop[] = $link->getAttribute('href');
         }
+        $this->assertSame([route('about'), route('contact')], array_slice($desktop, -2), 'Desktop nav must end with About then Contact.');
 
-        $this->assertSame(['About' => route('about'), 'CSR' => route('csr.index')], $items, 'The Contact dropdown must contain exactly About and CSR, linking to their existing routes.');
-    }
-
-    /**
-     * The mobile menu: "Contact" is its own nested accordion, same pattern
-     * as "E-Shop", with its own label still linking to `contact` and
-     * exactly two children, About and CSR.
-     */
-    public function test_the_mobile_menu_has_a_contact_accordion_linking_to_contact_with_about_and_csr_as_children(): void
-    {
-        $response = $this->get(route('home'))->assertOk();
-        $xpath = $this->xpath($response->getContent());
-
-        $accordions = $xpath->query('//details[contains(@class, "group/submenu")]/summary[contains(., "Contact")]');
-        $this->assertSame(1, $accordions->length, 'The mobile menu must have exactly one Contact accordion.');
-
-        $triggerLink = $xpath->query('.//a[contains(., "Contact")]', $accordions->item(0));
-        $this->assertSame(1, $triggerLink->length, 'The Contact accordion trigger\'s own label must still be a real link.');
-        $this->assertSame(route('contact'), $triggerLink->item(0)->getAttribute('href'));
-
-        $items = [];
-        foreach ($xpath->query('./following-sibling::div[1]/a', $accordions->item(0)) as $link) {
-            $items[trim($link->textContent)] = $link->getAttribute('href');
+        $mobile = [];
+        foreach ($xpath->query('//details[contains(@class, "lg:hidden")]//div[contains(@class, "site-container")]/a') as $link) {
+            $mobile[] = $link->getAttribute('href');
         }
-
-        $this->assertSame(['About' => route('about'), 'CSR' => route('csr.index')], $items, 'The mobile Contact accordion must contain exactly About and CSR.');
+        $this->assertSame([route('about'), route('contact')], array_slice($mobile, -2), 'Mobile menu must end with About then Contact.');
     }
 
     /**
-     * "About" and "CSR" must never appear as their own standalone top-level
-     * nav links in either the desktop nav or the mobile menu — only nested
-     * once each, inside the Contact dropdown/accordion.
+     * About appears once in each menu; CSR is no longer in the main or
+     * mobile menu at all — only in the red strip.
      */
-    public function test_about_and_csr_are_not_duplicated_as_separate_top_level_nav_items(): void
+    public function test_about_is_not_duplicated_and_csr_is_only_in_the_red_strip(): void
     {
         $response = $this->get(route('home'))->assertOk();
         $content = $response->getContent();
@@ -525,10 +500,26 @@ class HomePageTest extends TestCase
         $aboutHref = 'href="'.route('about').'"';
         $csrHref = 'href="'.route('csr.index').'"';
 
-        $this->assertSame(1, substr_count($desktopNavHtml, $aboutHref), 'About must appear exactly once in the desktop nav (inside the Contact dropdown).');
-        $this->assertSame(1, substr_count($mobileNavHtml, $aboutHref), 'About must appear exactly once in the mobile menu (inside the Contact accordion).');
-        $this->assertSame(1, substr_count($desktopNavHtml, $csrHref), 'CSR must appear exactly once in the desktop nav (inside the Contact dropdown).');
-        $this->assertSame(1, substr_count($mobileNavHtml, $csrHref), 'CSR must appear exactly once in the mobile menu (inside the Contact accordion).');
+        $this->assertSame(1, substr_count($desktopNavHtml, $aboutHref));
+        $this->assertSame(1, substr_count($mobileNavHtml, $aboutHref));
+        $this->assertSame(0, substr_count($desktopNavHtml, $csrHref), 'CSR must not appear in the desktop nav.');
+        $this->assertSame(0, substr_count($mobileNavHtml, $csrHref), 'CSR must not appear in the mobile menu.');
+
+        $xpath = $this->xpath($content);
+        $this->assertSame(1, $xpath->query('//nav[@aria-label="Secondary"]//a[@href="'.route('csr.index').'"]')->length, 'CSR must stay in the red strip.');
+    }
+
+    /**
+     * Only the red-strip item for the current route is marked current
+     * (rendered bold); the others carry no aria-current.
+     */
+    public function test_only_the_active_red_strip_item_is_marked_current(): void
+    {
+        $xpath = $this->xpath($this->get(route('jobs'))->assertOk()->getContent());
+
+        $current = $xpath->query('//nav[@aria-label="Secondary"]//a[@aria-current="page"]');
+        $this->assertSame(1, $current->length);
+        $this->assertSame(route('jobs'), $current->item(0)->getAttribute('href'));
     }
 
     /**

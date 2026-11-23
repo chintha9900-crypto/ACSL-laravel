@@ -9,7 +9,7 @@
 --}}
 <x-layouts.public :title="$product->name">
     <section class="border-t border-border">
-        <div class="container mx-auto px-4 py-12 lg:px-8">
+        <div class="site-container py-12">
             <a href="{{ route('eshop.index') }}" class="text-sm font-semibold text-[#CC001F] hover:underline">&larr; Back to shop</a>
 
             <div class="mt-6 grid gap-10 lg:grid-cols-2">

@@ -18,24 +18,41 @@
     </x-public.hero>
 
     <section class="border-t border-border">
-        <div class="container mx-auto max-w-3xl px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container content-reading py-16 md:py-20">
             @php
                 $faqs = [
                     [
                         'q' => 'Who can become a member?',
-                        'a' => 'Membership is open to anyone who genuinely works, studies or takes part in the aviation field. You apply under whichever category best matches your situation.',
+                        'a' => [
+                            'Membership is open to anyone with an interest in or connection to aviation. Whether you are an aviation enthusiast of any age, a student, an active aviation professional, or a veteran who has served in the aviation industry, there is a place for you.',
+                            'We also welcome school and university aviation clubs, as well as companies and organisations involved in the aviation industry. Simply apply under the membership category that best matches you.',
+                        ],
                     ],
                     [
                         'q' => 'What are the membership categories?',
-                        'a' => 'There are three: Student (currently studying in an aviation-related course), Professional (working in the aviation industry) and Veteran (previous aviation experience). Each category asks for a few category-specific details on the application form.',
+                        'categories' => [
+                            'Aviation Enthusiast Membership' => 'Open to anyone with an interest in aviation, regardless of age or professional background.',
+                            'Aviation Student Membership' => 'For students pursuing studies or training in aviation-related fields, including flight training, aircraft engineering, cabin crew, aviation management and other related disciplines.',
+                            'Professional Membership' => 'For individuals currently working in the aviation industry, including pilots, aircraft maintenance engineers, air traffic controllers, cabin crew, aviation safety professionals, operations personnel, cargo specialists, trainers and aviation analysts.',
+                            'Veteran Professional Membership' => 'For retired aviation professionals and highly experienced individuals who have made a significant contribution to the aviation industry.',
+                            'Corporate Membership' => 'For organisations and businesses involved in aviation, including airlines, flying schools, maintenance, repair and overhaul (MRO) organisations, aviation service providers and other aviation-related companies.',
+                            'School & University Club Membership' => 'For schools, colleges and universities interested in establishing or supporting aviation clubs and encouraging students to explore aviation.',
+                        ],
                     ],
                     [
                         'q' => 'What do I need to apply?',
-                        'a' => 'Fill in the application form with your details and upload proof of your connection to aviation (for example a course letter, employment evidence, or similar). You\'ll get a link to track your application\'s status by email.',
+                        'a' => [
+                            'Complete the membership application form with your personal details.',
+                            'Students and aviation professionals must upload proof of their connection to aviation (e.g., an enrolment or course confirmation letter for students, or employment evidence for professionals).',
+                            'Aviation enthusiasts do not need to provide any supporting evidence.',
+                        ],
                     ],
                     [
                         'q' => 'How is my application approved?',
-                        'a' => 'ACI reviews every application. They may ask you for more details if something needs clarifying. Approval and activation are two separate steps — being approved means your application has been accepted; activation is when your membership actually starts.',
+                        'a' => [
+                            'The Aviation Club team reviews every membership application. If any information needs clarification, we may contact you to request additional details or supporting documents.',
+                            'Approval and activation are two separate steps. Approval means your application has been accepted. Activation means your membership is officially active, giving you access to member benefits and services once the required activation process is completed.',
+                        ],
                     ],
                     [
                         'q' => 'Is there really a free introductory period?',
@@ -43,11 +60,14 @@
                     ],
                     [
                         'q' => 'How does payment and renewal work?',
-                        'a' => 'Your introductory period is free. After that, renewing is a paid step: you\'ll see the renewal fee for your category on your Membership page when it\'s time to renew, pay by bank transfer, and submit your payment reference and evidence for ACI to confirm. Renewal does not happen automatically — you choose when to renew.',
+                        'a' => [
+                            'Your introductory period is free. After that, renewing is a paid step: you\'ll see the renewal fee for your category on your Membership page when it\'s time to renew, pay by bank transfer, and submit your payment reference and evidence for the Aviation Club to confirm.',
+                            'Renewal does not happen automatically; you choose when to renew.',
+                        ],
                     ],
                     [
                         'q' => 'Will my membership number change when I renew?',
-                        'a' => 'No. Your membership number is issued once, when your membership is first activated, and stays the same for as long as you remain a member — including across every renewal.',
+                        'a' => 'No. Your membership number is issued once, when your membership is first activated, and stays the same for as long as you remain a member including across every renewal.',
                     ],
                     [
                         'q' => 'How do I set up my account?',
@@ -55,11 +75,14 @@
                     ],
                     [
                         'q' => 'What is the digital membership card and QR code for?',
-                        'a' => 'Once you\'re signed in, your account includes a digital membership card with a QR code. Scanning it takes you to a page confirming your membership is currently active — it never reveals your email, phone or other personal details. The card follows your real membership status: if your membership lapses it will show as not currently valid, and it becomes valid again as soon as you renew.',
+                        'a' => [
+                            'Once you\'re signed in, your account includes a digital membership card with a QR code. Scanning it takes you to a page confirming your membership is currently active. It never reveals your email, phone or other personal details.',
+                            'The card follows your real membership status: if your membership lapses it will show as not currently valid, and it becomes valid again as soon as you renew.',
+                        ],
                     ],
                     [
                         'q' => 'What happens if my application is rejected?',
-                        'a' => 'You\'ll be told if your application isn\'t approved. You\'re welcome to apply again whenever you\'re ready — there\'s no waiting period.',
+                        'a' => 'You\'ll be told if your application isn\'t approved. You\'re welcome to apply again whenever you\'re ready  there\'s no waiting period.',
                     ],
                     [
                         'q' => 'I forgot my password. What do I do?',
@@ -75,14 +98,19 @@
                             {{ $faq['q'] }}
                             <svg class="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                         </summary>
-                        <p class="mt-3 text-sm leading-relaxed text-muted-foreground">{{ $faq['a'] }}</p>
+                        @foreach ((array) ($faq['a'] ?? []) as $paragraph)
+                            <p class="mt-3 text-sm leading-relaxed text-muted-foreground">{{ $paragraph }}</p>
+                        @endforeach
+                        @isset($faq['categories'])
+                            <ol class="mt-3 list-decimal space-y-3 pl-5 text-sm leading-relaxed text-muted-foreground">
+                                @foreach ($faq['categories'] as $name => $description)
+                                    <li><strong>{{ $name }}</strong> – {{ $description }}</li>
+                                @endforeach
+                            </ol>
+                        @endisset
                     </details>
                 @endforeach
             </div>
-
-            <p class="mt-10 text-center text-sm text-muted-foreground">
-                Still have questions? <a href="{{ route('membership.apply') }}" class="font-semibold text-[#CC001F] hover:underline">Start your application</a> and ACI can help along the way.
-            </p>
         </div>
     </section>
 </x-layouts.public>

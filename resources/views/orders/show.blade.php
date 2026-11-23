@@ -6,7 +6,7 @@
 --}}
 <x-layouts.public title="Order Confirmation">
     <section class="border-t border-border">
-        <div class="container mx-auto px-4 py-12 lg:px-8">
+        <div class="site-container py-12">
             <h1 class="font-display text-3xl font-bold text-primary md:text-4xl">Thank you for your order</h1>
             <p class="mt-2 text-muted-foreground">Order <span class="font-mono font-semibold text-foreground">{{ $order->order_number }}</span></p>
 

@@ -6,13 +6,26 @@
     Content is allow-list sanitised on the server either way. Older plain-text
     content opens as paragraphs, keeping its line breaks.
 
-    @param  string|null  $content  The record's saved content, if any.
+    Several editors can share one form; each binds only to its own field.
+    Callers that pass only `content` get the original markup unchanged
+    (field "content", label "Content", editor id "content-editor").
+
+    @param  string|null  $content  The record's saved value, if any.
+    @param  string  $field  The textarea name (default "content").
+    @param  string  $fieldLabel  The visible label (default "Content").
+    @param  bool  $fieldRequired  Whether the field is required (default true).
 --}}
-<div class="space-y-1.5" data-rte-root>
-    <x-form.input name="content" label="Content" type="textarea" rows="12" :value="HtmlSanitizer::forDisplay((string) old('content', $content ?? ''))"
+@php
+    $rteField = $field ?? 'content';
+    $rteLabel = $fieldLabel ?? 'Content';
+    $rteRequired = $fieldRequired ?? true;
+    $rteEditorId = str_replace(['[', ']', '.'], '_', $rteField).'-editor';
+@endphp
+<div class="space-y-1.5" data-rte-root="{{ $rteField }}">
+    <x-form.input :name="$rteField" :label="$rteLabel" :required="$rteRequired" type="textarea" rows="12" :value="HtmlSanitizer::forDisplay((string) old($rteField, $content ?? ''))"
         hint="Formatting: headings, bold, italic, underline, lists, quotes, links and text alignment. Anything else is removed when you save." />
 
-    <div data-rte-toolbar hidden role="toolbar" aria-label="Formatting" aria-controls="content-editor" class="flex flex-wrap gap-1 rounded-t-md border border-b-0 border-input bg-muted/40 p-1.5">
+    <div data-rte-toolbar hidden role="toolbar" aria-label="Formatting" aria-controls="{{ $rteEditorId }}" class="flex flex-wrap gap-1 rounded-t-md border border-b-0 border-input bg-muted/40 p-1.5">
         @foreach ([
             ['formatBlock', 'h2', 'H2', 'Heading 2'],
             ['formatBlock', 'h3', 'H3', 'Heading 3'],
@@ -34,16 +47,16 @@
                 class="rounded border border-transparent px-2 py-1 text-xs font-semibold text-foreground hover:border-input hover:bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">{{ $label }}</button>
         @endforeach
     </div>
-    <div id="content-editor" data-rte-editor hidden contenteditable="true" role="textbox" aria-multiline="true" aria-label="Content"
+    <div id="{{ $rteEditorId }}" data-rte-editor hidden contenteditable="true" role="textbox" aria-multiline="true" aria-label="{{ $rteLabel }}"
         class="blog-content min-h-[16rem] w-full rounded-b-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"></div>
 </div>
 
 <script>
-    // Rich-text editor: the editable area mirrors the `content` textarea.
-    (function () {
-        var root = document.querySelector('[data-rte-root]');
+    // Rich-text editor: the editable area mirrors its own field's textarea.
+    (function (field) {
+        var root = Array.prototype.find.call(document.querySelectorAll('[data-rte-root]'), function (el) { return el.getAttribute('data-rte-root') === field; });
         if (!root || typeof document.execCommand !== 'function') { return; }
-        var textarea = root.querySelector('textarea[name="content"]');
+        var textarea = Array.prototype.find.call(root.querySelectorAll('textarea'), function (el) { return el.name === field; });
         var toolbar = root.querySelector('[data-rte-toolbar]');
         var editor = root.querySelector('[data-rte-editor]');
         if (!textarea || !toolbar || !editor) { return; }
@@ -94,5 +107,5 @@
         });
         editor.addEventListener('input', sync);
         textarea.form.addEventListener('submit', function () { normalize(); sync(); });
-    })();
+    })(@json($rteField));
 </script>

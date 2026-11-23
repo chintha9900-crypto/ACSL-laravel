@@ -16,7 +16,7 @@
 
     {{-- Who we are --}}
     <section class="border-t border-border">
-        <div class="container mx-auto max-w-3xl px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container py-16 md:py-20">
             <x-ui.section-heading badge="Who We Are">
                 Connecting the Global Aviation Community
             </x-ui.section-heading>
@@ -31,8 +31,8 @@
 
     {{-- Mission & Vision --}}
     <section class="border-y border-border bg-muted/50">
-        <div class="container mx-auto px-4 py-16 md:py-20 lg:px-8">
-            <div class="mx-auto grid max-w-4xl gap-5 md:grid-cols-2">
+        <div class="site-container py-16 md:py-20">
+            <div class="mx-auto grid gap-5 md:grid-cols-2">
                 <div class="ui-card p-6 md:p-8">
                     <x-ui.icon-tile size="sm">
                         <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
@@ -54,12 +54,12 @@
 
     {{-- Values --}}
     <section>
-        <div class="container mx-auto px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container py-16 md:py-20">
             <x-ui.section-heading badge="What We Stand For">
                 Our Values
             </x-ui.section-heading>
 
-            <div class="mx-auto mt-10 grid max-w-4xl gap-5 sm:grid-cols-3">
+            <div class="mx-auto mt-10 grid gap-5 sm:grid-cols-3">
                 @php
                     $values = [
                         ['title' => 'Community', 'text' => 'A club built around people, not just membership numbers.', 'path' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'],
@@ -83,7 +83,7 @@
 
     {{-- CTA banner --}}
     <section class="border-t border-border bg-muted/50">
-        <div class="container mx-auto px-4 py-16 md:py-20 lg:px-8">
+        <div class="site-container py-16 md:py-20">
             <div class="mx-auto max-w-2xl rounded-xl border border-border bg-background p-8 text-center shadow-card md:p-12">
                 <h2 class="font-display text-2xl font-bold text-primary md:text-3xl">Ready to join the community?</h2>
                 <p class="mt-3 text-muted-foreground">See membership categories and what's included, or start your application today.</p>

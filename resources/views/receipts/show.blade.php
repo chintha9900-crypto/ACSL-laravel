@@ -6,7 +6,7 @@
 --}}
 <x-layouts.public title="Receipt">
     <section class="border-t border-border">
-        <div class="container mx-auto max-w-2xl px-4 py-12 lg:px-8">
+        <div class="site-container content-narrow py-12">
             <h1 class="font-display text-3xl font-bold text-primary md:text-4xl">Receipt</h1>
             <p class="mt-2 text-muted-foreground">Order <span class="font-mono font-semibold text-foreground">{{ $order->order_number }}</span></p>
 
