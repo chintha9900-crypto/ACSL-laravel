@@ -9,19 +9,20 @@
     always escaped.
 --}}
 <x-layouts.public :title="$post->title">
-    <div class="border-b border-border bg-muted/50">
-        <div class="site-container py-10">
-            <a href="{{ route('blog.index') }}" class="text-sm font-semibold text-[#CC001F] hover:underline">&larr; Back to blog</a>
+    <div class="bg-[#686868] text-white" data-page-intro>
+        <div class="site-container py-[15px]">
+            <a href="{{ route('blog.index') }}" class="text-sm font-semibold text-white hover:underline">&larr; Back to blog</a>
 
             @if ($post->category)
-                <a href="{{ route('blog.index', ['category' => $post->category->slug]) }}" class="mt-4 inline-flex w-fit items-center rounded-md border border-[#666666]/40 px-2 py-0.5 text-[13px] font-semibold uppercase tracking-wide text-[#4D4D4D] hover:border-[#CC001F]/60">{{ $post->category->name }}</a>
+                <a href="{{ route('blog.index', ['category' => $post->category->slug]) }}" class="mt-4 inline-flex w-fit items-center rounded-md border border-white/60 px-2 py-0.5 text-[13px] font-semibold uppercase tracking-wide text-white hover:border-white">{{ $post->category->name }}</a>
             @endif
 
-            <h1 class="mt-3 max-w-4xl font-display text-3xl font-bold text-primary md:text-4xl">{{ $post->title }}</h1>
-            <p class="mt-2 text-sm text-muted-foreground">
+            <h1 class="mt-3 max-w-4xl font-sans text-3xl font-bold tracking-normal text-white md:text-4xl">{{ $post->title }}</h1>
+            <p class="mt-2 text-sm text-white">
                 <time datetime="{{ $post->published_at->toDateString() }}">{{ $post->published_at->format('j M Y') }}</time>
                 @if ($post->author) &middot; By {{ $post->author->name }} @endif
             </p>
+            <x-public.breadcrumbs :current="$post->title" class="mt-3" />
         </div>
     </div>
 

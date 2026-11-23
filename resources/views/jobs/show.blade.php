@@ -5,7 +5,7 @@
     this job selected.
 --}}
 <x-layouts.public :title="$job->title.' — Jobs'">
-    <x-public.hero>
+    <x-public.hero :breadcrumb-title="$job->title">
         <x-slot:badge>Jobs</x-slot:badge>
         <x-slot:lead>
             Browse current local and overseas aviation vacancies, and apply directly on the employer's website.

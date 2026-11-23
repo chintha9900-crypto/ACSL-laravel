@@ -21,7 +21,7 @@
         </div>
     @endif
 
-    <x-public.hero>
+    <x-public.hero :breadcrumb-title="$article->title">
         <x-slot:badge>Education</x-slot:badge>
         <x-slot:lead>{{ $article->short_description }}</x-slot:lead>
         {{ $article->title }}

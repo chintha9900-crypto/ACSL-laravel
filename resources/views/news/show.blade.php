@@ -6,12 +6,13 @@
     (`HtmlSanitizer::forDisplay()`).
 --}}
 <x-layouts.public :title="$item->title">
-    <div class="border-b border-border bg-muted/50">
-        <div class="site-container content-reading py-10">
-            <a href="{{ route('news.index') }}" class="text-sm font-semibold text-[#CC001F] hover:underline">&larr; Back to News</a>
+    <div class="bg-[#686868] text-white" data-page-intro>
+        <div class="site-container content-reading py-[15px]">
+            <a href="{{ route('news.index') }}" class="text-sm font-semibold text-white hover:underline">&larr; Back to News</a>
 
-            <h1 class="mt-3 font-display text-3xl font-bold text-primary md:text-4xl">{{ $item->title }}</h1>
-            <p class="mt-2 text-sm text-muted-foreground">{{ $item->published_at->format('j M Y') }}</p>
+            <h1 class="mt-3 font-sans text-3xl font-bold tracking-normal text-white md:text-4xl">{{ $item->title }}</h1>
+            <p class="mt-2 text-sm text-white">{{ $item->published_at->format('j M Y') }}</p>
+            <x-public.breadcrumbs :current="$item->title" class="mt-3" />
         </div>
     </div>
 

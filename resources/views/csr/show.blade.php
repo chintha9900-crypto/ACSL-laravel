@@ -7,11 +7,12 @@
     (`HtmlSanitizer::forDisplay()`).
 --}}
 <x-layouts.public :title="$project->title">
-    <div class="border-b border-border bg-muted/50">
-        <div class="site-container content-reading py-10">
+    <div class="bg-[#686868] text-white" data-page-intro>
+        <div class="site-container content-reading py-[15px]">
             <a href="{{ route('csr.index') }}" class="btn btn-sm btn-brand">&larr; Back to CSR</a>
 
-            <h1 class="mt-4 font-display text-3xl font-bold text-primary md:text-4xl">{{ $project->title }}</h1>
+            <h1 class="mt-4 font-sans text-3xl font-bold tracking-normal text-white md:text-4xl">{{ $project->title }}</h1>
+            <x-public.breadcrumbs :current="$project->title" class="mt-3" />
         </div>
     </div>
 
