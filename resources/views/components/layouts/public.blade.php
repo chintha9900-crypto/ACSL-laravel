@@ -1,8 +1,11 @@
 @props(['title' => 'Aviation Club'])
 
-{{-- The approved ACI logo is a controlled brand asset supplied by ACI (docs/frontend/08 C-02).
-     Until it is added at public/images/aci-logo.png the name is shown as text; nothing is invented. --}}
+{{-- The ACI logo (public/images/aci-logo.png), shared by the header and footer.
+     The newer "Aviation Club Logo.png" is kept in public/images for later use:
+     its dark lettering is unreadable on the #686868 footer until a light
+     version is supplied. If the file is missing the name is shown as text. --}}
 @php($hasLogo = file_exists(public_path('images/aci-logo.png')))
+@php($logoUrl = asset('images/aci-logo.png'))
 {{--
     Every page these link to already exists as a real route — no nav entry
     ever points at an unbuilt page (Jobs and Education live in the red strip,
@@ -15,20 +18,16 @@
     is a dropdown/disclosure, not a direct link only: the desktop
     nav renders it as a click-to-open `<details>` panel, the mobile menu as a
     nested `<details>` accordion — one shared source of navigation, not two.
-    The footer is deliberately different: it shows Membership as a single
-    plain link (`footerRoute`), not its children, and News & Events is one
-    combined item everywhere (its own landing page, `news-events`) — the
-    separate full lists (`news.index`/`events.index`) are reachable only
-    from that landing page's own "View all" links, per the approved design.
+    The footer has its own fixed four-column list (`$footerColumns`, below).
+    News & Events is one combined item everywhere (its own landing page,
+    `news-events`) — the separate full lists (`news.index`/`events.index`)
+    are reachable only from that landing page's own "View all" links, per
+    the approved design.
 
     E-Shop Step 10.2 — "E-Shop" is a dropdown item that is *also* a direct
     link (`route` set alongside `children`): unlike Membership's trigger,
     its own label still navigates to `eshop.index`, with "Cart" as its one
     child (`cart.show`) rather than a second, separate top-level nav entry.
-    The footer needs no `footerRoute` override here: with `route` already
-    set, `route($link['footerRoute'] ?? $link['route'])` already resolves to
-    `eshop.index`, the same single-plain-link behaviour Membership gets via
-    its own `footerRoute`.
 
     Main-site nav update — "About" is a top-level item directly before
     "Contact", which is a plain link; CSR is reached from the red strip only,
@@ -42,7 +41,6 @@
     ['route' => 'home', 'label' => 'Home'],
     [
         'label' => 'Membership',
-        'footerRoute' => 'membership.benefits',
         'children' => [
             ['route' => 'membership.benefits', 'label' => 'Membership Types'],
             ['route' => 'rules', 'label' => 'Club Rules'],
@@ -63,7 +61,7 @@
     // About sits directly before Contact; CSR lives only in the red strip, so
     // Contact has no dropdown children left and is a plain link. About stays
     // out of the footer, which never listed it.
-    ['route' => 'about', 'label' => 'About', 'inFooter' => false],
+    ['route' => 'about', 'label' => 'About'],
     ['route' => 'contact', 'label' => 'Contact'],
 ])
 {{-- Privacy/Terms are legal boilerplate, conventionally footer-only links —
@@ -71,7 +69,7 @@
      separate "Legal" column). --}}
 @php($legalLinks = [
     ['route' => 'privacy', 'label' => 'Privacy Policy'],
-    ['route' => 'terms', 'label' => 'Terms & Conditions'],
+    ['route' => 'terms', 'label' => 'Terms and Conditions'],
 ])
 
 <!DOCTYPE html>
@@ -85,7 +83,7 @@
             @vite(['resources/css/app.css', 'resources/js/app.js'])
         @endif
     </head>
-    <body class="theme-public flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
+    <body class="theme-public public-square flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
         <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[60] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm">
             Skip to content
         </a>
@@ -94,7 +92,7 @@
             <div class="site-container flex h-16 items-center justify-between lg:h-20">
                 <a href="{{ url('/') }}" class="flex items-center gap-2">
                     @if ($hasLogo)
-                        <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club" width="473" height="155" class="h-11 w-auto lg:h-14">
+                        <img src="{{ $logoUrl }}" alt="Aviation Club" width="473" height="155" class="h-11 w-auto lg:h-14">
                     @else
                         <span class="font-display text-lg font-bold text-primary">Aviation Club</span>
                     @endif
@@ -196,74 +194,76 @@
             {{ $slot }}
         </main>
 
-        {{-- Footer background is the approved brand red itself (not the `primary`
-             token, which is the dark-gray heading colour elsewhere on the site).
-             `primary-foreground` (white) is unaffected, so the existing
-             `text-primary-foreground/*` classes below still read correctly. --}}
-        <footer class="mt-20 bg-[#CC001F] text-primary-foreground">
-            <div class="site-container grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-5">
-                <div class="lg:col-span-2">
-                    <a href="{{ url('/') }}" class="mb-4 inline-flex items-center gap-2">
+        {{-- Footer: #686868 (the inner-page strip's grey), all text solid white
+             (5.6:1) and uppercase except the company description. Four columns,
+             left to right: Explore, Memberships, Legal, then the logo,
+             description and Contact Us on the far right. On phones the three
+             link columns sit two-up and the company column spans the full
+             width, keeping the footer short. --}}
+        @php($footerColumns = [
+            'Explore' => [
+                ['route' => 'eshop.index', 'label' => 'E-Shop'],
+                ['route' => 'jobs', 'label' => 'Jobs'],
+                ['route' => 'education', 'label' => 'Education'],
+                ['route' => 'blog.index', 'label' => 'Blog'],
+                ['route' => 'news-events', 'label' => 'News & Events'],
+            ],
+            'Memberships' => [
+                ['route' => 'membership.benefits', 'label' => 'Membership Types'],
+                ['route' => 'membership.apply', 'label' => 'Become a Member'],
+                ['route' => 'rules', 'label' => 'Club Rules'],
+                ['route' => 'faq', 'label' => 'FAQ'],
+                ['route' => 'commercial-partners', 'label' => 'Commercial Partners'],
+            ],
+            'Legal' => $legalLinks,
+        ])
+        @php($footerLinkClass = 'hover:underline hover:underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white')
+        <footer class="mt-20 bg-[#686868] text-white" data-site-footer>
+            <div class="site-container grid grid-cols-2 gap-x-6 gap-y-10 py-14 lg:grid-cols-[1fr_1fr_1fr_1.4fr] lg:gap-x-10">
+                @foreach ($footerColumns as $heading => $links)
+                    <div data-footer-column="{{ Str::lower($heading) }}">
+                        <h4 class="mb-4 font-sans text-base font-semibold uppercase tracking-normal">{{ $heading }}</h4>
+                        <ul class="space-y-2 text-sm uppercase">
+                            @foreach ($links as $link)
+                                <li><a href="{{ route($link['route']) }}" class="{{ $footerLinkClass }}">{{ $link['label'] }}</a></li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endforeach
+
+                {{-- Company column: logo, description, then the approved contact
+                     e-mail and phone (clickable mailto:/tel: links). --}}
+                <div class="col-span-2 lg:col-span-1" data-footer-column="company">
+                    <a href="{{ url('/') }}" class="inline-flex items-center gap-2 {{ $footerLinkClass }}">
                         @if ($hasLogo)
                             {{-- The logo's own text is dark, so it needs a light backing to
-                                 read on this dark footer; the asset itself is untouched. --}}
+                                 read on this grey footer; the asset itself is untouched. --}}
                             <span class="inline-flex items-center rounded-md bg-white px-3 py-2">
-                                <img src="{{ asset('images/aci-logo.png') }}" alt="Aviation Club" width="473" height="155" class="h-8 w-auto">
+                                <img src="{{ $logoUrl }}" alt="Aviation Club" width="473" height="155" class="h-8 w-auto">
                             </span>
                         @else
-                            <span class="grid h-9 w-9 place-items-center rounded-lg bg-secondary text-secondary-foreground">
-                                <svg class="h-5 w-5 -rotate-45" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
-                            </span>
-                            <span class="font-display text-lg font-bold">Aviation Club</span>
+                            <span class="font-sans text-lg font-bold uppercase">Aviation Club</span>
                         @endif
                     </a>
-                    <p class="text-sm leading-relaxed text-primary-foreground/70">
+                    <p class="mt-4 max-w-[17rem] text-sm leading-relaxed">
                         For people who work, study or take part in aviation.
                     </p>
-                </div>
 
-                <div>
-                    <h4 class="mb-4 font-display text-base font-semibold">Explore</h4>
-                    {{-- `hover:text-white` (not `hover:text-secondary`, now a mid-gray) keeps
-                         the hover state legible against the brand-red background. "Home" is
-                         left out here only — the logo above already links there, matching
-                         the approved reference footer's own layout. --}}
-                    <ul class="space-y-2 text-sm uppercase text-primary-foreground/75">
-                        @foreach ($navLinks as $link)
-                            @continue(($link['route'] ?? null) === 'home' || ($link['inFooter'] ?? true) === false)
-                            {{-- The footer has no dropdown affordance: Membership shows as
-                                 one normal link (`footerRoute`), not its four children. --}}
-                            <li><a href="{{ route($link['footerRoute'] ?? $link['route']) }}" class="hover:text-white">{{ $link['label'] }}</a></li>
-                        @endforeach
-                        <li><a href="{{ route('education') }}" class="hover:text-white">Education</a></li>
-                        <li><a href="{{ route('jobs') }}" class="hover:text-white">Jobs</a></li>
-                        <li><a href="{{ route('login') }}" class="hover:text-white">Sign In</a></li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h4 class="mb-4 font-display text-base font-semibold">Legal</h4>
-                    <ul class="space-y-2 text-sm uppercase text-primary-foreground/75">
-                        @foreach ($legalLinks as $link)
-                            <li><a href="{{ route($link['route']) }}" class="hover:text-white">{{ $link['label'] }}</a></li>
-                        @endforeach
-                    </ul>
-                </div>
-
-                {{-- No real ACI email/phone/address exists anywhere in this project
-                     (contact.blade.php's own contact-details cards are the same
-                     confirmed placeholder state) — this column links to the real
-                     contact form rather than inventing any of those details. --}}
-                <div>
-                    <h4 class="mb-4 font-display text-base font-semibold">Get in Touch</h4>
-                    <ul class="space-y-2 text-sm uppercase text-primary-foreground/75">
-                        <li><a href="{{ route('contact') }}" class="hover:text-white">Contact Us</a></li>
-                    </ul>
+                    <dl class="mt-6 space-y-2 text-sm uppercase" data-footer-contact>
+                        <div class="flex flex-wrap gap-x-2">
+                            <dt class="font-semibold">E-mail:</dt>
+                            <dd><a href="mailto:info@aviationclub.lk" class="{{ $footerLinkClass }}">info@aviationclub.lk</a></dd>
+                        </div>
+                        <div class="flex flex-wrap gap-x-2">
+                            <dt class="font-semibold">Phone:</dt>
+                            <dd><a href="tel:+94777691862" class="{{ $footerLinkClass }}">+94 777691862</a></dd>
+                        </div>
+                    </dl>
                 </div>
             </div>
 
-            <div class="border-t border-white/10">
-                <div class="site-container flex flex-col items-center justify-between gap-2 py-5 text-xs text-primary-foreground/60 md:flex-row">
+            <div class="border-t border-white/30">
+                <div class="site-container flex flex-col items-center justify-between gap-2 py-5 text-xs uppercase text-white md:flex-row">
                     <p>&copy; {{ date('Y') }} Aviation Club. All rights reserved.</p>
                     <p>Built for the global aviation community.</p>
                 </div>

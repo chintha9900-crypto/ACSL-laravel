@@ -166,6 +166,21 @@
 }
 
 /*
+ * Square corners across the public website (approved visual refinement).
+ * Scoped to the public layout's <body class="public-square">, so the admin,
+ * member and sign-in layouts keep their current look. Deliberately outside
+ * any @layer: unlayered rules outrank Tailwind's layered `rounded-*`
+ * utilities and the `.ui-card`/`.btn`/`.field-control` components without
+ * needing !important. Kept round: true circles (`rounded-full` — carousel
+ * dots, numbered steps, icon circles) and the blurred decorative glow behind
+ * the homepage hero text (`blur-xl`), which has no visible edge.
+ */
+.public-square *:not(.rounded-full, .blur-xl),
+.public-square ::file-selector-button {
+    border-radius: 0;
+}
+
+/*
  * The one deliberate brand-red action colour (docs: "Primary CTA should use
  * #CC001F"). Kept separate from the `--secondary`/`--primary` token remap
  * above (those feed many existing badges/icons whose meaning — e.g. a

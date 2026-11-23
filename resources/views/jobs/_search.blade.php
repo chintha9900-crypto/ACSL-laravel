@@ -24,7 +24,7 @@
             <a href="{{ route('jobs', array_filter(['q' => $filters['q'], 'location' => $value])) }}"
                 @if ($active) aria-current="page" @endif
                 @class([
-                    'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+                    'border px-4 py-1.5 text-sm font-medium transition-colors',
                     'border-[#CC001F] bg-[#CC001F] text-white' => $active,
                     'border-border bg-background text-primary hover:border-[#CC001F]/60' => ! $active,
                 ])>{{ $label }}</a>
