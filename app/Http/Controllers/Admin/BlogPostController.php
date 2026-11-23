@@ -35,7 +35,7 @@ class BlogPostController extends Controller
         $categoryId = ctype_digit((string) $categoryId) ? (int) $categoryId : null;
 
         $posts = BlogPost::query()
-            ->select(['id', 'title', 'slug', 'blog_category_id', 'status', 'published_at', 'updated_at'])
+            ->select(['id', 'title', 'slug', 'blog_category_id', 'status', 'published_at', 'homepage_position', 'updated_at'])
             ->with('category:id,name')
             ->when($status, fn ($query) => $query->where('status', $status))
             ->when($categoryId, fn ($query) => $query->where('blog_category_id', $categoryId))

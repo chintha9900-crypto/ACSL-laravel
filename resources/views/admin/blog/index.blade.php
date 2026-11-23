@@ -52,6 +52,9 @@
                     <tr>
                         <td class="px-4 py-3">
                             <a href="{{ route('admin.blog.edit', $post) }}" class="font-medium text-primary underline underline-offset-2 hover:text-secondary">{{ $post->title }}</a>
+                            @if ($post->homepage_position)
+                                <span class="ml-1 inline-flex items-center rounded border border-[#CC001F]/40 px-1.5 py-0.5 text-xs font-semibold text-[#CC001F]" title="Featured on the homepage">Home {{ $post->homepage_position }}</span>
+                            @endif
                         </td>
                         <td class="px-4 py-3">{{ $post->category?->name ?? '—' }}</td>
                         <td class="px-4 py-3">

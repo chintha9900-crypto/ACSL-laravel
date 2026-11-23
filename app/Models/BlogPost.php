@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\BlogPostFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +32,17 @@ class BlogPost extends Model
     public const STATUSES = [self::STATUS_DRAFT, self::STATUS_PUBLISHED];
 
     /**
+     * Homepage "Featured insights & events" article slots (`homepage_position`):
+     * 1 = middle column, 2 = right column. Independent of `is_featured`.
+     *
+     * @var array<int, string>
+     */
+    public const HOMEPAGE_POSITIONS = [
+        1 => 'Homepage position 1 (middle column)',
+        2 => 'Homepage position 2 (right column)',
+    ];
+
+    /**
      * @var list<string>
      */
     protected $fillable = [
@@ -53,6 +65,7 @@ class BlogPost extends Model
         return [
             'published_at' => 'datetime',
             'is_featured' => 'boolean',
+            'homepage_position' => 'integer',
         ];
     }
 
@@ -104,6 +117,24 @@ class BlogPost extends Model
     {
         return self::query()->published()->where('is_featured', true)->first()
             ?? self::query()->published()->orderByDesc('published_at')->orderByDesc('id')->first();
+    }
+
+    /**
+     * The published posts in homepage positions 1 and 2, in position order,
+     * with their category loaded. Drafts and scheduled posts holding a
+     * position are left out; each post can hold only one position.
+     *
+     * @return Collection<int, BlogPost>
+     */
+    public static function onHomepage(): Collection
+    {
+        return self::query()
+            ->published()
+            ->whereIn('homepage_position', array_keys(self::HOMEPAGE_POSITIONS))
+            ->with('category:id,name,slug')
+            ->orderBy('homepage_position')
+            ->limit(count(self::HOMEPAGE_POSITIONS))
+            ->get(['id', 'blog_category_id', 'title', 'slug', 'excerpt', 'content', 'featured_image_path', 'featured_image_alt', 'published_at', 'homepage_position']);
     }
 
     public function scopePublished(Builder $query): void

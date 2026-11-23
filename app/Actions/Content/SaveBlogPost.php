@@ -34,7 +34,9 @@ class SaveBlogPost
     /**
      * Update a post. With `is_featured` present, the post becomes (or stops
      * being) the one featured post — any other featured post is cleared in the
-     * same transaction; the unique `featured_key` is the backstop.
+     * same transaction; the unique `featured_key` is the backstop. With
+     * `homepage_position` present, the post takes that homepage slot (or
+     * none), releasing it from any other post.
      *
      * @param  array<string, mixed>  $data
      */
@@ -50,6 +52,16 @@ class SaveBlogPost
                     BlogPost::query()->where('is_featured', true)->whereKeyNot($post->id)->update(['is_featured' => false]);
                 }
                 $post->forceFill(['is_featured' => $featured])->save();
+            }
+
+            // Homepage position: taking a slot releases it from whichever post
+            // held it, in the same transaction; the unique index is the backstop.
+            if (array_key_exists('homepage_position', $data)) {
+                $position = $data['homepage_position'] === null || $data['homepage_position'] === '' ? null : (int) $data['homepage_position'];
+                if ($position !== null) {
+                    BlogPost::query()->where('homepage_position', $position)->whereKeyNot($post->id)->update(['homepage_position' => null]);
+                }
+                $post->forceFill(['homepage_position' => $position])->save();
             }
 
             $this->syncTags($post, $data['tags'] ?? null);

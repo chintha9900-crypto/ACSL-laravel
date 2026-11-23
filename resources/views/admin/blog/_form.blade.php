@@ -80,6 +80,21 @@
                 <p class="text-xs text-[#CC001F]">{{ $message }}</p>
             @enderror
         </div>
+
+        <div class="space-y-1.5">
+            <label for="homepage_position" class="block text-sm font-medium leading-none">Featured on homepage</label>
+            @php($selectedPosition = (string) old('homepage_position', $post->homepage_position ?? ''))
+            <select id="homepage_position" name="homepage_position" class="field-control h-9 max-w-md" @error('homepage_position') aria-invalid="true" @enderror>
+                <option value="" @selected($selectedPosition === '')>Not featured on homepage</option>
+                @foreach (\App\Models\BlogPost::HOMEPAGE_POSITIONS as $value => $label)
+                    <option value="{{ $value }}" @selected($selectedPosition === (string) $value)>{{ $label }}</option>
+                @endforeach
+            </select>
+            <p class="text-xs text-muted-foreground">Shows this published post in the homepage "Featured insights &amp; events" section. Choosing a position another post holds moves that post off the homepage. Separate from the Featured post option above.</p>
+            @error('homepage_position')
+                <p class="text-xs text-[#CC001F]">{{ $message }}</p>
+            @enderror
+        </div>
     @endif
 
     @php($imageMaxKb = (int) config('uploads.blog_featured_image.max_kb'))

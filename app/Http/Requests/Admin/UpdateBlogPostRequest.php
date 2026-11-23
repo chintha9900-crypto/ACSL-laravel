@@ -32,6 +32,7 @@ class UpdateBlogPostRequest extends FormRequest
             'featured_image_alt' => ['nullable', 'string', 'max:255'],
             'tags' => ['nullable', 'string', 'max:500'],
             'is_featured' => ['nullable', 'boolean'],
+            'homepage_position' => ['nullable', 'integer', Rule::in(array_keys(BlogPost::HOMEPAGE_POSITIONS))],
         ];
     }
 
@@ -76,6 +77,30 @@ class UpdateBlogPostRequest extends FormRequest
 
                 if ($wantsFeatured && $post->status !== BlogPost::STATUS_PUBLISHED) {
                     $validator->errors()->add('is_featured', 'Only a published post can be featured. Publish it first.');
+                }
+            },
+            // Homepage position: same rule as the featured post — a publishing
+            // decision, for published posts only. Independent of is_featured.
+            function (Validator $validator): void {
+                if (! $this->has('homepage_position') || $validator->errors()->has('homepage_position')) {
+                    return;
+                }
+
+                $post = $this->route('post');
+                $wanted = $this->filled('homepage_position') ? (int) $this->input('homepage_position') : null;
+
+                if ($wanted === $post->homepage_position) {
+                    return;
+                }
+
+                if (! $this->user()->can('publish', $post)) {
+                    $validator->errors()->add('homepage_position', 'You do not have permission to change the homepage articles.');
+
+                    return;
+                }
+
+                if ($wanted !== null && $post->status !== BlogPost::STATUS_PUBLISHED) {
+                    $validator->errors()->add('homepage_position', 'Only a published post can be shown on the homepage. Publish it first.');
                 }
             },
         ];
