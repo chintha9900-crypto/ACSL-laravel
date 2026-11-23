@@ -25,7 +25,7 @@ class NewsEventsController extends Controller
 
         $events = EventListing::query()
             ->select(['id', 'title', 'slug', 'excerpt', 'image_path', 'starts_at', 'location', 'published_at'])
-            ->published()
+            ->upcoming()
             ->orderBy('starts_at')
             ->limit(3)
             ->get();

@@ -1,6 +1,6 @@
 {{--
     Home — docs/frontend/03_PUBLIC_PAGES.md §A1. Sections: (1) Hero (2) About
-    (3) Benefits (4) Latest from the club. Copy notes:
+    (3) Benefits (4) Featured insights & events. Copy notes:
     - Hero H1 is the documented fallback ("no active hero banner" — there is no
       hero-banner CMS yet, so this is always what renders).
     - About/Benefits copy is adapted from the live production site
@@ -286,10 +286,12 @@
     </div>
 </section>
 
-    {{-- 3. Benefits --}}
-    <section class="border-y border-border bg-muted/50">
+    {{-- 3. Benefits — grey #828282 band; the heading turns white (3.8:1, large
+         text) and the small badge gets a white fill so its dark text stays
+         readable (8.4:1). Cards keep their white background. --}}
+    <section class="border-y border-border bg-[#828282]" data-home-benefits>
         <div class="site-container py-16 md:py-20">
-            <x-ui.section-heading badge="Membership Benefits">
+            <x-ui.section-heading badge="Membership Benefits" class="[&>h2]:text-white [&>span]:border-white [&>span]:bg-white">
                 Everything you need to grow.
             </x-ui.section-heading>
 
@@ -319,15 +321,95 @@
         </div>
     </section>
 
-    {{-- 4. Latest from the club (blog module does not exist yet — empty state only) --}}
-    <section>
-        <div class="site-container py-16 text-center md:py-20">
+    {{-- 4. Featured insights & events (HomeController): one bordered frame
+         that always keeps its three columns — upcoming events, homepage
+         position 1, homepage position 2. A missing item gets a compact
+         placeholder in its own column; the frame never collapses. The 1px
+         gaps over a border-coloured grid draw the dividers in every layout.
+         Desktop (lg): three equal columns. Tablet (md): events across the
+         top, the two articles side by side. Mobile: events, article 1,
+         article 2. --}}
+    <section data-featured-insights>
+        <div class="site-container py-16 md:py-20">
             <x-ui.section-heading badge="From the Club">
-                Insights &amp; stories
+                Featured insights &amp; events
             </x-ui.section-heading>
 
-            <div class="mt-8 rounded-xl border border-dashed border-border bg-background px-6 py-10 text-sm text-muted-foreground">
-                New articles are landing soon.
+            <div class="mt-10 grid gap-px overflow-hidden rounded-xl border border-border bg-border md:grid-cols-2 lg:grid-cols-3" data-featured-grid>
+                <div class="flex flex-col bg-background p-6 md:col-span-2 lg:col-span-1 lg:p-7" data-home-events>
+                    <h3 class="text-xs font-semibold uppercase tracking-wider text-[#CC001F]">Upcoming events</h3>
+
+                    @if ($upcomingEvents->isEmpty())
+                        <p class="mt-4 text-sm text-muted-foreground">There are no upcoming events right now.</p>
+                    @else
+                        <ul class="mt-2 divide-y divide-border">
+                            @foreach ($upcomingEvents as $event)
+                                <li>
+                                    <a href="{{ route('events.show', $event->slug) }}" class="group flex items-start gap-4 py-4" data-home-event>
+                                        <span class="flex w-14 shrink-0 flex-col items-center rounded-lg border border-border bg-muted/40 py-2 text-center">
+                                            <span class="text-xs font-semibold uppercase tracking-wider text-[#CC001F]">{{ $event->starts_at->format('M') }}</span>
+                                            <span class="font-display text-2xl font-bold leading-none text-primary">{{ $event->starts_at->format('j') }}</span>
+                                        </span>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block text-xs font-medium uppercase tracking-wide text-muted-foreground">{{ $event->starts_at->format('g:ia') }}</span>
+                                            <span class="mt-1 line-clamp-2 font-display font-semibold leading-snug text-primary group-hover:text-[#CC001F]">{{ $event->title }}</span>
+                                            @if ($event->excerpt)
+                                                <span class="mt-1 line-clamp-2 text-sm leading-snug text-muted-foreground">{{ $event->excerpt }}</span>
+                                            @endif
+                                        </span>
+                                        <svg class="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-[#CC001F]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
+
+                @foreach (array_keys(\App\Models\BlogPost::HOMEPAGE_POSITIONS) as $position)
+                    @php($article = $homepageArticles->firstWhere('homepage_position', $position))
+                    @if (! $article)
+                        <div class="flex flex-col bg-background p-6 lg:p-7" data-home-article-placeholder="{{ $position }}">
+                            <div class="grid aspect-[16/10] place-items-center rounded-lg border border-dashed border-border bg-muted/40">
+                                <svg class="h-8 w-8 text-muted-foreground/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
+                            </div>
+                            <p class="mt-5 text-sm text-muted-foreground">A featured article will appear here soon.</p>
+                        </div>
+                        @continue
+                    @endif
+                    @php($articleUrl = route('blog.show', $article->slug))
+                    @php($articleExcerpt = $article->excerpt ?: Str::limit(trim(html_entity_decode(strip_tags((string) $article->content), ENT_QUOTES | ENT_HTML5, 'UTF-8')), 180))
+                    <article class="flex flex-col bg-background p-6 lg:p-7" data-home-article="{{ $article->homepage_position }}">
+                        <a href="{{ $articleUrl }}" class="block aspect-[16/10] overflow-hidden rounded-lg bg-[#4D4D4D]" tabindex="-1" aria-hidden="true">
+                            @if ($article->featured_image_path)
+                                <img data-fallback src="{{ Storage::disk('public')->url($article->featured_image_path) }}" alt="" class="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.02]">
+                            @else
+                                <span class="grid h-full w-full place-items-center">
+                                    <svg class="h-10 w-10 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
+                                </span>
+                            @endif
+                        </a>
+                        <p class="mt-5 text-xs font-medium uppercase tracking-wide text-[#666666]">
+                            <time datetime="{{ $article->published_at->toDateString() }}">{{ $article->published_at->format('j M Y') }}</time>
+                            @if ($article->category)
+                                &middot; {{ $article->category->name }}
+                            @endif
+                        </p>
+                        <h3 class="mt-2 font-display text-xl font-bold leading-snug text-primary">
+                            <a href="{{ $articleUrl }}" class="hover:text-[#CC001F]">{{ $article->title }}</a>
+                        </h3>
+                        @if ($articleExcerpt !== '')
+                            <p class="mt-2 line-clamp-3 text-sm leading-relaxed text-muted-foreground">{{ $articleExcerpt }}</p>
+                        @endif
+                        <a href="{{ $articleUrl }}" class="group mt-auto inline-flex w-fit pt-5 text-muted-foreground hover:text-[#CC001F]" data-home-article-arrow>
+                            <span class="sr-only">Read article: {{ $article->title }}</span>
+                            <svg class="h-5 w-5 transition-transform group-hover:translate-x-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        </a>
+                    </article>
+                @endforeach
+            </div>
+
+            <div class="mt-10 text-center">
+                <a href="{{ route('news-events') }}" class="text-sm font-semibold text-[#CC001F] hover:underline">View all news &amp; events &rarr;</a>
             </div>
         </div>
     </section>

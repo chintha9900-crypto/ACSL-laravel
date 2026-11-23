@@ -13,14 +13,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * rich-text editor (App\Support\HtmlSanitizer); older events hold plain text,
  * which `HtmlSanitizer::forDisplay()` keeps readable.
  *
- * Past events are not filtered out of the public listing: whether to show
- * only upcoming events is explicitly an unresolved query-level concern
- * (docs/database/10 §7), not something this stage decides.
+ * Upcoming vs past (approved rule): an event stays upcoming throughout its
+ * scheduled day in Asia/Colombo and becomes past after midnight. `starts_at`
+ * holds the local Sri Lankan date/time exactly as entered (the app runs in
+ * UTC and no conversion is applied), so it is compared with the start of
+ * today in Colombo as a plain wall-clock value — never with the UTC clock.
+ * scopeUpcoming()/scopePast() are the single place this rule lives.
  */
 class EventListing extends Model
 {
     /** @use HasFactory<EventListingFactory> */
     use HasFactory;
+
+    /** The timezone event dates/times are entered and shown in. */
+    public const EVENT_TIMEZONE = 'Asia/Colombo';
 
     public const STATUS_DRAFT = 'draft';
 
@@ -74,6 +80,47 @@ class EventListing extends Model
     public function scopePublished(Builder $query): void
     {
         $query->where('status', self::STATUS_PUBLISHED)->where('published_at', '<=', now());
+    }
+
+    /**
+     * The start of today in Colombo, as the wall-clock value `starts_at` is
+     * stored in (`Y-m-d 00:00:00`).
+     */
+    public static function startOfEventToday(): string
+    {
+        return now(self::EVENT_TIMEZONE)->startOfDay()->format('Y-m-d H:i:s');
+    }
+
+    /**
+     * Published events on today's date (Colombo) or later — an event stays
+     * here for its whole day.
+     *
+     * @param  Builder<EventListing>  $query
+     */
+    public function scopeUpcoming(Builder $query): void
+    {
+        $query->published()->where('starts_at', '>=', self::startOfEventToday());
+    }
+
+    /**
+     * Published events whose day ended before today (Colombo). Exactly the
+     * complement of scopeUpcoming() among published events.
+     *
+     * @param  Builder<EventListing>  $query
+     */
+    public function scopePast(Builder $query): void
+    {
+        $query->published()->where('starts_at', '<', self::startOfEventToday());
+    }
+
+    /**
+     * Same rule as scopeUpcoming(), for a single already-loaded item:
+     * publicly visible and on today's date (Colombo) or later.
+     */
+    public function isUpcoming(): bool
+    {
+        return $this->isPubliclyVisible()
+            && $this->starts_at->format('Y-m-d H:i:s') >= self::startOfEventToday();
     }
 
     /**

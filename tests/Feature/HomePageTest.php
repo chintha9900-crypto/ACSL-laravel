@@ -523,58 +523,65 @@ class HomePageTest extends TestCase
     }
 
     /**
-     * The footer's "Explore" column: Membership shows as one normal link
-     * (to `membership.benefits`, not a dropdown and not its four children),
-     * and News & Events shows as its one combined item — never the two
-     * separate full-list routes.
+     * The footer has exactly four columns, left to right: Explore,
+     * Memberships, Legal, then the company column (logo, description and the
+     * approved e-mail and phone as mailto:/tel: links).
+     * Each column lists its links in the approved order, to existing routes.
      */
-    public function test_the_footer_explore_column_shows_membership_as_one_link_not_four(): void
+    public function test_the_footer_has_the_four_approved_columns_in_order(): void
     {
         $response = $this->get(route('home'))->assertOk();
         $xpath = $this->xpath($response->getContent());
 
-        $exploreHeading = $xpath->query('//h4[contains(., "Explore")]')->item(0);
-        $this->assertNotNull($exploreHeading, 'The footer must have an "Explore" column.');
-
-        $items = [];
-        foreach ($xpath->query('following-sibling::ul[1]/li/a', $exploreHeading) as $link) {
-            $items[trim($link->textContent)] = $link->getAttribute('href');
+        $columns = [];
+        foreach ($xpath->query('//footer//*[@data-footer-column]') as $column) {
+            $columns[$column->getAttribute('data-footer-column')] = $column;
         }
 
-        $this->assertSame(route('membership.benefits'), $items['Membership'] ?? null, 'Footer "Membership" must be one plain link, not its dropdown children.');
-        $this->assertArrayNotHasKey('Membership Types', $items, 'The footer must not list Membership\'s children separately.');
-        $this->assertArrayNotHasKey('Club Rules', $items);
-        $this->assertArrayNotHasKey('Become a Member', $items);
-        $this->assertArrayNotHasKey('FAQ', $items);
-        $this->assertArrayNotHasKey('Commercial Partners', $items);
+        $this->assertSame(['explore', 'memberships', 'legal', 'company'], array_keys($columns));
 
-        $this->assertSame(route('news-events'), $items['News & Events'] ?? null, 'Footer must link "News & Events" to the combined landing page.');
-        $this->assertArrayNotHasKey('News', $items);
-        $this->assertArrayNotHasKey('Events', $items);
+        $links = function (\DOMElement $column) use ($xpath): array {
+            $items = [];
+            foreach ($xpath->query('.//ul/li/a', $column) as $link) {
+                $items[trim($link->textContent)] = $link->getAttribute('href');
+            }
 
-        $this->assertSame(route('contact'), $items['Contact'] ?? null, 'Footer "Contact" must be one plain link, not its dropdown children.');
-        $this->assertArrayNotHasKey('About', $items, 'The footer must not list Contact\'s children separately.');
-        $this->assertArrayNotHasKey('CSR', $items);
-    }
+            return $items;
+        };
 
-    /**
-     * The footer has the four documented columns: brand, Explore, Legal,
-     * and Get in Touch (which links to the real contact page rather than
-     * inventing an email/phone/address that doesn't exist anywhere in this
-     * project).
-     */
-    public function test_the_footer_has_the_four_documented_columns(): void
-    {
-        $response = $this->get(route('home'))->assertOk();
-        $xpath = $this->xpath($response->getContent());
+        $this->assertSame([
+            'E-Shop' => route('eshop.index'),
+            'Jobs' => route('jobs'),
+            'Education' => route('education'),
+            'Blog' => route('blog.index'),
+            'News & Events' => route('news-events'),
+        ], $links($columns['explore']));
 
-        $this->assertSame(1, $xpath->query('//footer//h4[contains(., "Explore")]')->length);
-        $this->assertSame(1, $xpath->query('//footer//h4[contains(., "Legal")]')->length);
+        $this->assertSame([
+            'Membership Types' => route('membership.benefits'),
+            'Become a Member' => route('membership.apply'),
+            'Club Rules' => route('rules'),
+            'FAQ' => route('faq'),
+            'Commercial Partners' => route('commercial-partners'),
+        ], $links($columns['memberships']));
 
-        $getInTouchHeading = $xpath->query('//footer//h4[contains(., "Get in Touch")]')->item(0);
-        $this->assertNotNull($getInTouchHeading, 'The footer must have a "Get in Touch" column.');
+        $this->assertSame([
+            'Privacy Policy' => route('privacy'),
+            'Terms and Conditions' => route('terms'),
+        ], $links($columns['legal']));
 
-        $getInTouchLinks = $xpath->query('following-sibling::ul[1]/li/a[@href="'.route('contact').'"]', $getInTouchHeading);
-        $this->assertSame(1, $getInTouchLinks->length, 'The Get in Touch column must link to the real contact page.');
+        $this->assertSame(0, $xpath->query('.//h4', $columns['company'])->length, 'The company column has no Contact Us heading.');
+        $this->assertStringContainsString('For people who work, study or take part in aviation.', $columns['company']->textContent);
+
+        $contact = [];
+        foreach ($xpath->query('.//dl[@data-footer-contact]/div', $columns['company']) as $row) {
+            $link = $xpath->query('.//dd/a', $row)->item(0);
+            $contact[trim($xpath->query('.//dt', $row)->item(0)->textContent)] = [trim($link->textContent), $link->getAttribute('href')];
+        }
+
+        $this->assertSame([
+            'E-mail:' => ['info@aviationclub.lk', 'mailto:info@aviationclub.lk'],
+            'Phone:' => ['+94 777691862', 'tel:+94777691862'],
+        ], $contact);
     }
 }

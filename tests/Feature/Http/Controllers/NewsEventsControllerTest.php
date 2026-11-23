@@ -4,6 +4,7 @@ namespace Tests\Feature\Http\Controllers;
 
 use App\Models\EventListing;
 use App\Models\NewsItem;
+use Carbon\CarbonImmutable;
 use Tests\MysqlTestCase;
 
 class NewsEventsControllerTest extends MysqlTestCase
@@ -81,5 +82,49 @@ class NewsEventsControllerTest extends MysqlTestCase
         $this->get(route('events.index'))->assertOk();
         $this->assertNotSame(route('news.index'), route('news-events'));
         $this->assertNotSame(route('events.index'), route('news-events'));
+    }
+
+    // --- events column: upcoming only (EventListing::scopeUpcoming()) ----------
+
+    public function test_the_events_column_shows_only_publicly_visible_upcoming_events(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-11-25 10:00', EventListing::EVENT_TIMEZONE));
+
+        $upcoming = EventListing::factory()->published()->create([
+            'slug' => 'published-upcoming',
+            'starts_at' => CarbonImmutable::parse('2026-12-01 10:00', EventListing::EVENT_TIMEZONE),
+        ]);
+        $past = EventListing::factory()->published()->create([
+            'slug' => 'published-past',
+            'starts_at' => CarbonImmutable::parse('2026-11-24 18:00', EventListing::EVENT_TIMEZONE),
+        ]);
+        $draft = EventListing::factory()->create([
+            'slug' => 'draft-upcoming',
+            'starts_at' => CarbonImmutable::parse('2026-12-01 10:00', EventListing::EVENT_TIMEZONE),
+        ]);
+        $scheduled = EventListing::factory()->create([
+            'slug' => 'scheduled-publication',
+            'status' => EventListing::STATUS_PUBLISHED,
+            'published_at' => CarbonImmutable::parse('2026-11-26 10:00', EventListing::EVENT_TIMEZONE)->utc(),
+            'starts_at' => CarbonImmutable::parse('2026-12-01 10:00', EventListing::EVENT_TIMEZONE),
+        ]);
+
+        $response = $this->get(route('news-events'))->assertOk();
+
+        $response->assertSee('href="'.route('events.show', $upcoming->slug).'"', false);
+        $response->assertDontSee('href="'.route('events.show', $past->slug).'"', false);
+        $response->assertDontSee('href="'.route('events.show', $draft->slug).'"', false);
+        $response->assertDontSee('href="'.route('events.show', $scheduled->slug).'"', false);
+    }
+
+    public function test_the_events_column_shows_the_empty_state_when_only_past_events_exist(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-11-25 10:00', EventListing::EVENT_TIMEZONE));
+
+        EventListing::factory()->published()->create([
+            'starts_at' => CarbonImmutable::parse('2026-11-24 18:00', EventListing::EVENT_TIMEZONE),
+        ]);
+
+        $this->get(route('news-events'))->assertOk()->assertSee('No upcoming events.');
     }
 }

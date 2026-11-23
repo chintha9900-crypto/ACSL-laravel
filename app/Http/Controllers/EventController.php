@@ -8,20 +8,32 @@ use Illuminate\View\View;
 class EventController extends Controller
 {
     /**
-     * Published events only, soonest first. Past events are not filtered
-     * out — whether to list upcoming events only is an unresolved,
-     * unconfirmed rule (docs/database/10 §7), not decided here.
+     * Upcoming events (soonest first, `?page=`) and the Past Events Archive
+     * (newest first, `?past_page=`), paginated independently. The split is
+     * EventListing::scopeUpcoming()/scopePast(), so an event is in exactly
+     * one list and moves to the archive after its day ends in Colombo.
      */
     public function index(): View
     {
+        $columns = ['id', 'title', 'slug', 'excerpt', 'image_path', 'starts_at', 'location', 'published_at'];
+
         $events = EventListing::query()
-            ->select(['id', 'title', 'slug', 'excerpt', 'image_path', 'starts_at', 'location', 'published_at'])
-            ->published()
+            ->select($columns)
+            ->upcoming()
             ->orderBy('starts_at')
-            ->paginate(9)
+            ->orderBy('id')
+            ->paginate(9, pageName: 'page')
             ->withQueryString();
 
-        return view('events.index', ['events' => $events]);
+        $pastEvents = EventListing::query()
+            ->select($columns)
+            ->past()
+            ->orderByDesc('starts_at')
+            ->orderByDesc('id')
+            ->paginate(9, pageName: 'past_page')
+            ->withQueryString();
+
+        return view('events.index', ['events' => $events, 'pastEvents' => $pastEvents]);
     }
 
     /**
