@@ -7,6 +7,7 @@ use Carbon\CarbonImmutable;
 use DOMDocument;
 use DOMXPath;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\MysqlTestCase;
 
 /**
@@ -223,9 +224,7 @@ class JobsPageTest extends MysqlTestCase
         ];
     }
 
-    /**
-     * @dataProvider unusableUrls
-     */
+    #[DataProvider('unusableUrls')]
     public function test_apply_now_is_hidden_when_the_url_is_missing_or_invalid(?string $url): void
     {
         $job = $this->liveJob();

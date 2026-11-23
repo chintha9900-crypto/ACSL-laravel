@@ -8,6 +8,7 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\Concerns\CreatesReviewableApplications;
 use Tests\Concerns\CreatesUploads;
@@ -112,9 +113,7 @@ class JobListingControllerTest extends MysqlTestCase
         return ['admin' => ['admin'], 'editor' => ['editor']];
     }
 
-    /**
-     * @dataProvider managers
-     */
+    #[DataProvider('managers')]
     public function test_admin_and_editor_can_open_the_management_pages(string $role): void
     {
         $user = $this->{$role}();
@@ -126,9 +125,7 @@ class JobListingControllerTest extends MysqlTestCase
         $this->actingAs($user)->get(route('admin.jobs.edit', $job))->assertOk();
     }
 
-    /**
-     * @dataProvider managers
-     */
+    #[DataProvider('managers')]
     public function test_admin_and_editor_can_create_edit_publish_and_unpublish(string $role): void
     {
         $user = $this->{$role}();
@@ -150,9 +147,7 @@ class JobListingControllerTest extends MysqlTestCase
         $this->assertSame(JobListing::STATUS_DRAFT, $job->fresh()->status);
     }
 
-    /**
-     * @dataProvider managers
-     */
+    #[DataProvider('managers')]
     public function test_admin_and_editor_can_delete_a_job(string $role): void
     {
         $job = JobListing::factory()->published()->create();
@@ -230,9 +225,7 @@ class JobListingControllerTest extends MysqlTestCase
         ];
     }
 
-    /**
-     * @dataProvider unsafeUrls
-     */
+    #[DataProvider('unsafeUrls')]
     public function test_unsafe_or_malformed_application_urls_are_rejected_on_save(string $url): void
     {
         $this->actingAs($this->admin())
@@ -242,9 +235,7 @@ class JobListingControllerTest extends MysqlTestCase
         $this->assertSame(0, JobListing::query()->count());
     }
 
-    /**
-     * @dataProvider unsafeUrls
-     */
+    #[DataProvider('unsafeUrls')]
     public function test_a_stored_unsafe_application_url_blocks_publishing(string $url): void
     {
         $job = JobListing::factory()->create();
@@ -288,9 +279,7 @@ class JobListingControllerTest extends MysqlTestCase
         return ['draft' => ['draft'], 'published' => ['published'], 'expired' => ['expired']];
     }
 
-    /**
-     * @dataProvider statuses
-     */
+    #[DataProvider('statuses')]
     public function test_editing_never_changes_the_status(string $status): void
     {
         $job = match ($status) {
@@ -525,9 +514,7 @@ class JobListingControllerTest extends MysqlTestCase
         return ['save returns false' => [false], 'save throws' => [true]];
     }
 
-    /**
-     * @dataProvider failedSaves
-     */
+    #[DataProvider('failedSaves')]
     public function test_a_failed_database_update_keeps_the_old_logo_and_removes_the_new_file(bool $throws): void
     {
         $job = JobListing::factory()->create();
@@ -563,9 +550,7 @@ class JobListingControllerTest extends MysqlTestCase
         return $job->fresh();
     }
 
-    /**
-     * @dataProvider managers
-     */
+    #[DataProvider('managers')]
     public function test_admin_and_editor_can_remove_the_current_logo(string $role): void
     {
         $job = $this->jobWithLogo();
@@ -634,9 +619,7 @@ class JobListingControllerTest extends MysqlTestCase
         Storage::disk('public')->assertExists($job->company_logo);
     }
 
-    /**
-     * @dataProvider failedSaves
-     */
+    #[DataProvider('failedSaves')]
     public function test_a_failed_removal_keeps_the_reference_and_the_file(bool $throws): void
     {
         $job = $this->jobWithLogo();
@@ -672,9 +655,7 @@ class JobListingControllerTest extends MysqlTestCase
         $response->assertRedirect()->assertSessionHasErrors('job')->assertSessionMissing('status');
     }
 
-    /**
-     * @dataProvider managers
-     */
+    #[DataProvider('managers')]
     public function test_a_silent_save_failure_during_an_ordinary_edit_changes_nothing(string $role): void
     {
         $job = $this->jobWithLogo();
@@ -706,9 +687,7 @@ class JobListingControllerTest extends MysqlTestCase
             ->assertDontSee('Job updated.');
     }
 
-    /**
-     * @dataProvider managers
-     */
+    #[DataProvider('managers')]
     public function test_a_silent_save_failure_during_logo_removal_keeps_the_logo(string $role): void
     {
         $job = $this->jobWithLogo();
@@ -724,9 +703,7 @@ class JobListingControllerTest extends MysqlTestCase
         $this->assertSame([$logo], Storage::disk('public')->allFiles());
     }
 
-    /**
-     * @dataProvider managers
-     */
+    #[DataProvider('managers')]
     public function test_a_silent_save_failure_during_logo_replacement_keeps_the_old_logo_and_removes_the_new_file(string $role): void
     {
         $job = $this->jobWithLogo();
