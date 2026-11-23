@@ -76,16 +76,23 @@ class PublicImagesTest extends MysqlTestCase
         $this->assertStringContainsString('.image-fallback', file_get_contents(resource_path('css/app.css')));
     }
 
-    public function test_news_and_event_listing_images_are_half_the_card_width_on_desktop(): void
+    public function test_news_listing_images_are_half_the_card_width_on_desktop(): void
     {
         NewsItem::factory()->published()->create(['image_path' => 'news/item.png']);
+
+        $this->get(route('news.index'))->assertOk()
+            ->assertSee('aspect-[16/10] w-full overflow-hidden bg-[#4D4D4D] lg:mx-5 lg:mt-5 lg:w-1/2 lg:rounded-md" data-listing-image', false)
+            ->assertSee('object-cover', false);
+    }
+
+    public function test_event_card_images_span_the_full_card_width(): void
+    {
         EventListing::factory()->published()->create(['image_path' => 'events/event.png']);
 
-        foreach ([route('news.index'), route('events.index')] as $page) {
-            $this->get($page)->assertOk()
-                ->assertSee('aspect-[16/10] w-full overflow-hidden bg-[#4D4D4D] lg:mx-5 lg:mt-5 lg:w-1/2 lg:rounded-md" data-listing-image', false)
-                ->assertSee('object-cover', false);
-        }
+        $this->get(route('events.index'))->assertOk()
+            ->assertSee('<div class="aspect-[16/10] w-full overflow-hidden bg-[#4D4D4D]" data-listing-image>', false)
+            ->assertDontSee('lg:w-1/2', false)
+            ->assertSee('object-cover', false);
     }
 
     public function test_private_documents_can_never_be_reached_through_storage_urls(): void
